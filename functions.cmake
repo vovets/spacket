@@ -1,0 +1,6 @@
+function(PREPEND_CUR_DIR list_to_append_results srcs)
+  foreach(f ${srcs})
+    list(APPEND ${list_to_append_results} "${CMAKE_CURRENT_SOURCE_DIR}/${f}")
+  endforeach(f)
+  set(${list_to_append_results} ${${list_to_append_results}} PARENT_SCOPE)
+endfunction(PREPEND_CUR_DIR)
