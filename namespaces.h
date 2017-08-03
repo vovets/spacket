@@ -4,10 +4,10 @@ namespace boost {
 namespace program_options {}
 }
 
-namespace config {}
+namespace std {
+namespace chrono {}
+}
 
+namespace ch = std::chrono;
 namespace b = boost;
 namespace po = b::program_options;
-namespace c = config;
-
-

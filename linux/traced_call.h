@@ -4,11 +4,15 @@
 #error macro 'call or callv' already defined
 #endif
 
-#define callv(resultVar, function, fail, ...)                           \
+#define callv(resultVar, fail, function, ...)                           \
     int resultVar = function(__VA_ARGS__);                              \
     do {                                                                \
-        if (-1 == resultVar) {                                          \
+        while (-1 == resultVar) {                                       \
             int err = errno;                                            \
+            if (err == EINTR) {                                         \
+                resultVar = function(__VA_ARGS__);                      \
+                continue;                                               \
+            }                                                           \
             TRACE()                                                     \
                 << #function << " failed with [" << err                 \
                 << "]: " << strerror(err);                              \
@@ -16,11 +20,15 @@
         }                                                               \
     } while(false)
 
-#define call(function, fail, ...)                                       \
+#define call(fail, function, ...)                                       \
     do {                                                                \
         int resultVar = function(__VA_ARGS__);                          \
-        if (-1 == resultVar) {                                          \
+        while (-1 == resultVar) {                                       \
             int err = errno;                                            \
+            if (err == EINTR) {                                         \
+                resultVar = function(__VA_ARGS__);                      \
+                continue;                                               \
+            }                                                           \
             TRACE()                                                     \
                 << #function << " failed with [" << err                 \
                 << "]: " << strerror(err);                              \

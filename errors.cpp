@@ -5,11 +5,6 @@
 #include <iostream>
 #include <unordered_map>
 
-void fatal(Error e) {
-    std::cerr << "error " << toInt(e) << ": " << toString(e) << std::endl;
-    exit(1);
-}
-
 static const std::unordered_map<typename std::underlying_type<Error>::type, std::string> errorToString{
 #define X(ID, CODE, SEP) { CODE, ID } SEP
 #define STR(X) BOOST_PP_STRINGIZE(X)

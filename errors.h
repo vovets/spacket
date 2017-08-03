@@ -8,7 +8,9 @@
 #else
 #define ERROR_LIST(ID, CODE, SEP)               \
     X(ID(ConfigNoDevSpecified), CODE(1), SEP()) \
-    X(ID(DevInitFailed), CODE(2), )
+    X(ID(DevInitFailed),        CODE(2), SEP()) \
+    X(ID(DevReadFailed),        CODE(3), SEP()) \
+    X(ID(DevWriteFailed),       CODE(4), )
 #endif
 
 #define ID(X) X
@@ -25,6 +27,3 @@ constexpr typename std::underlying_type<Error>::type toInt(Error e) noexcept {
 }
 
 std::string toString(Error e);
-
-// never returns
-void fatal(Error e);

@@ -3,10 +3,18 @@
 #include "config_utils.h"
 #include "errors.h"
 #include "serial_device.h"
+#include "buffer_utils.h"
 
 #include <boost/program_options.hpp>
 
 #include <iostream>
+
+// never returns
+void fatal(Error e) {
+    std::cerr << "error " << toInt(e) << ": " << toString(e) << std::endl;
+    exit(1);
+}
+
 
 int main(int argc, const char* argv[]) {
     po::options_description desc("Allowed options");
@@ -28,14 +36,20 @@ int main(int argc, const char* argv[]) {
         return 0;
     }
 
-    auto pcr = fromProgramOptions(vm);
-    if (isFail(pcr)) {
-        fatal(GETFAIL(pcr));
-    }
+    auto fatal = [](Error e) {
+                     std::cerr << "fatal error [" << toInt(e) << "]: " << toString(e) << std::endl;
+                     return 1;
+                 };
 
-    auto sdr = SerialDevice::open(GETOK(pcr));
-    if (isFail(sdr)) {
-        fatal(GETFAIL(sdr));
-    }
+    rcallv(pc, fatal, fromProgramOptions, vm);
+
+    rcallv(sd, fatal, SerialDevice::open, std::move(pc));
+
+    auto wb = Buffer{1, 2, 3, 4, 5, 6};
+    std::cout << hr(wb) << " " << wb.size() << std::endl;
+    rcall(fatal, sd.write, wb);
+    rcallv(rb, fatal, sd.read, ch::seconds(1), 65536);
+    std::cout << hr(rb) << " " << rb.size() << std::endl;
+
     return 0;
 }
