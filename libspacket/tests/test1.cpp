@@ -1,9 +1,9 @@
 #include "namespaces.h"
-#include "config.h"
-#include "config_utils.h"
-#include "errors.h"
-#include "serial_device.h"
-#include "buffer_utils.h"
+#include <spacket/config.h>
+#include <spacket/config_utils.h>
+#include <spacket/errors.h>
+#include <spacket/serial_device.h>
+#include <spacket/buffer_utils.h>
 
 #include <boost/program_options.hpp>
 

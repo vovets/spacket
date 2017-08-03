@@ -1,4 +1,4 @@
-include("${CMAKE_SOURCE_DIR}/functions.cmake")
+include("../functions.cmake")
 
 set(SRCS serial_device_impl.cpp)
 

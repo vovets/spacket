@@ -1,4 +1,4 @@
-#include "errors.h"
+#include <spacket/errors.h>
 
 #include <boost/preprocessor/stringize.hpp>
 

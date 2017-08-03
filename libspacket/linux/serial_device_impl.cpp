@@ -1,7 +1,7 @@
-#include "namespaces.h"
-#include "serial_device.h"
+#include <spacket/serial_device.h>
 #include "logging.h"
 #include "traced_call.h"
+#include "namespaces.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>

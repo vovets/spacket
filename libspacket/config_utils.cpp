@@ -1,5 +1,6 @@
-#include "config_utils.h"
-#include "errors.h"
+#include <spacket/config_utils.h>
+#include <spacket/errors.h>
+#include "namespaces.h"
 
 Result<PortConfig> fromProgramOptions(const po::variables_map& vm) {
     if (!vm.count("device")) {
