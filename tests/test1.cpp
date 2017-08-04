@@ -1,4 +1,6 @@
 #include "namespaces.h"
+#include "utils.h"
+#include "build_config.h"
 #include <spacket/config.h>
 #include <spacket/config_utils.h>
 #include <spacket/errors.h>
@@ -41,7 +43,7 @@ int main(int argc, const char* argv[]) {
                      return 1;
                  };
 
-    rcallv(pc, fatal, fromProgramOptions, vm);
+    PortConfig pc = fromJson(DEVICE_CONFIG_PATH);
 
     rcallv(sd, fatal, SerialDevice::open, std::move(pc));
 
