@@ -7,51 +7,81 @@
 #include <spacket/serial_device.h>
 #include <spacket/buffer_utils.h>
 
-#include <boost/program_options.hpp>
+#include <catch.hpp>
 
-#include <iostream>
+#include <sstream>
+#include <cstring>
 
-// never returns
-void fatal(Error e) {
-    std::cerr << "error " << toInt(e) << ": " << toString(e) << std::endl;
-    exit(1);
+class Equals: public Catch::MatcherBase<Buffer> {
+public:
+    Equals(const Buffer& reference): reference(reference) {}
+
+    bool match(const Buffer& b) const override {
+        if (b.size() != reference.size()) { return false; }
+        return std::memcmp(b.begin(), reference.begin(), b.size()) == 0;
+    }
+
+    std::string describe() const {
+        std::ostringstream ss;
+        ss << "is equal to " << hr(reference);
+        return ss.str();
+    }
+
+private:
+    const Buffer& reference;
+};
+
+inline Equals isEqualTo(const Buffer& reference) { return Equals(reference); }
+
+namespace Catch {
+	template<> struct StringMaker<Buffer> {
+    	static std::string convert( Buffer const& value ) {
+            std::ostringstream ss;
+            ss << hr(value);
+        	return ss.str(); 
+        } 
+    }; 
 }
 
-
-int main(int argc, const char* argv[]) {
-    po::options_description desc("Allowed options");
-    desc.add_options()
-        ("help", "produce help message")
-        ("device,d", po::value<std::string>(), "serial device to work with");
-
-    po::variables_map vm;
-    try {
-        po::store(po::parse_command_line(argc, argv, desc), vm);
-    } catch (std::exception& e) {
-        std::cerr << e.what() << std::endl;
-        exit(1);
+Buffer createTestBuffer(size_t size) {
+    Buffer buffer(size);
+    auto c = buffer.begin();
+    for (size_t i = 0; i < size; ++i, ++c) {
+        *c = i % 10;
     }
-    po::notify(vm);
+    return std::move(buffer);
+}
 
-    if (vm.count("help")) {
-        std::cout << desc << "\n";
-        return 0;
-    }
-
+TEST_CASE("loopback 1") {
     auto fatal = [](Error e) {
-                     std::cerr << "fatal error [" << toInt(e) << "]: " << toString(e) << std::endl;
-                     return 1;
+                     std::ostringstream ss;
+                     ss << "fatal error [" << toInt(e) << "]: " << toString(e);
+                     throw std::runtime_error(ss.str());
                  };
 
     PortConfig pc = fromJson(DEVICE_CONFIG_PATH);
 
     rcallv(sd, fatal, SerialDevice::open, std::move(pc));
 
-    auto wb = Buffer{1, 2, 3, 4, 5, 6};
-    std::cout << hr(wb) << " " << wb.size() << std::endl;
-    rcall(fatal, sd.write, wb);
-    rcallv(rb, fatal, sd.read, ch::seconds(1), 65536);
-    std::cout << hr(rb) << " " << rb.size() << std::endl;
+    const size_t MAX_READ = 65536;
 
-    return 0;
+    auto test = [&](size_t size) {
+                    INFO("buffer size: " << size);
+                    auto wb = createTestBuffer(size);
+                    rcall(fatal, sd.write, wb);
+                    Buffer rb(0);
+                    while (rb.size() < wb.size()) {
+                        rcallv(tmp, fatal, sd.read, ch::milliseconds(100), MAX_READ);
+                        rb = rb + tmp;
+                    }
+                    CHECK_THAT(rb, isEqualTo(wb));
+                };
+
+    std::vector<size_t> sizes = {1, 2, 3, 4, 5, 6, 16, 17, 32, 33, 256, 257, 4096};
+    const size_t REPETITIONS = 10;
+    for (auto s: sizes) {
+        for (size_t n = 0; n < REPETITIONS; ++n) {
+            test(s);
+        }
+    }
 }

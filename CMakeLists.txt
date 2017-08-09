@@ -14,6 +14,7 @@ add_library(spacket ${COMMON_SRCS} ${PLATFORM_SRCS})
 
 include_directories(include)
 include_directories(json/src)
+include_directories(catch/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 add_subdirectory(tests)

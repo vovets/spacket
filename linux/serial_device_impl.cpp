@@ -10,8 +10,9 @@
 #include <termios.h>
 #include <unistd.h>
 
-// const ::speed_t DEFAULT_SPEED = B115200;
-const ::speed_t DEFAULT_SPEED = B9600;
+const ::speed_t DEFAULT_SPEED = B115200;
+// const ::speed_t DEFAULT_SPEED = B9600;
+// const ::speed_t DEFAULT_SPEED = B230400;
 
 struct SerialDevice::Impl {
     Impl(int fd);
@@ -66,8 +67,8 @@ Result<Buffer> SerialDevice::Impl::read(Timeout t, size_t maxSize) {
         struct timeval timeout;
         timeout.tv_sec = 0;
         // byte interval * 1.5
-        // timeout.tv_usec = (1.5 * 1000000.) / (115200. / 10.);
-        timeout.tv_usec = (2. * 1000000.) / (9600. / 10.);
+        timeout.tv_usec = (1.5 * 1000000.) / (115200. / 10.);
+        // timeout.tv_usec = (2. * 1000000.) / (9600. / 10.);
         // timeout.tv_usec = 400;
         fd_set fds;
         FD_ZERO(&fds);
@@ -82,7 +83,7 @@ Result<Buffer> SerialDevice::Impl::read(Timeout t, size_t maxSize) {
         }
         size_t requested = b.end() - cur;
         callv(bytesRead, f, ::read, fd, cur, requested);
-        TRACE() << "requested " << requested << ", read " << bytesRead;
+        TRACE("requested " << requested << ", read " << bytesRead);
         cur += bytesRead;
     }
     return ok(b.prefix(cur - b.begin()));

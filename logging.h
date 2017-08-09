@@ -18,5 +18,9 @@ public:
 #ifdef TRACE
 #error macro 'TRACE' already defined
 #endif
-    
-#define TRACE() Tracer()
+
+#if 0
+#define TRACE(E) do { Tracer() << E; } while(false)
+#else
+#define TRACE(E) do {} while(false)
+#endif

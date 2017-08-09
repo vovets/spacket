@@ -13,9 +13,9 @@
                 resultVar = function(__VA_ARGS__);                      \
                 continue;                                               \
             }                                                           \
-            TRACE()                                                     \
-                << #function << " failed with [" << err                 \
-                << "]: " << strerror(err);                              \
+            TRACE(                                                      \
+                #function << " failed with [" << err                    \
+                << "]: " << strerror(err));                             \
             return fail();                                              \
         }                                                               \
     } while(false)
@@ -29,9 +29,9 @@
                 resultVar = function(__VA_ARGS__);                      \
                 continue;                                               \
             }                                                           \
-            TRACE()                                                     \
-                << #function << " failed with [" << err                 \
-                << "]: " << strerror(err);                              \
+            TRACE(                                                      \
+                  #function << " failed with [" << err                  \
+                << "]: " << strerror(err));                             \
             return fail();                                              \
         }                                                               \
     } while(false)

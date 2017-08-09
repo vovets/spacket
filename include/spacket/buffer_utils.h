@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iomanip>
+#include <cstring>
 
 template<typename Buffer>
 struct Hr {
@@ -12,7 +13,7 @@ Hr<Buffer> hr(const Buffer& b) { return Hr<Buffer>{b}; }
 
 template<typename Buffer>
 std::ostream& operator<<(std::ostream& os, Hr<Buffer> hr) {
-    os  << "[";
+    os  << hr.b.size() << ":[";
     for (uint8_t* cur = hr.b.begin(); cur < hr.b.end(); ++cur) {
         if (cur != hr.b.begin()) {
             os << ", ";
@@ -22,4 +23,11 @@ std::ostream& operator<<(std::ostream& os, Hr<Buffer> hr) {
     os << "]";
     return os;
 }
-        
+
+template<typename Buffer>
+Buffer operator+(const Buffer& lhs, const Buffer& rhs) {
+    Buffer result(lhs.size() + rhs.size());
+    std::memcpy(result.begin(), lhs.begin(), lhs.size());
+    std::memcpy(result.begin() + lhs.size(), rhs.begin(), rhs.size());
+    return std::move(result);
+}
