@@ -11,6 +11,7 @@
 
 #include <sstream>
 #include <cstring>
+#include <thread>
 
 class Equals: public Catch::MatcherBase<Buffer> {
 public:
@@ -61,27 +62,48 @@ TEST_CASE("loopback 1") {
 
     PortConfig pc = fromJson(DEVICE_CONFIG_PATH);
 
-    rcallv(sd, fatal, SerialDevice::open, std::move(pc));
+    // rcallv(sd, fatal, SerialDevice::open, std::move(pc));
 
     const size_t MAX_READ = 65536;
 
-    auto test = [&](size_t size) {
+    auto test1 = [&](size_t size) {
                     INFO("buffer size: " << size);
+                    rcallv(sd, fatal, SerialDevice::open, pc);
                     auto wb = createTestBuffer(size);
                     rcall(fatal, sd.write, wb);
                     Buffer rb(0);
                     while (rb.size() < wb.size()) {
-                        rcallv(tmp, fatal, sd.read, ch::milliseconds(100), MAX_READ);
+                        rcallv(tmp, fatal, sd.read, ch::seconds(1), MAX_READ);
                         rb = rb + tmp;
                     }
                     CHECK_THAT(rb, isEqualTo(wb));
                 };
-
-    std::vector<size_t> sizes = {1, 2, 3, 4, 5, 6, 16, 17, 32, 33, 256, 257, 4096};
+    
+    auto test2 = [&](size_t size) {
+                    INFO("buffer size: " << size);
+                    rcallv(sd, fatal, SerialDevice::open, pc);
+                    auto wb = createTestBuffer(size);
+                    rcall(fatal, sd.write, wb);
+                    rcallv(rb, fatal, sd.read, ch::seconds(1), MAX_READ);
+                    CHECK(rb.size() <= wb.size());
+                };
+    
+    std::vector<size_t> sizes = {6};
     const size_t REPETITIONS = 10;
     for (auto s: sizes) {
         for (size_t n = 0; n < REPETITIONS; ++n) {
-            test(s);
+            test2(s);
+            std::this_thread::sleep_for(ch::milliseconds(10));
         }
     }
+}
+
+TEST_CASE("separate tx rx") {
+    auto fatal = [](Error e) {
+                     std::ostringstream ss;
+                     ss << "fatal error [" << toInt(e) << "]: " << toString(e);
+                     throw std::runtime_error(ss.str());
+                 };
+
+    PortConfig pc = fromJson(DEVICE_CONFIG_PATH);
 }
