@@ -8,7 +8,7 @@ string(TOLOWER ${CMAKE_SYSTEM_NAME} PLATFORM_ID)
 
 add_subdirectory(${PLATFORM_ID})
 
-set(COMMON_SRCS errors.cpp config_utils.cpp)
+set(COMMON_SRCS errors.cpp config.cpp config_utils.cpp)
 
 add_library(spacket ${COMMON_SRCS} ${PLATFORM_SRCS})
 

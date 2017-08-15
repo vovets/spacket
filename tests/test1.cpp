@@ -61,35 +61,44 @@ void fatal(Error e) {
 
 const size_t MAX_READ = 1024;
 std::vector<size_t> sizes = {100, 200, 300, 400, 500, 600, 700, 800, 1000, 2000, 4096};
+std::vector<Baud> bauds = {Baud::B_115200, Baud::B_230400};
 const size_t REPETITIONS = 20;
+const size_t BYTE_TIMEOUT_US = 0;
 
-TEST_CASE("open each write prefix", "[loopback]") {
-    PortConfig pc = fromJson(DEVICE_CONFIG_PATH);
+template<typename Test>
+void runTest(Test test) {
+    for (auto b: bauds) {
+        for (auto s: sizes) {
+            for (size_t n = 0; n < REPETITIONS; ++n) {
+                INFO("buffer size: " << s << ", baud: " << toInt(b) << ", rep: " << n);
+                test(s, b, n);
+            }
+        }
+    }
+}
 
-    auto test = [&](size_t size, size_t rep) {
-                    INFO("buffer size: " << size << ", rep: " << rep);
+TEST_CASE("read prefix", "[loopback]") {
+    auto test = [&](size_t size, Baud b, size_t rep) {
+                    PortConfig pc = fromJson(DEVICE_CONFIG_PATH);
+                    pc.baud = b;
+                    pc.byteTimeout_us = BYTE_TIMEOUT_US;
+    
                     rcallv(sd, fatal, SerialDevice::open, pc);
                     auto wb = createTestBuffer(size);
-                    // rcall(fatal, sd.flush);
-                    // std::this_thread::sleep_for(ch::milliseconds(100));
                     rcall(fatal, sd.write, wb);
                     rcallv(rb, fatal, sd.read, ch::seconds(1), MAX_READ);
                     CAPTURE(rb);
                     REQUIRE(isPrefix(rb, wb));
                 };
-    
-    for (auto s: sizes) {
-        for (size_t n = 0; n < REPETITIONS; ++n) {
-            test(s, n);
-        }
-    }
+    runTest(test);
 }
 
-TEST_CASE("open each write full", "[loopback]") {
-    PortConfig pc = fromJson(DEVICE_CONFIG_PATH);
+TEST_CASE("read whole", "[loopback]") {
+    auto test = [&](size_t size, Baud b, size_t rep) {
+                    PortConfig pc = fromJson(DEVICE_CONFIG_PATH);
+                    pc.baud = b;
+                    pc.byteTimeout_us = BYTE_TIMEOUT_US;
 
-    auto test = [&](size_t size, size_t rep) {
-                    INFO("buffer size: " << size << ", rep: " << rep);
                     rcallv(sd, fatal, SerialDevice::open, pc);
                     auto wb = createTestBuffer(size);
                     rcall(fatal, sd.write, wb);
@@ -105,9 +114,5 @@ TEST_CASE("open each write full", "[loopback]") {
                     REQUIRE_THAT(rb, isEqualTo(wb));
                 };
 
-    for (auto s: sizes) {
-        for (size_t n = 0; n < REPETITIONS; ++n) {
-            test(s, n);
-        }
-    }
+    runTest(test);
 }

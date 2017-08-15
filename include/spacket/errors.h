@@ -1,20 +1,20 @@
 #pragma once
 
+#include <spacket/macro_utils.h>
+
 #include <type_traits>
 #include <string>
 
 #ifdef ERROR_LIST
 #error "ERROR_LIST macro should not be defined here"
 #else
-#define ERROR_LIST(ID, CODE, SEP)               \
-    X(ID(ConfigNoDevSpecified), CODE(1), SEP()) \
-    X(ID(DevInitFailed),        CODE(2), SEP()) \
-    X(ID(DevReadFailed),        CODE(3), SEP()) \
-    X(ID(DevWriteFailed),       CODE(4), )
+#define ERROR_LIST(ID, CODE, SEP)                \
+    X(ID(ConfigNoDevSpecified), CODE(10), SEP()) \
+    X(ID(ConfigBadBaud),        CODE(11), SEP()) \
+    X(ID(DevInitFailed),        CODE(20), SEP()) \
+    X(ID(DevReadFailed),        CODE(21), SEP()) \
+    X(ID(DevWriteFailed),       CODE(22), )
 #endif
-
-#define ID(X) X
-#define SEP_COMMA() ,
 
 enum class Error {
 #define X(ID, CODE, SEP) ID = CODE SEP

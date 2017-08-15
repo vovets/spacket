@@ -1,3 +1,4 @@
 {
-    "device": "DEVICE_PATH_OR_ID"
+    "device": "DEVICE_PATH_OR_ID",
+    "baud": baud_as_int
 }
