@@ -31,3 +31,11 @@ Buffer operator+(const Buffer& lhs, const Buffer& rhs) {
     std::memcpy(result.begin() + lhs.size(), rhs.begin(), rhs.size());
     return std::move(result);
 }
+
+template<typename Buffer>
+bool isPrefix(const Buffer& prefix, const Buffer& b) {
+    if (prefix.size() > b.size()) {
+        return false;
+    }
+    return 0 == std::memcmp(prefix.begin(), b.begin(), prefix.size());
+}

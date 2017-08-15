@@ -15,6 +15,7 @@ public:
     
     Result<Buffer> read(Timeout t, size_t maxSize);
     Result<boost::blank> write(const Buffer& b);
+    Result<boost::blank> flush();
 private:
     struct Impl;
     using ImplPtr = std::unique_ptr<Impl>;

@@ -9,6 +9,9 @@ class BufferT {
 public:
     BufferT(size_t size);
     BufferT(std::initializer_list<uint8_t> l);
+    BufferT(BufferT&& toMove);
+    BufferT& operator=(BufferT&& toMove);
+    
     uint8_t* begin() const;
     uint8_t* end() const;
     size_t size() const;
@@ -41,6 +44,22 @@ BufferT<Allocator>::BufferT(std::initializer_list<uint8_t> l)
     : data(Allocator().allocate(l.size()))
     , size_(l.size()) {
     std::memcpy(begin(), l.begin(), size_);
+}
+
+template<typename Allocator>
+inline
+BufferT<Allocator>::BufferT(BufferT&& toMove)
+    : data(std::move(toMove.data))
+    , size_(toMove.size_) {
+    toMove.size_ = 0;
+}
+
+template<typename Allocator>
+inline
+BufferT<Allocator>& BufferT<Allocator>::operator=(BufferT&& toMove) {
+    data = std::move(toMove.data);
+    size_ = toMove.size_;
+    toMove.size_ = 0;
 }
 
 template<typename Allocator>

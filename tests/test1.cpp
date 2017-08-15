@@ -48,62 +48,66 @@ Buffer createTestBuffer(size_t size) {
     Buffer buffer(size);
     auto c = buffer.begin();
     for (size_t i = 0; i < size; ++i, ++c) {
-        *c = i % 10;
+        *c = i % 256;
     }
     return std::move(buffer);
 }
 
-TEST_CASE("loopback 1") {
-    auto fatal = [](Error e) {
-                     std::ostringstream ss;
-                     ss << "fatal error [" << toInt(e) << "]: " << toString(e);
-                     throw std::runtime_error(ss.str());
-                 };
+void fatal(Error e) {
+    std::ostringstream ss;
+    ss << "fatal error [" << toInt(e) << "]: " << toString(e);
+    throw std::runtime_error(ss.str());
+}
 
+const size_t MAX_READ = 1024;
+std::vector<size_t> sizes = {100, 200, 300, 400, 500, 600, 700, 800, 1000, 2000, 4096};
+const size_t REPETITIONS = 20;
+
+TEST_CASE("open each write prefix", "[loopback]") {
     PortConfig pc = fromJson(DEVICE_CONFIG_PATH);
 
-    // rcallv(sd, fatal, SerialDevice::open, std::move(pc));
+    auto test = [&](size_t size, size_t rep) {
+                    INFO("buffer size: " << size << ", rep: " << rep);
+                    rcallv(sd, fatal, SerialDevice::open, pc);
+                    auto wb = createTestBuffer(size);
+                    // rcall(fatal, sd.flush);
+                    // std::this_thread::sleep_for(ch::milliseconds(100));
+                    rcall(fatal, sd.write, wb);
+                    rcallv(rb, fatal, sd.read, ch::seconds(1), MAX_READ);
+                    CAPTURE(rb);
+                    REQUIRE(isPrefix(rb, wb));
+                };
+    
+    for (auto s: sizes) {
+        for (size_t n = 0; n < REPETITIONS; ++n) {
+            test(s, n);
+        }
+    }
+}
 
-    const size_t MAX_READ = 65536;
+TEST_CASE("open each write full", "[loopback]") {
+    PortConfig pc = fromJson(DEVICE_CONFIG_PATH);
 
-    auto test1 = [&](size_t size) {
-                    INFO("buffer size: " << size);
+    auto test = [&](size_t size, size_t rep) {
+                    INFO("buffer size: " << size << ", rep: " << rep);
                     rcallv(sd, fatal, SerialDevice::open, pc);
                     auto wb = createTestBuffer(size);
                     rcall(fatal, sd.write, wb);
                     Buffer rb(0);
                     while (rb.size() < wb.size()) {
                         rcallv(tmp, fatal, sd.read, ch::seconds(1), MAX_READ);
+                        CAPTURE(tmp);
+                        if (!rb.size()) {
+                            REQUIRE(isPrefix(tmp, wb));
+                        }
                         rb = rb + tmp;
                     }
-                    CHECK_THAT(rb, isEqualTo(wb));
+                    REQUIRE_THAT(rb, isEqualTo(wb));
                 };
-    
-    auto test2 = [&](size_t size) {
-                    INFO("buffer size: " << size);
-                    rcallv(sd, fatal, SerialDevice::open, pc);
-                    auto wb = createTestBuffer(size);
-                    rcall(fatal, sd.write, wb);
-                    rcallv(rb, fatal, sd.read, ch::seconds(1), MAX_READ);
-                    CHECK(rb.size() <= wb.size());
-                };
-    
-    std::vector<size_t> sizes = {6};
-    const size_t REPETITIONS = 10;
+
     for (auto s: sizes) {
         for (size_t n = 0; n < REPETITIONS; ++n) {
-            test2(s);
-            std::this_thread::sleep_for(ch::milliseconds(10));
+            test(s, n);
         }
     }
-}
-
-TEST_CASE("separate tx rx") {
-    auto fatal = [](Error e) {
-                     std::ostringstream ss;
-                     ss << "fatal error [" << toInt(e) << "]: " << toString(e);
-                     throw std::runtime_error(ss.str());
-                 };
-
-    PortConfig pc = fromJson(DEVICE_CONFIG_PATH);
 }

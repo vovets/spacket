@@ -11,6 +11,8 @@
             int err = errno;                                            \
             if (err == EINTR) {                                         \
                 resultVar = function(__VA_ARGS__);                      \
+                TRACE(                                                  \
+                    #function << " restarted");                         \
                 continue;                                               \
             }                                                           \
             TRACE(                                                      \

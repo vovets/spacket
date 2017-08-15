@@ -4,6 +4,7 @@
 
 #include <boost/variant.hpp>
 #include <boost/mpl/at.hpp>
+#include <boost/preprocessor/cat.hpp>
 
 #include <iostream>
 
@@ -71,8 +72,8 @@ ErrorT<Result> getFailLoc(Result& r, const char* file, int line) {
     }                                               \
     auto var = getOkUnsafe(var##_result)
 
-#define rcall(fail, function, ...)                  \
-    auto var##_result = function(__VA_ARGS__);      \
-    if (isFail(var##_result)) {                     \
-        return fail(getFailUnsafe(var##_result));   \
+#define rcall(fail, function, ...)                        \
+    auto BOOST_PP_CAT(result_,__LINE__) = function(__VA_ARGS__);    \
+    if (isFail(BOOST_PP_CAT(result_,__LINE__))) {                   \
+        return fail(getFailUnsafe(BOOST_PP_CAT(result_,__LINE__))); \
     }
