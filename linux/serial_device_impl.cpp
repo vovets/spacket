@@ -126,6 +126,9 @@ Result<Buffer> SerialDevice::Impl::read(Timeout t, size_t maxSize) {
         cur += bytesRead;
     }
     TRACE("<2== " << cur - b.begin());
+    if (cur == b.begin()) {
+        return fail<Buffer>(Error::Timeout);
+    }
     return ok(b.prefix(cur - b.begin()));
 }
 

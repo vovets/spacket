@@ -116,3 +116,30 @@ TEST_CASE("read whole", "[loopback]") {
 
     runTest(test);
 }
+
+TEST_CASE("timeout", "[loopback]") {
+    auto test = [&](size_t size, Baud b, size_t rep) {
+                    PortConfig pc = fromJson(DEVICE_CONFIG_PATH);
+                    pc.baud = b;
+                    pc.byteTimeout_us = BYTE_TIMEOUT_US;
+
+                    rcallv(sd, fatal, SerialDevice::open, pc);
+                    auto wb = createTestBuffer(size);
+                    rcall(fatal, sd.write, wb);
+                    Buffer rb(0);
+                    while (rb.size() < wb.size()) {
+                        rcallv(tmp, fatal, sd.read, ch::seconds(1), MAX_READ);
+                        CAPTURE(tmp);
+                        if (!rb.size()) {
+                            REQUIRE(isPrefix(tmp, wb));
+                        }
+                        rb = rb + tmp;
+                    }
+                    REQUIRE_THAT(rb, isEqualTo(wb));
+                    auto tmp = sd.read(ch::milliseconds(10), MAX_READ);
+                    REQUIRE(isFail(tmp));
+                    REQUIRE(getFailUnsafe(tmp) == Error::Timeout);
+                };
+
+    runTest(test);
+}
