@@ -33,6 +33,11 @@ Buffer operator+(const Buffer& lhs, const Buffer& rhs) {
 }
 
 template<typename Buffer>
+bool operator==(const Buffer& lhs, const Buffer& rhs) {
+    return lhs.size() == rhs.size() && (0 == memcmp(lhs.begin(), rhs.begin(), lhs.size()));
+}
+
+template<typename Buffer>
 bool isPrefix(const Buffer& prefix, const Buffer& b) {
     if (prefix.size() > b.size()) {
         return false;

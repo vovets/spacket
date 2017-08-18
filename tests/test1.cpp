@@ -11,53 +11,6 @@
 
 #include <sstream>
 #include <cstring>
-#include <thread>
-
-class Equals: public Catch::MatcherBase<Buffer> {
-public:
-    Equals(const Buffer& reference): reference(reference) {}
-
-    bool match(const Buffer& b) const override {
-        if (b.size() != reference.size()) { return false; }
-        return std::memcmp(b.begin(), reference.begin(), b.size()) == 0;
-    }
-
-    std::string describe() const {
-        std::ostringstream ss;
-        ss << "is equal to " << hr(reference);
-        return ss.str();
-    }
-
-private:
-    const Buffer& reference;
-};
-
-inline Equals isEqualTo(const Buffer& reference) { return Equals(reference); }
-
-namespace Catch {
-	template<> struct StringMaker<Buffer> {
-    	static std::string convert( Buffer const& value ) {
-            std::ostringstream ss;
-            ss << hr(value);
-        	return ss.str(); 
-        } 
-    }; 
-}
-
-Buffer createTestBuffer(size_t size) {
-    Buffer buffer(size);
-    auto c = buffer.begin();
-    for (size_t i = 0; i < size; ++i, ++c) {
-        *c = i % 256;
-    }
-    return std::move(buffer);
-}
-
-void fatal(Error e) {
-    std::ostringstream ss;
-    ss << "fatal error [" << toInt(e) << "]: " << toString(e);
-    throw std::runtime_error(ss.str());
-}
 
 const size_t MAX_READ = 1024;
 std::vector<size_t> sizes = {100, 200, 300, 400, 500, 600, 700, 800, 1000, 2000, 4096};

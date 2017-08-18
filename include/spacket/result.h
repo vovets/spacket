@@ -61,6 +61,10 @@ ErrorT<Result> getFailLoc(Result& r, const char* file, int line) {
     return std::move(*p);
 }
 
+template <typename Success>
+Result<Success> idFail(Error e) { return fail<Success>(e); }
+
+
 #define getOk(X) getOkLoc(X, __FILE__, __LINE__)
        
 #define getFail(X) getFailLoc(X, __FILE__, __LINE__)
