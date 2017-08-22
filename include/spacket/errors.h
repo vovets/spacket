@@ -14,7 +14,8 @@
     X(ID(ConfigBadBaud),        CODE(11), SEP()) \
     X(ID(DevInitFailed),        CODE(20), SEP()) \
     X(ID(DevReadFailed),        CODE(21), SEP()) \
-    X(ID(DevWriteFailed),       CODE(22), )
+    X(ID(DevWriteFailed),       CODE(22), SEP()) \
+    X(ID(PacketTooBig),         CODE(30), )
 #endif
 
 enum class Error {

@@ -30,8 +30,8 @@ size_t timeoutFromBaud(Baud b) {
 struct SerialDevice::Impl {
     Impl(int fd, struct timeval byteTimeout);
     ~Impl();
-    Result<Buffer> read(Timeout t, size_t maxSize);
-    Result<b::blank> write(const Buffer& b);
+    Result<size_t> read(Timeout t, uint8_t* buffer, size_t maxRead);
+    Result<boost::blank> write(uint8_t* buffer, size_t size);
     Result<boost::blank> flush();
 
     int fd;
@@ -72,12 +72,12 @@ Result<SerialDevice> SerialDevice::open(PortConfig portConfig) {
     return ok(SerialDevice(std::move(impl)));
 }
 
-Result<Buffer> SerialDevice::read(Timeout t, size_t maxSize) {
-    return impl->read(t, maxSize);
+Result<size_t> SerialDevice::read(Timeout t, uint8_t* buffer, size_t maxRead) {
+    return impl->read(t, buffer, maxRead);
 }
 
-Result<b::blank> SerialDevice::write(const Buffer& b) {
-    return impl->write(b);
+Result<boost::blank> SerialDevice::write(uint8_t* buffer, size_t size) {
+    return impl->write(buffer, size);
 }
 
 Result<boost::blank> SerialDevice::flush() {
@@ -93,14 +93,14 @@ SerialDevice::Impl::~Impl() {
     ::close(fd);
 }
 
-Result<Buffer> SerialDevice::Impl::read(Timeout t, size_t maxSize) {
+Result<size_t> SerialDevice::Impl::read(Timeout t, uint8_t* buffer, size_t maxRead) {
     TRACE("===>");
-    auto f = [] { return fail<Buffer>(Error::DevReadFailed); };
+    auto f = [] { return fail<size_t>(Error::DevReadFailed); };
     auto now = Clock::now();
     auto deadline = now + t;
-    auto b = Buffer(maxSize);
-    uint8_t* cur = b.begin();
-    while (now < deadline && cur < b.end()) {
+    uint8_t* cur = buffer;
+    uint8_t* const end = buffer + maxRead;
+    while (now < deadline && cur < end) {
         struct timeval timeout = byteTimeout;
         fd_set fds;
         FD_ZERO(&fds);
@@ -108,41 +108,42 @@ Result<Buffer> SerialDevice::Impl::read(Timeout t, size_t maxSize) {
         callv(result, f, ::select, fd + 1, &fds, nullptr, nullptr, &timeout);
         if (!result) {
             TRACE("select timeout");
-            if (cur == b.begin()) {
+            if (cur == buffer) {
                 now = Clock::now();
                 TRACE("cont");
                 continue;
             }
-            TRACE("<1== " << cur - b.begin());
-            return ok(b.prefix(cur - b.begin()));
+            TRACE("<1== " << cur - buffer);
+            return ok(cur - buffer);
         }
         if (!FD_ISSET(fd, &fds)) {
             TRACE("fd not ready");
             continue;
         }
-        size_t requested = b.end() - cur;
+        size_t requested = end - cur;
         callv(bytesRead, f, ::read, fd, cur, requested);
         TRACE("requested " << requested << ", read " << bytesRead);
         cur += bytesRead;
     }
-    TRACE("<2== " << cur - b.begin());
-    if (cur == b.begin()) {
-        return fail<Buffer>(Error::Timeout);
+    TRACE("<2== " << cur - buffer);
+    if (cur == buffer) {
+        return fail<size_t>(Error::Timeout);
     }
-    return ok(b.prefix(cur - b.begin()));
+    return ok(cur - buffer);
 }
 
-Result<b::blank> SerialDevice::Impl::write(const Buffer& b) {
+Result<boost::blank> SerialDevice::Impl::write(uint8_t* buffer, size_t size) {
     auto f = []{ return fail<b::blank>(Error::DevWriteFailed); };
-    uint8_t* cur = b.begin();
-    while (cur < b.end()) {
+    uint8_t* cur = buffer;
+    uint8_t* end = buffer + size;
+    while (cur < end) {
         callv(
             bytesWritten,
             f,
             ::write,
             fd,
             cur,
-            b.end() - cur);
+            end - cur);
         cur += bytesWritten;
     }
     return ok(b::blank());

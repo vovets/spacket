@@ -69,15 +69,29 @@ Result<Success> idFail(Error e) { return fail<Success>(e); }
        
 #define getFail(X) getFailLoc(X, __FILE__, __LINE__)
 
-#define rcallv(var, fail, function, ...)            \
-    auto var##_result = function(__VA_ARGS__);      \
+#define rcallv(var, fail, expr)                     \
+    auto var##_result = expr;                       \
     if (isFail(var##_result)) {                     \
         return fail(getFailUnsafe(var##_result));   \
     }                                               \
     auto var = getOkUnsafe(var##_result)
 
-#define rcall(fail, function, ...)                        \
-    auto BOOST_PP_CAT(result_,__LINE__) = function(__VA_ARGS__);    \
+#define rcall(fail, expr)                                           \
+    auto BOOST_PP_CAT(result_,__LINE__) = expr;                     \
     if (isFail(BOOST_PP_CAT(result_,__LINE__))) {                   \
         return fail(getFailUnsafe(BOOST_PP_CAT(result_,__LINE__))); \
     }
+
+#define nrcallv(var, fail, expr)           \
+    auto var##_result = expr;      \
+    if (isFail(var##_result)) {                     \
+        fail(getFailUnsafe(var##_result));          \
+    }                                               \
+    auto var = getOkUnsafe(var##_result)
+
+#define nrcall(fail, expr)                                  \
+    auto BOOST_PP_CAT(result_,__LINE__) = expr;    \
+    if (isFail(BOOST_PP_CAT(result_,__LINE__))) {                   \
+        fail(getFailUnsafe(BOOST_PP_CAT(result_,__LINE__))); \
+    }
+

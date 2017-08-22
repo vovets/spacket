@@ -6,59 +6,133 @@
 
 #include <catch.hpp>
 
+using Buffer = BufferT<StdAllocator, 1024>;
+using TestSource = TestSourceT<Buffer>;
+auto fatal = fatalT<Buffer>;
 
-TEST_CASE("1", "[nodev][sync]") {
-    TestSource ts({{0, 1, 2}});
-    auto source = [&] (Timeout t, size_t maxSize) { return ts.read(t, maxSize); };
-    rcallv(b, fatal, readSync, source, 3, ch::milliseconds(1));
-    Buffer ref{1, 2};
-    REQUIRE(b == ref);
-}
-
-TEST_CASE("2", "[nodev][sync]") {
-    TestSource ts({{0, 0}, {0, 1, 2}});
-    auto source = [&] (Timeout t, size_t maxSize) { return ts.read(t, maxSize); };
-    rcallv(b, fatal, readSync, source, 3, ch::milliseconds(1));
-    Buffer ref{1, 2};
-    REQUIRE(b == ref);
-}
-
-TEST_CASE("3", "[nodev][sync]") {
-    TestSource ts({{0, 0}, {1, 2, 3}});
-    auto source = [&] (Timeout t, size_t maxSize) { return ts.read(t, maxSize); };
-    rcallv(b, fatal, readSync, source, 3, ch::milliseconds(1));
-    Buffer ref{1, 2, 3};
-    REQUIRE(b == ref);
-}
-
-TEST_CASE("4", "[nodev][sync]") {
-    TestSource ts({{0}, {0}, {0}});
-    auto source = [&] (Timeout t, size_t maxSize) { return ts.read(t, maxSize); };
-    auto result = readSync(source, 3, ch::milliseconds(1));
+TEST_CASE("1", "[nodev][read]") {
+    TestSource ts({{1, 2, 3, 4, 5, 6}});
+    Buffer next(0);
+    auto source = [&] (Timeout t, size_t maxRead) { return ts.read(t, maxRead); };
+    auto result = readPacket<Buffer>(source, std::move(next), 6, ch::milliseconds(1));
     REQUIRE(isFail(result));
     REQUIRE(getFailUnsafe(result) == Error::Timeout);
 }
 
-TEST_CASE("5", "[nodev][sync]") {
+TEST_CASE("2", "[nodev][read]") {
+    TestSource ts({{0, 0, 0, 0, 0, 0}});
+    Buffer next(0);
+    const size_t MAX_READ = 6;
+    auto source = [&] (Timeout t, size_t maxRead) { return ts.read(t, maxRead); };
+    auto result = readPacket<Buffer>(source, std::move(next), 6, ch::milliseconds(1));
+    REQUIRE(isFail(result));
+    REQUIRE(getFailUnsafe(result) == Error::Timeout);
+}
+
+TEST_CASE("3", "[nodev][read]") {
+    TestSource ts({{1, 2, 3, 4, 5, 0}});
+    Buffer next(0);
+    auto source = [&] (Timeout t, size_t maxRead) { return ts.read(t, maxRead); };
+    nrcallv(result, fatal, readPacket<Buffer>(source, std::move(next), 6, ch::milliseconds(1)));
+    REQUIRE(result.packet == (Buffer{1, 2, 3, 4, 5}));
+    REQUIRE(result.suffix == Buffer(0));
+}
+
+TEST_CASE("4", "[nodev][read]") {
+    TestSource ts({{0, 1, 2, 0}});
+    Buffer next(0);
+    auto source = [&] (Timeout t, size_t maxRead) { return ts.read(t, maxRead); };
+    nrcallv(b, fatal, readPacket<Buffer>(source, std::move(next), 4, ch::milliseconds(1)));
+    REQUIRE(b.packet == (Buffer{1, 2}));
+    REQUIRE(b.suffix == Buffer(0));
+}
+
+TEST_CASE("5", "[nodev][read]") {
+    TestSource ts({{0, 0}, {0, 1, 2, 0}});
+    Buffer next(0);
+    auto source = [&] (Timeout t, size_t maxRead) { return ts.read(t, maxRead); };
+    nrcallv(b, fatal, readPacket<Buffer>(source, std::move(next), 4, ch::milliseconds(1)));
+    REQUIRE(b.packet == (Buffer{1, 2}));
+    REQUIRE(b.suffix == Buffer(0));
+}
+
+TEST_CASE("6", "[nodev][read]") {
+    TestSource ts({{0, 0}, {0, 1, 2, 0}});
+    Buffer next(0);
+    auto source = [&] (Timeout t, size_t maxRead) { return ts.read(t, maxRead); };
+    nrcallv(b, fatal, readPacket<Buffer>(source, std::move(next), 4, ch::milliseconds(1)));
+    REQUIRE(b.packet == (Buffer{1, 2}));
+    REQUIRE(b.suffix == Buffer(0));
+}
+
+TEST_CASE("7", "[nodev][read]") {
+    TestSource ts({{0, 0}, {0, 1, 2}, {0}});
+    Buffer next(0);
+    auto source = [&] (Timeout t, size_t maxRead) { return ts.read(t, maxRead); };
+    nrcallv(b, fatal, readPacket<Buffer>(source, std::move(next), 3, ch::milliseconds(1)));
+    REQUIRE(b.packet == (Buffer{1, 2}));
+    REQUIRE(b.suffix == Buffer(0));
+}
+
+TEST_CASE("8", "[nodev][read]") {
     TestSource ts({{1}, {1, 2, 3}, {1}});
-    auto source = [&] (Timeout t, size_t maxSize) { return ts.read(t, maxSize); };
-    auto result = readSync(source, 3, ch::milliseconds(1));
+    Buffer next(0);
+    auto source = [&] (Timeout t, size_t maxRead) { return ts.read(t, maxRead); };
+    auto result = readPacket<Buffer>(source, std::move(next), 3, ch::milliseconds(1));
     REQUIRE(isFail(result));
     REQUIRE(getFailUnsafe(result) == Error::Timeout);
 }
 
-TEST_CASE("6", "[nodev][sync]") {
+TEST_CASE("9", "[nodev][read]") {
     TestSource ts({{1}, {1, 0, 3}, {1}});
-    auto source = [&] (Timeout t, size_t maxSize) { return ts.read(t, maxSize); };
-    rcallv(b, fatal, readSync, source, 3, ch::milliseconds(1));
-    Buffer ref{3};
-    REQUIRE(b == ref);
+    Buffer next(0);
+    auto source = [&] (Timeout t, size_t maxRead) { return ts.read(t, maxRead); };
+    nrcallv(b, fatal, readPacket<Buffer>(source, std::move(next), 3, ch::milliseconds(1)));
+    REQUIRE(b.packet == (Buffer{1, 1}));
+    REQUIRE(b.suffix == Buffer{3});
 }
 
-TEST_CASE("7", "[nodev][sync]") {
+TEST_CASE("10", "[nodev][read]") {
     TestSource ts({{1}, {1, 2, 0}, {2}});
-    auto source = [&] (Timeout t, size_t maxSize) { return ts.read(t, maxSize); };
-    rcallv(b, fatal, readSync, source, 3, ch::milliseconds(1));
-    Buffer ref{2};
-    REQUIRE(b == ref);
+    Buffer next(0);
+    auto source = [&] (Timeout t, size_t maxRead) { return ts.read(t, maxRead); };
+    nrcallv(b, fatal, readPacket<Buffer>(source, std::move(next), 3, ch::milliseconds(1)));
+    REQUIRE(b.packet == (Buffer{1, 1, 2}));
+    REQUIRE(b.suffix == Buffer(0));
+}
+
+TEST_CASE("20", "[nodev][read]") {
+    TestSource ts({{1}, {1, 2, 0}, {2, 0}});
+    Buffer next(0);
+    auto source = [&] (Timeout t, size_t maxRead) { return ts.read(t, maxRead); };
+    {
+        nrcallv(b, fatal, readPacket<Buffer>(source, std::move(next), 3, ch::milliseconds(1)));
+        REQUIRE(b.packet == (Buffer{1, 1, 2}));
+        REQUIRE(b.suffix == Buffer(0));
+        next = std::move(b.suffix);
+    }
+    {
+        nrcallv(b, fatal, readPacket<Buffer>(source, std::move(next), 3, ch::milliseconds(1)));
+        REQUIRE(b.packet == (Buffer{2}));
+        REQUIRE(b.suffix == Buffer(0));
+        next = std::move(b.suffix);
+    }
+}
+
+TEST_CASE("21", "[nodev][read]") {
+    TestSource ts({{1}, {1, 2, 0}, {0, 2, 0}});
+    Buffer next(0);
+    auto source = [&] (Timeout t, size_t maxRead) { return ts.read(t, maxRead); };
+    {
+        nrcallv(b, fatal, readPacket<Buffer>(source, std::move(next), 3, ch::milliseconds(1)));
+        REQUIRE(b.packet == (Buffer{1, 1, 2}));
+        REQUIRE(b.suffix == Buffer(0));
+        next = std::move(b.suffix);
+    }
+    {
+        nrcallv(b, fatal, readPacket<Buffer>(source, std::move(next), 3, ch::milliseconds(1)));
+        REQUIRE(b.packet == (Buffer{2}));
+        REQUIRE(b.suffix == Buffer(0));
+        next = std::move(b.suffix);
+    }
 }

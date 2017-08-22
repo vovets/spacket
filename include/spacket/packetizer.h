@@ -4,10 +4,16 @@
 #include <spacket/buffer.h>
 #include <spacket/time_utils.h>
 
-#include <tuple>
+template <typename Buffer>
+using Source = std::function<Result<Buffer>(Timeout t, size_t maxRead)>;
 
-using Source = std::function<Result<Buffer>(Timeout t, size_t maxSize)>;
+template <typename Buffer>
+struct ReadResult {
+    Buffer packet;
+    Buffer suffix;
+};
 
-Result<Buffer> readSync(Source s, size_t maxRead, Timeout t);
+template<typename Buffer>
+Result<ReadResult<Buffer>> readPacket(Source<Buffer> s, Buffer prefix, size_t maxRead, Timeout t);
 
-Result<std::tuple<Buffer, Buffer>> readPacket(Source s, Timeout t);
+#include <spacket/impl/packetizer-impl.h>

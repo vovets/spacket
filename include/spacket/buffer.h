@@ -3,9 +3,9 @@
 #include <memory>
 #include <cstring>
 
-template<typename Allocator, size_t MAX_SIZE = Allocator::maxSize()>
+template<typename Allocator, size_t MAX_SIZE>
 class BufferT {
-    using This = BufferT<Allocator>;
+    using This = BufferT<Allocator, MAX_SIZE>;
     
 public:
     static constexpr size_t maxSize() { return MAX_SIZE; }
@@ -120,8 +120,4 @@ public:
     void deallocate(uint8_t* ptr) {
         ::operator delete[](ptr);
     }
-
-    static constexpr size_t maxSize() { return 1024; }
 };
-
-using Buffer = BufferT<StdAllocator>;

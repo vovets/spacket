@@ -10,6 +10,7 @@
 
 PortConfig fromJson(const std::string& path);
 
+template<typename Buffer>
 class Equals: public Catch::MatcherBase<Buffer> {
 public:
     Equals(const Buffer& reference): reference(reference) {}
@@ -29,20 +30,23 @@ private:
     const Buffer& reference;
 };
 
-inline
-Equals isEqualTo(const Buffer& reference) { return Equals(reference); }
+template<typename Buffer>
+Equals<Buffer> isEqualTo(const Buffer& reference) { return Equals<Buffer>(reference); }
 
-namespace Catch {
-	template<> struct StringMaker<Buffer> {
-    	static std::string convert( Buffer const& value ) {
-            std::ostringstream ss;
-            ss << hr(value);
-        	return ss.str(); 
-        } 
-    }; 
-}
+template<typename Buffer>
+struct StringMakerBase {
+    static std::string convert( Buffer const& value ) {
+        std::ostringstream ss;
+        ss << hr(value);
+        return ss.str();
+    }
+};
 
-inline
+// namespace Catch {
+// template<> struct StringMaker<ConcreteBuffer>: public StringMakerBase<ConcreteBuffer> {}; 
+// }
+
+template<typename Buffer>
 Buffer createTestBuffer(size_t size) {
     Buffer buffer(size);
     auto c = buffer.begin();
@@ -52,16 +56,17 @@ Buffer createTestBuffer(size_t size) {
     return std::move(buffer);
 }
 
-inline
-void fatal(Error e) {
+template<typename Success>
+Result<Success> fatalT(Error e) {
     std::ostringstream ss;
     ss << "fatal error [" << toInt(e) << "]: " << toString(e);
     throw std::runtime_error(ss.str());
 }
 
-class TestSource {
+template<typename Buffer>
+class TestSourceT {
 public:
-    TestSource(std::vector<std::vector<uint8_t>> bs)
+    TestSourceT(std::vector<std::vector<uint8_t>> bs)
         : buffers(init(std::move(bs)))
         , index(0) {
     }

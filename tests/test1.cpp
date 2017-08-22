@@ -18,6 +18,9 @@ std::vector<Baud> bauds = {Baud::B_115200, Baud::B_230400};
 const size_t REPETITIONS = 20;
 const size_t BYTE_TIMEOUT_US = 0;
 
+using Buffer = BufferT<StdAllocator, 1024>;
+auto fatal = fatalT<Buffer>;
+
 template<typename Test>
 void runTest(Test test) {
     for (auto b: bauds) {
@@ -36,10 +39,10 @@ TEST_CASE("read prefix", "[loopback]") {
                     pc.baud = b;
                     pc.byteTimeout_us = BYTE_TIMEOUT_US;
     
-                    rcallv(sd, fatal, SerialDevice::open, pc);
-                    auto wb = createTestBuffer(size);
-                    rcall(fatal, sd.write, wb);
-                    rcallv(rb, fatal, sd.read, ch::seconds(1), MAX_READ);
+                    nrcallv(sd, fatal, SerialDevice::open(pc));
+                    auto wb = createTestBuffer<Buffer>(size);
+                    nrcall(fatal, sd.write(wb));
+                    nrcallv(rb, fatal, sd.read(ch::seconds(1), Buffer(MAX_READ)));
                     CAPTURE(rb);
                     REQUIRE(isPrefix(rb, wb));
                 };
@@ -52,12 +55,12 @@ TEST_CASE("read whole", "[loopback]") {
                     pc.baud = b;
                     pc.byteTimeout_us = BYTE_TIMEOUT_US;
 
-                    rcallv(sd, fatal, SerialDevice::open, pc);
-                    auto wb = createTestBuffer(size);
-                    rcall(fatal, sd.write, wb);
+                    nrcallv(sd, fatal, SerialDevice::open(pc));
+                    auto wb = createTestBuffer<Buffer>(size);
+                    nrcall(fatal, sd.write(wb));
                     Buffer rb(0);
                     while (rb.size() < wb.size()) {
-                        rcallv(tmp, fatal, sd.read, ch::seconds(1), MAX_READ);
+                        nrcallv(tmp, fatal, sd.read(ch::seconds(1), Buffer(MAX_READ)));
                         CAPTURE(tmp);
                         if (!rb.size()) {
                             REQUIRE(isPrefix(tmp, wb));
@@ -76,12 +79,12 @@ TEST_CASE("timeout", "[loopback]") {
                     pc.baud = b;
                     pc.byteTimeout_us = BYTE_TIMEOUT_US;
 
-                    rcallv(sd, fatal, SerialDevice::open, pc);
-                    auto wb = createTestBuffer(size);
-                    rcall(fatal, sd.write, wb);
+                    nrcallv(sd, fatal, SerialDevice::open(pc));
+                    auto wb = createTestBuffer<Buffer>(size);
+                    nrcall(fatal, sd.write(wb));
                     Buffer rb(0);
                     while (rb.size() < wb.size()) {
-                        rcallv(tmp, fatal, sd.read, ch::seconds(1), MAX_READ);
+                        nrcallv(tmp, fatal, sd.read(ch::seconds(1), Buffer(MAX_READ)));
                         CAPTURE(tmp);
                         if (!rb.size()) {
                             REQUIRE(isPrefix(tmp, wb));
@@ -89,7 +92,7 @@ TEST_CASE("timeout", "[loopback]") {
                         rb = rb + tmp;
                     }
                     REQUIRE_THAT(rb, isEqualTo(wb));
-                    auto tmp = sd.read(ch::milliseconds(10), MAX_READ);
+                    auto tmp = sd.read(ch::milliseconds(10), Buffer(MAX_READ));
                     REQUIRE(isFail(tmp));
                     REQUIRE(getFailUnsafe(tmp) == Error::Timeout);
                 };
