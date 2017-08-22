@@ -14,6 +14,14 @@ struct ReadResult {
 };
 
 template<typename Buffer>
+Result<ReadResult<Buffer>> readPacket(
+    Source<Buffer> s,
+    Buffer next,
+    size_t maxRead,
+    size_t maxPacketSize,
+    Timeout t);
+
+template<typename Buffer>
 Result<ReadResult<Buffer>> readPacket(Source<Buffer> s, Buffer prefix, size_t maxRead, Timeout t);
 
 #include <spacket/impl/packetizer-impl.h>

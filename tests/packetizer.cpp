@@ -136,3 +136,19 @@ TEST_CASE("21", "[nodev][read]") {
         next = std::move(b.suffix);
     }
 }
+
+TEST_CASE("30", "[nodev][read]") {
+    TestSource ts({{1}, {2, 3, 4}, {5, 6, 0}});
+    auto source = [&] (Timeout t, size_t maxRead) { return ts.read(t, maxRead); };
+    auto r = readPacket<Buffer>(source, Buffer(0), 3, 5, ch::milliseconds(1));
+    REQUIRE(isFail(r));
+    REQUIRE(getFailUnsafe(r) == Error::PacketTooBig);
+}
+
+TEST_CASE("31", "[nodev][read]") {
+    TestSource ts({{1}, {2, 3, 4}, {5, 6, 0}});
+    auto source = [&] (Timeout t, size_t maxRead) { return ts.read(t, maxRead); };
+    nrcallv(r, fatal, readPacket<Buffer>(source, Buffer(0), 3, 6, ch::milliseconds(1)));
+    REQUIRE(r.packet == (Buffer{1, 2, 3, 4, 5, 6}));
+    REQUIRE(r.suffix == Buffer(0));
+}

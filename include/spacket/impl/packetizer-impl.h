@@ -1,16 +1,33 @@
 #pragma once
 
 template<typename Buffer>
-Result<ReadResult<Buffer>> readPacket(Source<Buffer> s, Buffer next, size_t maxRead, Timeout t) {
+Result<ReadResult<Buffer>> readPacket(
+    Source<Buffer> s,
+    Buffer next,
+    size_t maxRead,
+    Timeout t)
+{
+    return readPacket<Buffer>(
+        std::move(s), std::move(next), maxRead, Buffer::maxSize(), t);
+}
+
+template<typename Buffer>
+Result<ReadResult<Buffer>> readPacket(
+    Source<Buffer> s,
+    Buffer next,
+    size_t maxRead,
+    size_t maxPacketSize,
+    Timeout t)
+{
     auto f = idFail<ReadResult<Buffer>>;
     auto deadline = Clock::now() + t;
-    Buffer packet(Buffer::maxSize());
+    Buffer packet(maxPacketSize);
     uint8_t* c = packet.begin();
 
     enum AppendResult {
         Finished,
         TooBig,
-        Continue
+        Continue,
     };
         
     auto skipZeroes = [&](Buffer b) {
