@@ -59,7 +59,7 @@ Buffer createTestBuffer(size_t size) {
 template<typename Success>
 Result<Success> fatalT(Error e) {
     std::ostringstream ss;
-    ss << "fatal error [" << toInt(e) << "]: " << toString(e);
+    ss << "fatal error " << toInt(e) << ":" << toString(e);
     throw std::runtime_error(ss.str());
 }
 

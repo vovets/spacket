@@ -22,6 +22,7 @@ public:
     size_t size() const;
     BufferT prefix(size_t size) const;
     BufferT suffix(uint8_t* begin) const;
+    BufferT copy() const { return prefix(size()); }
     
 private:
     struct Deleter{

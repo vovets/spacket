@@ -11,18 +11,22 @@ configure_file(
     "${CMAKE_CURRENT_BINARY_DIR}/build_config.cpp"
 )
 
-add_library(utils utils.cpp "${CMAKE_CURRENT_BINARY_DIR}/build_config.cpp")
+add_library(utils utils.cpp catch_main.cpp "${CMAKE_CURRENT_BINARY_DIR}/build_config.cpp")
 
 target_link_libraries(utils spacket)
 
-add_executable(test1 test1.cpp test1_main.cpp)
+add_executable(test1 test1.cpp)
 
 #target_link_libraries(test1 spacket utils ${Boost_LIBRARIES})
 
 target_link_libraries(test1 spacket utils)
 
-add_executable(test_packetizer packetizer.cpp packetizer_main.cpp)
+add_executable(test_packetizer packetizer.cpp)
 
 target_link_libraries(test_packetizer spacket utils)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
+add_executable(test_cobs cobs.cpp)
+
+target_link_libraries(test_cobs spacket utils)
