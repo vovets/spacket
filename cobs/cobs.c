@@ -3,75 +3,65 @@
 
 
 /* Returns the number of bytes written to "output".
- * Output must be at least length + length / 254 bytes long.
+ * Output must be at least length + length / 254 + 1 bytes long.
  *
  */
 size_t stuff(const uint8_t * restrict readPtr, size_t size, uint8_t * restrict output) {
-    size_t chunkWritten = 0;
+    size_t chunkRead = 0;
     uint8_t* writePtr = output;
     uint8_t* codePtr = output;
     const uint8_t* end = readPtr + size;
     for (; readPtr < end; ++readPtr) {
-        if (!chunkWritten) {
+        if (!chunkRead) {
             if (*readPtr == 0) {
                 *writePtr++ = 1;
             } else {
                 codePtr = writePtr++;
                 *writePtr++ = *readPtr;
-                chunkWritten = 2;
+                chunkRead = 1;
             }
         } else {
             if (*readPtr == 0) {
-                *codePtr = chunkWritten;
-                chunkWritten = 0;
+                *codePtr = chunkRead + 1;
+                chunkRead = 0;
             } else {
+                if (chunkRead == 254) {
+                    *codePtr = 255;
+                    chunkRead = 0;
+                    codePtr = writePtr++;
+                }
                 *writePtr++ = *readPtr;
-                ++chunkWritten;
+                ++chunkRead;
             }
         }
     }
-    if (chunkWritten) {
-        *codePtr = chunkWritten;
+    if (chunkRead) {
+        *codePtr = chunkRead + 1;
+    } else {
+        *writePtr++ = 1;
     }
     return writePtr - output;
 }
 
-/* Unstuffs "length" bytes of data at the location pointed to by
- * "input", writing the output * to the location pointed to by
- * "output". Returns the number of bytes written to "output" if
- * "input" was successfully unstuffed, and 0 if there was an
- * error unstuffing "input".
- *
- * Remove the "restrict" qualifiers if compiling with a
- * pre-C99 C dialect.
+/* Returns the number of bytes written to "output" if
+ * buffer was successfully unstuffed, and 0 if there was an
+ * error unstuffing buffer.
+ * No zero bytes allowed in buffer pointed to by "readPtr".
  */
-size_t cobs_decode(const uint8_t * restrict input, size_t length, uint8_t * restrict output)
+size_t unstuff(const uint8_t* restrict readPtr, size_t size, uint8_t* restrict output)
 {
-    size_t read_index = 0;
-    size_t write_index = 0;
-    uint8_t code;
-    uint8_t i;
-
-    while(read_index < length)
-    {
-        code = input[read_index];
-
-        if(read_index + code >= length && code != 1)
-        {
-            return 0;
+    const uint8_t* end = readPtr + size;
+    uint8_t* writePtr = output;
+    while (readPtr < end) {
+        uint8_t code = *readPtr;
+        ++readPtr;
+        for (uint8_t toCopy = code - 1; toCopy; --toCopy) {
+            if (readPtr >= end) { return 0; }
+            *writePtr++ = *readPtr++;
         }
-
-        ++read_index;
-
-        for(i = 1; i < code; i++)
-        {
-            output[write_index++] = input[read_index++];
-        }
-        if((code != 0xFF && read_index != length) || code == 1)
-        {
-            output[write_index++] = '\0';
+        if (readPtr < end && code != 255) {
+            *writePtr++ = 0;
         }
     }
-
-    return write_index;
+    return writePtr - output;
 }
