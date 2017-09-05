@@ -1,8 +1,7 @@
 #pragma once
 
 #include <spacket/result.h>
-
-#include "cobs/cobs.h"
+#include <spacket/cobs/cobs.h>
 
 namespace cobs {
 
