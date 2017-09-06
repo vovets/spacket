@@ -4,3 +4,7 @@
 [submodule "catch"]
 	path = catch
 	url = https://github.com/philsquared/Catch.git
+[submodule "chibios"]
+	path = chibios
+	url = https://github.com/ChibiOS/ChibiOS.git
+	branch = stable_17.6.x
