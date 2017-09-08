@@ -6,5 +6,5 @@
 	url = https://github.com/philsquared/Catch.git
 [submodule "chibios"]
 	path = chibios
-	url = https://github.com/ChibiOS/ChibiOS.git
+	url = git@github.com:vovets/ChibiOS.git
 	branch = stable_17.6.x
