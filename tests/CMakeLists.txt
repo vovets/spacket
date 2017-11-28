@@ -32,3 +32,9 @@ target_link_libraries(test_packetizer spacket utils)
 
 add_executable(test_cobs cobs.cpp)
 target_link_libraries(test_cobs spacket utils)
+
+add_test(1 test1)
+
+add_test(packetizer test_packetizer)
+
+add_test(cobs test_cobs)
