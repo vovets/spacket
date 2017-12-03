@@ -4,3 +4,8 @@ gt_add_sources(
   errors.cpp
   cobs/cobs.c
   )
+
+gt_add_include_directories(
+  .
+  include
+  )

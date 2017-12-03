@@ -10,9 +10,8 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
 
-gt_include(COMMON_SRCS ../lib)
-gt_include(PLATFORM_SRCS ../lib/linux)
+add_library(spacket "")
 
-include_directories(../lib ../lib/include)
+gt_include(spacket ../lib/sources.cmake)
+gt_include(spacket ../lib/linux/sources.cmake)
 
-add_library(spacket ${COMMON_SRCS} ${PLATFORM_SRCS})
