@@ -37,23 +37,6 @@ typedef struct {
     _rtt_stream_data
 } RTTStream;
 
-static msg_t rtt_put(void *ip, uint8_t b) {
-    RTTStream* s = (RTTStream*)ip;
-    if (streamWrite(s, &b, 1) != 1) {
-        return MSG_RESET;
-    }
-    return MSG_OK;
-}
-
-static msg_t rtt_get(void *ip) {
-    uint8_t b;
-    RTTStream* s = (RTTStream*)ip;
-    if (streamRead(s, &b, 1) != 1) {
-        return MSG_RESET;
-    }
-    return b;
-}
-
 static size_t rtt_write(void *ip, const uint8_t *bp, size_t n) {
     (void)ip;
     return SEGGER_RTT_Write(0, bp, n);
@@ -62,6 +45,21 @@ static size_t rtt_write(void *ip, const uint8_t *bp, size_t n) {
 static size_t rtt_read(void *ip, uint8_t *bp, size_t n) {
     (void)ip;
     return SEGGER_RTT_Read(0, bp, n);
+}
+
+static msg_t rtt_put(void *ip, uint8_t b) {
+    if (rtt_write(ip, &b, 1) != 1) {
+        return MSG_RESET;
+    }
+    return MSG_OK;
+}
+
+static msg_t rtt_get(void *ip) {
+    uint8_t b;
+    if (rtt_read(ip, &b, 1) != 1) {
+        return MSG_RESET;
+    }
+    return b;
 }
 
 static const struct RTTStreamVMT rtt_vmt = {rtt_write, rtt_read, rtt_put, rtt_get};
@@ -80,38 +78,6 @@ static void RTTStreamObjectInit(RTTStream *s) {
 /*===========================================================================*/
 
 #define TEST_WA_SIZE    THD_WORKING_AREA_SIZE(256)
-
-static void cmd_mem(BaseSequentialStream *chp, int argc, char *argv[]) {
-    size_t n, size, largest;
-
-  (void)argv;
-  if (argc > 0) {
-    chprintf(chp, "Usage: mem\r\n");
-    return;
-  }
-  n = chHeapStatus(NULL, &size, &largest);
-  chprintf(chp, "core free memory : %u bytes\r\n", chCoreGetStatusX());
-  chprintf(chp, "heap fragments   : %u\r\n", n);
-  chprintf(chp, "heap free total  : %u bytes\r\n", size);
-  chprintf(chp, "heap largest     : %u bytes\r\n", largest);
-}
-
-static void cmd_test(BaseSequentialStream *chp, int argc, char *argv[]) {
-  thread_t *tp;
-
-  (void)argv;
-  if (argc > 0) {
-    chprintf(chp, "Usage: test\r\n");
-    return;
-  }
-  tp = chThdCreateFromHeap(NULL, TEST_WA_SIZE, "test", chThdGetPriorityX(),
-      (tfunc_t)test_execute, chp);
-  if (tp == NULL) {
-    chprintf(chp, "out of memory\r\n");
-    return;
-  }
-  chThdWait(tp);
-}
 
 static void cmd_write(BaseSequentialStream *chp, int argc, char *argv[]) {
   static uint8_t buf[] =
@@ -145,8 +111,6 @@ static void cmd_write(BaseSequentialStream *chp, int argc, char *argv[]) {
 }
 
 static const ShellCommand commands[] = {
-  {"mem", cmd_mem},
-  {"test", cmd_test},
   {"write", cmd_write},
   {NULL, NULL}
 };
@@ -163,18 +127,17 @@ static const ShellConfig shell_cfg1 = {
 /*
  * Blinker thread, times are in milliseconds.
  */
-static THD_WORKING_AREA(waThread1, 128);
+static THD_WORKING_AREA(waThread1, 160);
 static __attribute__((noreturn)) THD_FUNCTION(Thread1, arg) {
-
   (void)arg;
   chRegSetThreadName("blinker");
   while (true) {
     const systime_t time = 250;
     palClearPad(GPIOC, GPIOC_LED);
-    chprintf(rttStream, "flip!\n");
+    chprintf(rttStream, "flip O\n\r");
     chThdSleepMilliseconds(time);
     palSetPad(GPIOC, GPIOC_LED);
-    chprintf(rttStream, "flop!\n");
+    chprintf(rttStream, "flop *\n\r");
     chThdSleepMilliseconds(time);
   }
 }
@@ -197,7 +160,7 @@ int __attribute__((noreturn)) main(void) {
 
   RTTStreamObjectInit(&rttStream_);
 
-  chprintf(rttStream, "Hello from RTT!\n");
+  chprintf(rttStream, "Hello from RTT!\n\r");
   
   /*
    * Initializes a serial driver.

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(blinker C CXX ASM)
 
-list(APPEND CMAKE_MODULE_PATH ../cmake)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../cmake")
 
 include(gather)
 include(chibios)
@@ -10,26 +10,53 @@ set(GATHER_DEBUG FALSE)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
 
-set(mc_flags -mcpu=cortex-m3)
-set(thumb_flags -mthumb -DTHUMB)
+set(CH_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}/../chibios")
+set(CH_MCU_NAME STM32F103x8)
+set(CH_LINKER_LIBRARY_PATH "${CH_ROOT_DIR}/os/common/startup/ARMCMx/compilers/GCC/ld")
+set(CH_LINKER_SCRIPT "${CH_LINKER_LIBRARY_PATH}/${CH_MCU_NAME}.ld")
+set(CH_CPU cortex-m3)
+
+set(mc_flags -mcpu=${CH_CPU})
+set(thumb_flags -mthumb -mno-thumb-interwork)
+set(thumb_defs -DTHUMB -DTHUMB_NO_INTERWORKING)
+set(debug_flags -ggdb)
 set(c_warn_flags -Wall -Wextra -Wundef -Wstrict-prototypes)
 set(cxx_warn_flags -Wall -Wextra -Wundef -Wno-literal-suffix)
+set(cxx_features_flags -fno-exceptions -fno-rtti)
+set(debug_optimization_flags -O0)
+set(release_optimization_flags -O2 -s)
+set(linker_flags
+  "${mc_flags}"
+  "${thumb_flags}"
+  -nostartfiles
+  -ffunction-sections -fdata-sections -fno-common
+  -flto
+  "-Wl,--library-path,${CH_LINKER_LIBRARY_PATH}"
+  "-Wl,--script,${CH_LINKER_SCRIPT}"
+  -Wl,--defsym,__main_stack_size__=0x400
+  -Wl,--defsym,__process_stack_size__=0x400
+  -Wl,--gc-sections
+  )
 
 add_compile_options(
   "${mc_flags}"
   "${thumb_flags}"
+  "${debug_flags}"
   "$<$<COMPILE_LANGUAGE:C>:${c_warn_flags}>"
-  "$<$<COMPILE_LANGUAGE:CXX>:${cxx_warn_flags}>")
+  "$<$<COMPILE_LANGUAGE:CXX>:${cxx_warn_flags}>"
+  "$<$<COMPILE_LANGUAGE:CXX>:${cxx_features_flags}>"
+  "$<$<CONFIG:Debug>:${debug_optimization_flags}>"
+  "$<$<CONFIG:Release>:${release_optimization_flags}>"
+  )
 
-set(CH_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}/../chibios")
-set(CH_USE_LINK_GC TRUE)
-set(CH_USE_LTO TRUE)
+add_definitions(
+  ${thumb_defs}
+  )
 
-add_executable(blinker "")
+add_executable(fw "")
 
-ch_include(blinker
+ch_include(fw
   /os/common/startup/ARMCMx/compilers/GCC/mk/startup_stm32f1xx.cmake
   /os/common/ports/ARMCMx/compilers/GCC/mk/port_v7m.cmake
   /os/hal/hal.cmake
@@ -42,25 +69,19 @@ ch_include(blinker
   board/sources.cmake
   )
 
-target_include_directories(blinker PUBLIC
+target_include_directories(fw PUBLIC
   conf
   ${CH_ROOT_DIR}/os/license
   ../SEGGER_RTT_V614c/RTT
   )
 
-target_sources(blinker PRIVATE
+target_sources(fw PRIVATE
   main.cpp
   ../SEGGER_RTT_V614c/RTT/SEGGER_RTT.c
   )
 
-set(LDSCRIPT "${CHIBIOS_ROOT}/os/common/startup/ARMCMx/compilers/GCC/ld/STM32f103x8.ld")
+ch_add_linker_flags(fw "${linker_flags}")
 
-# if(CH_USE_LINK_GC)
-#   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ffunction-sections -fdata-sections -fno-common")
-#   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffunction-sections -fdata-sections -fno-common")
-# endif()
+ch_add_hex_bin_targets(fw)
 
-# if(CH_USE_LTO)
-#   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -flto")
-#   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flto")
-# endif()
+ch_add_size_output(fw)
