@@ -1,10 +1,10 @@
 [submodule "json"]
-	path = json
+	path = external/json
 	url = https://github.com/nlohmann/json.git
 [submodule "catch"]
-	path = catch
+	path = external/catch
 	url = https://github.com/philsquared/Catch.git
 [submodule "chibios"]
-	path = chibios
+	path = external/chibios
 	url = git@github.com:vovets/ChibiOS.git
 	branch = stable_17.6.x

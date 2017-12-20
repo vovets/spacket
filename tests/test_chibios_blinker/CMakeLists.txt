@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 3.5)
 project(blinker C CXX ASM)
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../cmake")
+get_filename_component(SPACKET_ROOT ../.. ABSOLUTE)
+set(SPACKET_EXT "${SPACKET_ROOT}/external")
+
+list(APPEND CMAKE_MODULE_PATH "${SPACKET_ROOT}/cmake")
 
 include(gather)
 include(chibios)
@@ -11,7 +14,7 @@ set(GATHER_DEBUG FALSE)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(CH_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}/../chibios")
+set(CH_ROOT_DIR "${SPACKET_EXT}/chibios")
 set(CH_MCU_NAME STM32F103x8)
 set(CH_LINKER_LIBRARY_PATH "${CH_ROOT_DIR}/os/common/startup/ARMCMx/compilers/GCC/ld")
 set(CH_LINKER_SCRIPT "${CH_LINKER_LIBRARY_PATH}/${CH_MCU_NAME}.ld")
@@ -72,12 +75,12 @@ ch_include(fw
 target_include_directories(fw PUBLIC
   conf
   ${CH_ROOT_DIR}/os/license
-  ../SEGGER_RTT_V614c/RTT
+  "${SPACKET_EXT}/SEGGER_RTT_V614c/RTT"
   )
 
 target_sources(fw PRIVATE
   main.cpp
-  ../SEGGER_RTT_V614c/RTT/SEGGER_RTT.c
+  "${SPACKET_EXT}/SEGGER_RTT_V614c/RTT/SEGGER_RTT.c"
   )
 
 ch_add_linker_flags(fw "${linker_flags}")
