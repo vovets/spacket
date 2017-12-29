@@ -1,0 +1,6 @@
+speed 10000
+r
+loadfile ${jlink_flash_hex}
+r
+go
+exit

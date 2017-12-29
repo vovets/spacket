@@ -1,0 +1,26 @@
+do_cleanup() {
+    echo $1: killing $2 && kill $2
+}
+
+handler() {
+    local pid=$PID
+    PID=""
+    [ -n "$pid" ] && do_cleanup $1 $pid
+}
+
+for reason in INT TERM EXIT; do
+    trap "handler $reason" $reason
+done
+
+run_test() {
+    echo "Hello!"
+    false
+}
+
+${JLINK_RTT_COMMAND} >jlink.out & PID=$!
+
+sleep 1
+[ -n "$PID" ]
+egrep -q -e "identified.$" jlink.out
+
+run_test
