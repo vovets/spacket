@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(blinker C CXX ASM)
 
-get_filename_component(SPACKET_ROOT ../.. ABSOLUTE)
+get_filename_component(SPACKET_ROOT ../../.. ABSOLUTE)
 set(SPACKET_EXT "${SPACKET_ROOT}/external")
 
 list(APPEND CMAKE_MODULE_PATH "${SPACKET_ROOT}/cmake")
