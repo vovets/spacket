@@ -26,7 +26,7 @@ function(fw_tests_add_fw_subdirectory name source_dir)
   fw_tests_add_flash_target("${name}")
 endfunction()
 
-function(fw_tests_add_jlink_test test_name)
+function(fw_tests_add_jlink_test test_name fw_project)
   set(jlink_test_wrapper ${CMAKE_CURRENT_BINARY_DIR}/jlink_test_wrapper.sh)
   configure_file(jlink_test_wrapper.sh.in ${jlink_test_wrapper})
   add_test(NAME ${test_name}

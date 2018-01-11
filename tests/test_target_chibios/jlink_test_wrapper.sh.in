@@ -1,5 +1,7 @@
+#!/bin/sh -e
+
 do_cleanup() {
-    echo $1: killing $2 && kill $2
+    echo $1 trap: killing RTT server with pid $2 && kill $2
 }
 
 handler() {
@@ -13,14 +15,26 @@ for reason in INT TERM EXIT; do
 done
 
 run_test() {
-    echo "Hello!"
-    false
+    echo "Running test..."
+    true
 }
 
-${JLINK_RTT_COMMAND} >jlink.out & PID=$!
+echo "Flashing fw..."
+${CMAKE_COMMAND} --build ${CMAKE_CURRENT_BINARY_DIR} --target ${fw_project}_flash
 
-sleep 1
+echo "Starting RTT server..."
+${JLINK_RTT_COMMAND} >jlink_rtt.out & PID=$!
+
 [ -n "$PID" ]
-egrep -q -e "identified.$" jlink.out
+
+echo -n "Waiting for RTT server to connect to target"
+for attempt in 1 2 3 4 5 6 7 8 9 last; do
+    echo -n .
+    sleep 0.1
+    egrep -q -e "identified.$" jlink_rtt.out && break
+done
+echo
+
+[ $attempt = last ] && echo "Failed to connect to target" && false
 
 run_test
