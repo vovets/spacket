@@ -27,4 +27,4 @@ util_join_cl(JLINK_RTT_COMMAND
   )
 
 fw_tests_add_fw_subdirectory(test_target_chibios "${CMAKE_CURRENT_SOURCE_DIR}/fw")
-fw_tests_add_jlink_test(chibios test_target_chibios)
+fw_tests_add_jlink_test(chibios test_target_chibios "${CMAKE_CURRENT_SOURCE_DIR}/test.sh")

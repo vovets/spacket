@@ -16,7 +16,7 @@ done
 
 run_test() {
     echo "Running test..."
-    true
+    ${host_test_executable}
 }
 
 echo "Flashing fw..."
