@@ -11,7 +11,9 @@
     X(BAUD(9600), SEP())                        \
     X(BAUD(38400), SEP())                       \
     X(BAUD(115200), SEP())                      \
-    X(BAUD(230400), )
+    X(BAUD(230400), SEP())                      \
+    X(BAUD(460800), SEP())                      \
+    X(BAUD(921600), )
 #endif
 
 enum class Baud: size_t {

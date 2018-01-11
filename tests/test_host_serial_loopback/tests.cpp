@@ -14,8 +14,11 @@
 
 const size_t MAX_READ = 1024;
 std::vector<size_t> sizes = {100, 200, 300, 400, 500, 600, 700, 800, 1000, 2000, 4096};
-std::vector<Baud> bauds = {Baud::B_115200, Baud::B_230400};
-const size_t REPETITIONS = 20;
+// std::vector<Baud> bauds = {Baud::B_115200};
+// std::vector<Baud> bauds = {Baud::B_230400};
+// std::vector<Baud> bauds = {Baud::B_460800};
+std::vector<Baud> bauds = {Baud::B_921600};
+const size_t REPETITIONS = 10;
 const size_t BYTE_TIMEOUT_US = 0;
 
 using Buffer = BufferT<StdAllocator, 1024>;
