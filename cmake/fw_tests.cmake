@@ -5,7 +5,7 @@ function(fw_tests_add_flash_target fw_project)
 
   set(jlink_flash_hex "${BINARY_DIR}/fw.hex")
   set(jlink_flash_commandfile "${BINARY_DIR}/flash.jlink")
-  configure_file(flash.jlink.in "${jlink_flash_commandfile}")
+  configure_file("${SPACKET_ROOT}/tests/misc/flash.jlink.in" "${jlink_flash_commandfile}")
   set(target "${fw_project}_flash")
   add_custom_target(${target}
     ${JLINK_EXE} ${JLINK_CONNECT_OPTIONS} ${JLINK_FLASH_OPTIONS} -commandfile ${jlink_flash_commandfile}
@@ -28,7 +28,7 @@ endfunction()
 
 function(fw_tests_add_jlink_test test_name fw_project host_test_executable)
   set(jlink_test_wrapper ${CMAKE_CURRENT_BINARY_DIR}/jlink_test_wrapper.sh)
-  configure_file(jlink_test_wrapper.sh.in ${jlink_test_wrapper})
+  configure_file("${SPACKET_ROOT}/tests/misc/jlink_test_wrapper.sh.in" ${jlink_test_wrapper})
   add_test(NAME ${test_name}
     COMMAND sh -e ${jlink_test_wrapper}
     )

@@ -4,7 +4,7 @@
 #include <spacket/buffer.h>
 #include <spacket/buffer_utils.h>
 #include <spacket/time_utils.h>
-#include <spacket/config.h>
+#include <spacket/port_config.h>
 
 #include <catch.hpp>
 

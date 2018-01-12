@@ -1,6 +1,6 @@
 #pragma once
 
-#include <spacket/config.h>
+#include <spacket/port_config.h>
 #include <spacket/result.h>
 
 #include <boost/program_options.hpp>

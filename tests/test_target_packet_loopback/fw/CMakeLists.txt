@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(blinker C CXX ASM)
+project(packet_loopback C CXX ASM)
 
 get_filename_component(SPACKET_ROOT ../../.. ABSOLUTE)
 set(SPACKET_EXT "${SPACKET_ROOT}/external")
@@ -55,6 +55,7 @@ add_compile_options(
 
 add_definitions(
   ${thumb_defs}
+  -DSHELL_CONFIG_FILE
   )
 
 add_executable(fw "")
@@ -68,7 +69,6 @@ ch_include(fw
   /os/hal/lib/streams/streams.cmake
   /os/rt/rt.cmake
   /os/various/shell/shell.cmake
-  /test/rt/test.cmake
   )
 
 gt_include(fw

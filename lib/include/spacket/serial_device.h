@@ -1,9 +1,9 @@
 #pragma once
 
-#include "result.h"
-#include "config.h"
-#include "time_utils.h"
-#include "buffer.h"
+#include <spacket/result.h>
+#include <spacket/port_config.h>
+#include <spacket/time_utils.h>
+#include <spacket/buffer.h>
 
 #include <memory>
 

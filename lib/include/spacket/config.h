@@ -2,7 +2,7 @@
 
 #include <spacket/macro_utils.h>
 
-#include <string>
+#include <cstdint>
 
 #ifdef BAUD_LIST
 #error macro BAUD_LIST already defined
@@ -16,7 +16,7 @@
     X(BAUD(921600), )
 #endif
 
-enum class Baud: size_t {
+enum class Baud: std::size_t {
     NonStandard = 0,
 #define BAUD(X) B_##X = X // underscore used to not clash with BNNNN defines from termios.h
 #define X(BAUD, SEP) BAUD SEP
@@ -25,16 +25,10 @@ enum class Baud: size_t {
 #undef BAUD
 };
 
-Baud fromInt(size_t b);
+Baud fromInt(std::size_t b);
 
 inline
 constexpr
-size_t toInt(Baud b) {
-    return static_cast<size_t>(b);
+std::size_t toInt(Baud b) {
+    return static_cast<std::size_t>(b);
 }
-
-struct PortConfig {
-    std::string device;
-    Baud baud;
-    size_t byteTimeout_us; // 0 means 2 * byte interval according to baud
-};

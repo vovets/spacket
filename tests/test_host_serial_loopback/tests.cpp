@@ -1,7 +1,7 @@
 #include "namespaces.h"
 #include "utils.h"
 #include "build_config.h"
-#include <spacket/config.h>
+#include <spacket/port_config.h>
 #include <spacket/config_utils.h>
 #include <spacket/errors.h>
 #include <spacket/serial_device.h>
