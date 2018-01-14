@@ -1,4 +1,6 @@
 build/**
 eclipse/**
+external/boost_1_66_0/**
+tmp/**
 \#*\#
 .#*

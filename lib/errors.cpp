@@ -2,21 +2,13 @@
 
 #include <boost/preprocessor/stringize.hpp>
 
-#include <iostream>
-#include <unordered_map>
-
-static const std::unordered_map<typename std::underlying_type<Error>::type, std::string> errorToString{
-#define X(ID, CODE, SEP) { CODE, ID } SEP
+const char* toString(Error e) {
+    switch (e) {
+#define X(ID, CODE, SEP) case Error::ID: return CODE ":" STR(ID);
 #define STR(X) BOOST_PP_STRINGIZE(X)
-    ERROR_LIST(STR, ID, SEP_COMMA)
+        ERROR_LIST(ID, STR, ID)
 #undef X
 #undef STR
-};
-
-std::string toString(Error e) {
-    auto it = errorToString.find(toInt(e));
-    if (it == errorToString.end()) {
-        return { "no such error defined, something went terribly wrong" };
+        default: return "Unknown error";
     }
-    return it->second;
 }

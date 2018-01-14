@@ -39,7 +39,7 @@ struct SerialDevice::Impl {
 };
 
 SerialDevice::SerialDevice(ImplPtr p): impl(std::move(p)) {}
-SerialDevice::SerialDevice(SerialDevice&& other): impl(std::move(other.impl)) {}
+SerialDevice::SerialDevice(SerialDevice&& r): impl(std::move(r.impl)) {}
 SerialDevice::~SerialDevice() {}
 
 Result<SerialDevice> SerialDevice::open(PortConfig portConfig) {

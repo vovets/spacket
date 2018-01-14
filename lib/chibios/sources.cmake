@@ -4,6 +4,5 @@ gt_add_sources(
   )
 
 gt_add_include_directories(
-  .
   include
   )

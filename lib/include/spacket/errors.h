@@ -3,7 +3,6 @@
 #include <spacket/macro_utils.h>
 
 #include <type_traits>
-#include <string>
 
 #ifdef ERROR_LIST
 #error "ERROR_LIST macro should not be defined here"
@@ -29,4 +28,4 @@ constexpr typename std::underlying_type<Error>::type toInt(Error e) noexcept {
     return static_cast<typename std::underlying_type<Error>::type>(e);
 }
 
-std::string toString(Error e);
+const char* toString(Error e);

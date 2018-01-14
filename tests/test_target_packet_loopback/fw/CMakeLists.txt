@@ -13,6 +13,8 @@ set(GATHER_DEBUG FALSE)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 
 set(CH_ROOT_DIR "${SPACKET_EXT}/chibios")
 set(CH_MCU_NAME STM32F103x8)
@@ -27,7 +29,7 @@ set(debug_flags -ggdb)
 set(c_warn_flags -Wall -Wextra -Wundef -Wstrict-prototypes)
 set(cxx_warn_flags -Wall -Wextra -Wundef -Wno-literal-suffix)
 set(cxx_features_flags -fno-exceptions -fno-rtti)
-set(debug_optimization_flags -O0)
+set(debug_optimization_flags -Og)
 set(release_optimization_flags -O2 -s)
 set(linker_flags
   "${mc_flags}"
@@ -56,6 +58,7 @@ add_compile_options(
 add_definitions(
   ${thumb_defs}
   -DSHELL_CONFIG_FILE
+  -DBOOST_STRICT_CONFIG
   )
 
 add_executable(fw "")
@@ -72,12 +75,16 @@ ch_include(fw
   )
 
 gt_include(fw
-  "${SPACKET_ROOT}/tests/target_boards/STM32F103C8_MINIMAL/sources.cmake")
+  "${SPACKET_ROOT}/tests/target_boards/STM32F103C8_MINIMAL/sources.cmake"
+  "${SPACKET_ROOT}/lib/sources.cmake"
+  "${SPACKET_ROOT}/lib/chibios/sources.cmake"
+  )
 
 target_include_directories(fw PUBLIC
   conf
   ${CH_ROOT_DIR}/os/license
   "${SPACKET_EXT}/SEGGER_RTT_V614c/RTT"
+  "${SPACKET_EXT}/boost_1_66_0"
   )
 
 target_sources(fw PRIVATE

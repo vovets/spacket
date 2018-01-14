@@ -1,12 +1,11 @@
 #pragma once
 
-#include "errors.h"
+#include <spacket/errors.h>
+#include <spacket/fatal_error.h>
 
 #include <boost/variant.hpp>
 #include <boost/mpl/at.hpp>
 #include <boost/preprocessor/cat.hpp>
-
-#include <iostream>
 
 template <typename Success>
 using Result = boost::variant<Error, Success>;
@@ -38,10 +37,8 @@ template <typename Result>
 SuccessT<Result> getOkLoc(Result& r, const char* file, int line) {
     auto p = boost::get<SuccessT<Result>>(&r);
     if (!p) {
-        std::cerr                                              
-            << "getOk called upon error result at: " 
-            << file << ":" << line;                
-        exit(1); }
+        fatalError("getOk called upon error result", file, line);
+    }
     return std::move(*p);
 }
 
@@ -54,10 +51,8 @@ template <typename Result>
 ErrorT<Result> getFailLoc(Result& r, const char* file, int line) {
     auto p = boost::get<ErrorT<Result>>(&r);
     if (!p) {
-        std::cerr                                              
-            << "getFail called upon success result at: " 
-            << file << ":" << line;                
-        exit(1); }
+        fatalError("getFail called upon success result", file, line);
+    }
     return std::move(*p);
 }
 
