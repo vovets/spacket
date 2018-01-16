@@ -6,6 +6,8 @@
 #include <spacket/errors.h>
 #include <spacket/serial_device.h>
 #include <spacket/buffer_utils.h>
+#include <spacket/bind.h>
+#include <spacket/result_utils.h>
 
 #include <catch.hpp>
 
@@ -37,68 +39,104 @@ void runTest(Test test) {
 }
 
 TEST_CASE("read prefix", "[loopback]") {
-    auto test = [&](size_t size, Baud b, size_t rep) {
-                    PortConfig pc = fromJson(DEVICE_CONFIG_PATH);
-                    pc.baud = b;
-                    pc.byteTimeout_us = BYTE_TIMEOUT_US;
-    
-                    nrcallv(sd, fatal, SerialDevice::open(pc));
-                    auto wb = createTestBuffer<Buffer>(size);
-                    nrcall(fatal, sd.write(wb));
-                    nrcallv(rb, fatal, sd.read(ch::seconds(1), Buffer(MAX_READ)));
+    auto test =
+    [&](size_t size, Baud b, size_t rep) {
+        PortConfig pc = fromJson(DEVICE_CONFIG_PATH);
+        pc.baud = b;
+        pc.byteTimeout_us = BYTE_TIMEOUT_US;
+
+        auto result =
+        SerialDevice::open(pc) >>=
+        [&](SerialDevice&& sd) {
+            auto wb = createTestBuffer<Buffer>(size);
+            return
+            sd.write(wb) >>=
+            [&](boost::blank&&) {
+                return
+                sd.read(ch::seconds(1), Buffer(MAX_READ)) >>=
+                [&](Buffer&& rb) {
                     CAPTURE(rb);
                     REQUIRE(isPrefix(rb, wb));
+                    return ok(boost::blank{});
                 };
+            };
+        };
+        throwOnFail(result);
+    };
     runTest(test);
 }
 
 TEST_CASE("read whole", "[loopback]") {
-    auto test = [&](size_t size, Baud b, size_t rep) {
-                    PortConfig pc = fromJson(DEVICE_CONFIG_PATH);
-                    pc.baud = b;
-                    pc.byteTimeout_us = BYTE_TIMEOUT_US;
+    auto test =
+    [&](size_t size, Baud b, size_t rep) {
+        PortConfig pc = fromJson(DEVICE_CONFIG_PATH);
+        pc.baud = b;
+        pc.byteTimeout_us = BYTE_TIMEOUT_US;
 
-                    nrcallv(sd, fatal, SerialDevice::open(pc));
-                    auto wb = createTestBuffer<Buffer>(size);
-                    nrcall(fatal, sd.write(wb));
-                    Buffer rb(0);
-                    while (rb.size() < wb.size()) {
-                        nrcallv(tmp, fatal, sd.read(ch::seconds(1), Buffer(MAX_READ)));
-                        CAPTURE(tmp);
-                        if (!rb.size()) {
-                            REQUIRE(isPrefix(tmp, wb));
-                        }
-                        rb = rb + tmp;
+        auto result =
+        SerialDevice::open(pc) >>=
+        [&](SerialDevice&& sd) {
+            auto wb = createTestBuffer<Buffer>(size);
+            return
+            sd.write(wb) >>=
+            [&](boost::blank&&) {
+                Buffer rb(0);
+                while (rb.size() < wb.size()) {
+                    // nrcallv(tmp, fatal, sd.read(ch::seconds(1), Buffer(MAX_READ)));
+                    auto r = sd.read(ch::seconds(1), Buffer(MAX_READ));
+                    // if (isFail(r)) { return fail<boost::blank>(getFailUnsafe(r)); }
+                    returnOnFail(r, boost::blank);
+                    auto tmp = getOkUnsafe(r);
+                    CAPTURE(tmp);
+                    if (!rb.size()) {
+                        REQUIRE(isPrefix(tmp, wb));
                     }
-                    REQUIRE_THAT(rb, isEqualTo(wb));
-                };
+                    rb = rb + tmp;
+                }
+                REQUIRE_THAT(rb, isEqualTo(wb));
+                return ok(boost::blank{});
+            };
+        };
+        throwOnFail(result);
+    };
 
     runTest(test);
 }
 
 TEST_CASE("timeout", "[loopback]") {
-    auto test = [&](size_t size, Baud b, size_t rep) {
-                    PortConfig pc = fromJson(DEVICE_CONFIG_PATH);
-                    pc.baud = b;
-                    pc.byteTimeout_us = BYTE_TIMEOUT_US;
+    auto test =
+    [&](size_t size, Baud b, size_t rep) {
+        PortConfig pc = fromJson(DEVICE_CONFIG_PATH);
+        pc.baud = b;
+        pc.byteTimeout_us = BYTE_TIMEOUT_US;
 
-                    nrcallv(sd, fatal, SerialDevice::open(pc));
-                    auto wb = createTestBuffer<Buffer>(size);
-                    nrcall(fatal, sd.write(wb));
-                    Buffer rb(0);
-                    while (rb.size() < wb.size()) {
-                        nrcallv(tmp, fatal, sd.read(ch::seconds(1), Buffer(MAX_READ)));
-                        CAPTURE(tmp);
-                        if (!rb.size()) {
-                            REQUIRE(isPrefix(tmp, wb));
-                        }
-                        rb = rb + tmp;
+        auto result =
+        SerialDevice::open(pc) >>=
+        [&](SerialDevice&& sd) {
+            auto wb = createTestBuffer<Buffer>(size);
+            return
+            sd.write(wb) >>=
+            [&](boost::blank&&) {
+                Buffer rb(0);
+                while (rb.size() < wb.size()) {
+                    auto r = sd.read(ch::seconds(1), Buffer(MAX_READ));
+                    returnOnFail(r, boost::blank);
+                    auto tmp = getOkUnsafe(r);
+                    CAPTURE(tmp);
+                    if (!rb.size()) {
+                        REQUIRE(isPrefix(tmp, wb));
                     }
-                    REQUIRE_THAT(rb, isEqualTo(wb));
-                    auto tmp = sd.read(ch::milliseconds(10), Buffer(MAX_READ));
-                    REQUIRE(isFail(tmp));
-                    REQUIRE(getFailUnsafe(tmp) == Error::Timeout);
-                };
+                    rb = rb + tmp;
+                }
+                REQUIRE_THAT(rb, isEqualTo(wb));
+                auto r = sd.read(ch::milliseconds(10), Buffer(MAX_READ));
+                REQUIRE(isFail(r));
+                REQUIRE(getFailUnsafe(r) == Error::Timeout);
+                return ok(boost::blank{});
+            };
+        };
+        throwOnFail(result);
+    };
 
     runTest(test);
 }

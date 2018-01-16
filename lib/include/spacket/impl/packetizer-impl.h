@@ -1,5 +1,7 @@
 #pragma once
 
+#include <spacket/result_utils.h>
+
 template<typename Buffer>
 Result<ReadResult<Buffer>> readPacket(
     Source<Buffer> s,
@@ -19,7 +21,6 @@ Result<ReadResult<Buffer>> readPacket(
     size_t maxPacketSize,
     Timeout t)
 {
-    auto f = idFail<ReadResult<Buffer>>;
     auto deadline = Clock::now() + t;
     Buffer packet(maxPacketSize);
     uint8_t* c = packet.begin();
@@ -73,8 +74,9 @@ Result<ReadResult<Buffer>> readPacket(
                 next = std::move(r.second);
                 break;
             }
-            rcallv(b, f, s(deadline - Clock::now(), maxRead));
-            r = skipZeroes(std::move(b));
+            auto b_ = s(deadline - Clock::now(), maxRead);
+            returnOnFail(b_, ReadResult<Buffer>);
+            r = skipZeroes(getOkUnsafe(b_));
         }
     }
 
@@ -87,8 +89,9 @@ Result<ReadResult<Buffer>> readPacket(
             if (r.first == TooBig) {
                 return fail<ReadResult<Buffer>>(Error::PacketTooBig);
             }
-            rcallv(b, f, s(deadline - Clock::now(), maxRead));
-            r = append(std::move(b));
+            auto b_ = s(deadline - Clock::now(), maxRead);
+            returnOnFail(b_, ReadResult<Buffer>);
+            r = append(getOkUnsafe(b_));
         }
     }
 }

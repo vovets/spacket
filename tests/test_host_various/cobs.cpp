@@ -2,11 +2,11 @@
 
 #include <spacket/cobs.h>
 #include <spacket/buffer.h>
+#include <spacket/result_utils.h>
 
 #include <catch.hpp>
 
 using Buffer = BufferT<StdAllocator, 2048>;
-auto fatal = fatalT<Buffer>;
 constexpr size_t maxUnstuffed = cobs::maxUnstuffedSizeT<Buffer>();
 
 namespace Catch {
@@ -35,7 +35,7 @@ void test(Buffer b) {
     for (auto byte: stuffed) {
         REQUIRE(byte != 0);
     }
-    nrcallv(unstuffed, fatal, cobs::unstuff(std::move(stuffed)));
+    auto unstuffed = throwOnFail(cobs::unstuff(std::move(stuffed)));
     REQUIRE(unstuffed == b);
 }
 
