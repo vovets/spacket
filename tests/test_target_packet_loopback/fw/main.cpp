@@ -4,22 +4,7 @@
 #include "chprintf.h"
 
 #include <spacket/util/rtt_stream.h>
-
-template <size_t STACK_SIZE>
-class StaticThread {
-public:
-    thread_t* create(tprio_t prio, tfunc_t f, void* arg) {
-        return chThdCreateStatic(
-            workingArea,
-            sizeof(workingArea),
-            prio,
-            f,
-            arg);
-    }
-
-private:
-    THD_WORKING_AREA(workingArea, STACK_SIZE);
-};
+#include <spacket/util/static_thread.h>
 
 using RTTStream = RTTStreamT<0, 10>;
 

@@ -14,6 +14,9 @@ set(GATHER_DEBUG FALSE)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+
 set(CH_ROOT_DIR "${SPACKET_EXT}/chibios")
 set(CH_MCU_NAME STM32F103x8)
 set(CH_LINKER_LIBRARY_PATH "${CH_ROOT_DIR}/os/common/startup/ARMCMx/compilers/GCC/ld")
@@ -72,12 +75,16 @@ ch_include(fw
   )
 
 gt_include(fw
-  "${SPACKET_ROOT}/tests/target_boards/STM32F103C8_MINIMAL/sources.cmake")
+  "${SPACKET_ROOT}/tests/target_boards/STM32F103C8_MINIMAL/sources.cmake"
+  "${SPACKET_ROOT}/lib/sources.cmake"
+  "${SPACKET_ROOT}/lib/chibios/sources.cmake"
+  )
 
 target_include_directories(fw PUBLIC
   conf
   ${CH_ROOT_DIR}/os/license
   "${SPACKET_EXT}/SEGGER_RTT_V614c/RTT"
+  "${SPACKET_EXT}/boost_1_66_0"
   )
 
 target_sources(fw PRIVATE
