@@ -111,14 +111,3 @@ BufferT<Allocator, MAX_SIZE> BufferT<Allocator, MAX_SIZE>::suffix(uint8_t* begin
     std::memcpy(prefix.begin(), begin, prefix.size());
     return std::move(prefix);
 }
-
-class StdAllocator {
-public:
-    uint8_t* allocate(size_t count) {
-        return static_cast<uint8_t*>(::operator new[](count));
-    }
-
-    void deallocate(uint8_t* ptr) {
-        ::operator delete[](ptr);
-    }
-};

@@ -6,6 +6,7 @@
 #include <spacket/errors.h>
 #include <spacket/serial_device.h>
 #include <spacket/buffer_utils.h>
+#include <spacket/buffer_new_allocator.h>
 #include <spacket/bind.h>
 #include <spacket/result_utils.h>
 
@@ -23,7 +24,7 @@ std::vector<Baud> bauds = {Baud::B_921600};
 const size_t REPETITIONS = 10;
 const size_t BYTE_TIMEOUT_US = 0;
 
-using Buffer = BufferT<StdAllocator, 1024>;
+using Buffer = BufferT<NewAllocator, 1024>;
 auto fatal = fatalT<Buffer>;
 
 template<typename Test>

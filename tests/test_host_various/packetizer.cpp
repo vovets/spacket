@@ -2,12 +2,13 @@
 #include "utils.h"
 #include <spacket/errors.h>
 #include <spacket/buffer_utils.h>
+#include <spacket/buffer_new_allocator.h>
 #include <spacket/packetizer.h>
 #include <spacket/result_utils.h>
 
 #include <catch.hpp>
 
-using Buffer = BufferT<StdAllocator, 1024>;
+using Buffer = BufferT<NewAllocator, 1024>;
 using TestSource = TestSourceT<Buffer>;
 auto fatal = fatalT<Buffer>;
 

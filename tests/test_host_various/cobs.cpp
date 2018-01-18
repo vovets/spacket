@@ -2,11 +2,12 @@
 
 #include <spacket/cobs.h>
 #include <spacket/buffer.h>
+#include <spacket/buffer_new_allocator.h>
 #include <spacket/result_utils.h>
 
 #include <catch.hpp>
 
-using Buffer = BufferT<StdAllocator, 2048>;
+using Buffer = BufferT<NewAllocator, 2048>;
 constexpr size_t maxUnstuffed = cobs::maxUnstuffedSizeT<Buffer>();
 
 namespace Catch {
