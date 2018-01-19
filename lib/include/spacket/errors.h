@@ -7,16 +7,18 @@
 #ifdef ERROR_LIST
 #error "ERROR_LIST macro should not be defined here"
 #else
-#define ERROR_LIST(ID, CODE, SEP)                \
-    X(ID(Timeout),              CODE(1),  SEP()) \
-    X(ID(GuardedPoolOutOfMem),  CODE(2),  SEP()) \
-    X(ID(ConfigNoDevSpecified), CODE(10), SEP()) \
-    X(ID(ConfigBadBaud),        CODE(11), SEP()) \
-    X(ID(DevInitFailed),        CODE(20), SEP()) \
-    X(ID(DevReadFailed),        CODE(21), SEP()) \
-    X(ID(DevWriteFailed),       CODE(22), SEP()) \
-    X(ID(PacketTooBig),         CODE(30), SEP()) \
-    X(ID(CobsBadEncoding),      CODE(40), )
+#define ERROR_LIST(ID, CODE, SEP)                      \
+    X(ID(Timeout),                   CODE(100), SEP()) \
+    X(ID(GuardedPoolOutOfMem),       CODE(200), SEP()) \
+    X(ID(ConfigNoDevSpecified),      CODE(300), SEP()) \
+    X(ID(ConfigBadBaud),             CODE(301), SEP()) \
+    X(ID(DevInitFailed),             CODE(400), SEP()) \
+    X(ID(DevReadFailed),             CODE(401), SEP()) \
+    X(ID(DevWriteFailed),            CODE(402), SEP()) \
+    X(ID(PacketTooBig),              CODE(500), SEP()) \
+    X(ID(CobsBadEncoding),           CODE(600), SEP()) \
+    X(ID(PoolAllocatorObjectTooBig), CODE(700), SEP()) \
+    X(ID(MiserableFailure),          CODE(10000), )
 #endif
 
 enum class Error {

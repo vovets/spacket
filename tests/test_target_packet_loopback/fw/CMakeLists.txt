@@ -82,14 +82,17 @@ gt_include(fw
 
 target_include_directories(fw PUBLIC
   conf
+  .
   ${CH_ROOT_DIR}/os/license
   "${SPACKET_EXT}/SEGGER_RTT_V614c/RTT"
   "${SPACKET_EXT}/boost_1_66_0"
   )
 
 target_sources(fw PRIVATE
-  main.cpp
   "${SPACKET_EXT}/SEGGER_RTT_V614c/RTT/SEGGER_RTT.c"
+  main.cpp
+  system_halt_hook.cpp
+  rtt_stream.cpp
   )
 
 ch_add_linker_flags(fw "${linker_flags}")

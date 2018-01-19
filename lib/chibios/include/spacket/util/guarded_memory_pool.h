@@ -23,6 +23,8 @@ public:
     void deallocate(uint8_t* p) {
         chGuardedPoolFree(&pool, p);
     }
+
+    static constexpr size_t objectSize() { return OBJECT_SIZE; }
     
 private:
     Result<uint8_t*> allocateCheck(uint8_t* p) {
