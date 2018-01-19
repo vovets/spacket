@@ -21,8 +21,9 @@ Result<ReadResult<Buffer>> readPacket(
     size_t maxPacketSize,
     Timeout t)
 {
+    using SType = ReadResult<Buffer>;
     auto deadline = Clock::now() + t;
-    Buffer packet(maxPacketSize);
+    returnOnFailT(packet, SType, Buffer::create(maxPacketSize));
     uint8_t* c = packet.begin();
 
     enum AppendResult {
@@ -31,11 +32,11 @@ Result<ReadResult<Buffer>> readPacket(
         Continue,
     };
         
-    auto skipZeroes = [&](Buffer b) {
+    auto skipZeroes = [&](Buffer b) -> std::pair<AppendResult, Result<Buffer>> {
                            uint8_t* bc = b.begin();
                            for (; bc < b.end() && *bc == 0; ++bc) {}
                            if (bc == b.end()) {
-                               return std::make_pair(Continue, Buffer(0));
+                               return std::make_pair(Continue, Buffer::create(0));
                            }
                            return std::make_pair(Finished, b.suffix(bc));
                        };
@@ -57,13 +58,13 @@ Result<ReadResult<Buffer>> readPacket(
                                            std::make_pair(TooBig, b.suffix(bc + 1));
                                    }
                                } else {
-                                   return std::make_pair(Continue, Buffer(0));
+                                   return std::make_pair(Continue, Buffer::create(0));
                                }
                            } else {
                                if (bc < b.end()) {
                                    return std::make_pair(Finished, b.suffix(bc + 1));
                                } else {
-                                   return std::make_pair(Continue, Buffer(0));
+                                   return std::make_pair(Continue, Buffer::create(0));
                                }
                            }
                        };
@@ -71,12 +72,12 @@ Result<ReadResult<Buffer>> readPacket(
         auto r = skipZeroes(std::move(next));
         for (;;) {
             if (r.first == Finished) {
-                next = std::move(r.second);
+                returnOnFailT(b, SType, std::move(r.second));
+                next = std::move(b);
                 break;
             }
-            auto b_ = s(deadline - Clock::now(), maxRead);
-            returnOnFail(b_, ReadResult<Buffer>);
-            r = skipZeroes(getOkUnsafe(b_));
+            returnOnFailT(b, SType, s(deadline - Clock::now(), maxRead));
+            r = skipZeroes(std::move(b));
         }
     }
 
@@ -84,14 +85,15 @@ Result<ReadResult<Buffer>> readPacket(
         auto r = append(std::move(next));
         for (;;) {
             if (r.first == Finished) {
-                return ok(ReadResult<Buffer>{packet.prefix(c - packet.begin()), std::move(r.second)});
+                returnOnFailT(packetPrefix, SType, packet.prefix(c - packet.begin()));
+                returnOnFailT(suffix, SType, std::move(r.second));
+                return ok(ReadResult<Buffer>{std::move(packetPrefix), std::move(suffix)});
             }
             if (r.first == TooBig) {
                 return fail<ReadResult<Buffer>>(Error::PacketTooBig);
             }
-            auto b_ = s(deadline - Clock::now(), maxRead);
-            returnOnFail(b_, ReadResult<Buffer>);
-            r = append(getOkUnsafe(b_));
+            returnOnFailT(b, SType, s(deadline - Clock::now(), maxRead));
+            r = append(std::move(b));
         }
     }
 }

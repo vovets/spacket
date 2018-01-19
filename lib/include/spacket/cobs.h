@@ -6,8 +6,8 @@
 namespace cobs {
 
 template<typename Buffer>
-Buffer stuff(Buffer source) {
-    Buffer result(source.size() + source.size() / 254 + 1);
+Result<Buffer> stuff(Buffer source) {
+    returnOnFail(result, Buffer::create(source.size() + source.size() / 254 + 1));
     auto r = ::stuff(
         source.begin(),
         source.size(),
@@ -17,7 +17,7 @@ Buffer stuff(Buffer source) {
 
 template<typename Buffer>
 Result<Buffer> unstuff(Buffer source) {
-    Buffer result(source.size());
+    returnOnFail(result, Buffer::create(source.size()));
     auto r = ::unstuff(source.begin(), source.size(), result.begin());
     if (!r) { return fail<Buffer>(Error::CobsBadEncoding); }
     return result.prefix(r);

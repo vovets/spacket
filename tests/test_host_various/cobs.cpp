@@ -15,13 +15,13 @@ template<> struct StringMaker<Buffer>: public StringMakerBase<Buffer> {};
 }
 
 Buffer fill(uint8_t byte, size_t size) {
-    Buffer result(size);
+    Buffer result = throwOnFail(Buffer::create(size));
     std::memset(result.begin(), byte, size);
     return std::move(result);
 }
 
 Buffer fill1(uint8_t byte, size_t chunkSize, size_t size) {
-    Buffer result(size);
+    Buffer result = throwOnFail(Buffer::create(size));
     std::memset(result.begin(), byte, size);
     for (size_t n = chunkSize; n <= size; n += chunkSize) {
         result.begin()[n - 1] = 0;
@@ -31,7 +31,7 @@ Buffer fill1(uint8_t byte, size_t chunkSize, size_t size) {
 
 void test(Buffer b) {
     CAPTURE(b);
-    Buffer stuffed = cobs::stuff(b.copy());
+    Buffer stuffed = throwOnFail(cobs::stuff(throwOnFail(b.copy())));
     CAPTURE(stuffed);
     for (auto byte: stuffed) {
         REQUIRE(byte != 0);

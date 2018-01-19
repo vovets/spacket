@@ -9,6 +9,7 @@
 #else
 #define ERROR_LIST(ID, CODE, SEP)                \
     X(ID(Timeout),              CODE(1),  SEP()) \
+    X(ID(GuardedPoolOutOfMem),  CODE(2),  SEP()) \
     X(ID(ConfigNoDevSpecified), CODE(10), SEP()) \
     X(ID(ConfigBadBaud),        CODE(11), SEP()) \
     X(ID(DevInitFailed),        CODE(20), SEP()) \

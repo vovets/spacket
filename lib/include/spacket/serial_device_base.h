@@ -15,7 +15,7 @@ public:
         return
         impl().read(t, b.begin(), b.size()) >>=
         [&](size_t size) {
-            return ok(b.prefix(size));
+            return b.prefix(size);
         };
     }
 

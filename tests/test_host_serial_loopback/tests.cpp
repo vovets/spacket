@@ -25,7 +25,8 @@ const size_t REPETITIONS = 10;
 const size_t BYTE_TIMEOUT_US = 0;
 
 using Buffer = BufferT<NewAllocator, 1024>;
-auto fatal = fatalT<Buffer>;
+
+Buffer buffer(size_t size) { return std::move(throwOnFail(Buffer::create(size))); }
 
 template<typename Test>
 void runTest(Test test) {
@@ -54,7 +55,7 @@ TEST_CASE("read prefix", "[loopback]") {
             sd.write(wb) >>=
             [&](boost::blank&&) {
                 return
-                sd.read(ch::seconds(1), Buffer(MAX_READ)) >>=
+                sd.read(ch::seconds(1), buffer(MAX_READ)) >>=
                 [&](Buffer&& rb) {
                     CAPTURE(rb);
                     REQUIRE(isPrefix(rb, wb));
@@ -81,18 +82,15 @@ TEST_CASE("read whole", "[loopback]") {
             return
             sd.write(wb) >>=
             [&](boost::blank&&) {
-                Buffer rb(0);
+                Buffer rb = buffer(0);
                 while (rb.size() < wb.size()) {
-                    // nrcallv(tmp, fatal, sd.read(ch::seconds(1), Buffer(MAX_READ)));
-                    auto r = sd.read(ch::seconds(1), Buffer(MAX_READ));
-                    // if (isFail(r)) { return fail<boost::blank>(getFailUnsafe(r)); }
-                    returnOnFail(r, boost::blank);
-                    auto tmp = getOkUnsafe(r);
+                    returnOnFailT(tmp, boost::blank, sd.read(ch::seconds(1), buffer(MAX_READ)));
                     CAPTURE(tmp);
                     if (!rb.size()) {
                         REQUIRE(isPrefix(tmp, wb));
                     }
-                    rb = rb + tmp;
+                    returnOnFailT(sum, boost::blank, rb + tmp);
+                    rb = std::move(sum);
                 }
                 REQUIRE_THAT(rb, isEqualTo(wb));
                 return ok(boost::blank{});
@@ -118,19 +116,18 @@ TEST_CASE("timeout", "[loopback]") {
             return
             sd.write(wb) >>=
             [&](boost::blank&&) {
-                Buffer rb(0);
+                Buffer rb = buffer(0);
                 while (rb.size() < wb.size()) {
-                    auto r = sd.read(ch::seconds(1), Buffer(MAX_READ));
-                    returnOnFail(r, boost::blank);
-                    auto tmp = getOkUnsafe(r);
+                    returnOnFailT(tmp, boost::blank, sd.read(ch::seconds(1), buffer(MAX_READ)));
                     CAPTURE(tmp);
                     if (!rb.size()) {
                         REQUIRE(isPrefix(tmp, wb));
                     }
-                    rb = rb + tmp;
+                    returnOnFailT(sum, boost::blank, rb + tmp);
+                    rb = std::move(sum);
                 }
                 REQUIRE_THAT(rb, isEqualTo(wb));
-                auto r = sd.read(ch::milliseconds(10), Buffer(MAX_READ));
+                auto r = sd.read(ch::milliseconds(10), buffer(MAX_READ));
                 REQUIRE(isFail(r));
                 REQUIRE(getFailUnsafe(r) == Error::Timeout);
                 return ok(boost::blank{});

@@ -58,6 +58,7 @@ add_compile_options(
 
 add_definitions(
   ${thumb_defs}
+  -DBOOST_STRICT_CONFIG
   )
 
 add_executable(fw "")

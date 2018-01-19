@@ -48,7 +48,7 @@ struct StringMakerBase {
 
 template<typename Buffer>
 Buffer createTestBuffer(size_t size) {
-    Buffer buffer(size);
+    Buffer buffer = throwOnFail(Buffer::create(size));
     auto c = buffer.begin();
     for (size_t i = 0; i < size; ++i, ++c) {
         *c = i % 256;
@@ -74,7 +74,7 @@ public:
     static std::vector<Buffer> init(std::vector<std::vector<uint8_t>> bs) {
         std::vector<Buffer> result;
         for (auto& v: bs) {
-            result.push_back(Buffer(std::move(v)));
+            result.push_back(throwOnFail(Buffer::create(std::move(v))));
         }
         return std::move(result);
     }

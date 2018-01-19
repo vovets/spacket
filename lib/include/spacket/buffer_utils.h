@@ -25,8 +25,8 @@ std::ostream& operator<<(std::ostream& os, Hr<Buffer> hr) {
 }
 
 template<typename Buffer>
-Buffer operator+(const Buffer& lhs, const Buffer& rhs) {
-    Buffer result(lhs.size() + rhs.size());
+Result<Buffer> operator+(const Buffer& lhs, const Buffer& rhs) {
+    returnOnFail(result, Buffer::create(lhs.size() + rhs.size()));
     std::memcpy(result.begin(), lhs.begin(), lhs.size());
     std::memcpy(result.begin() + lhs.size(), rhs.begin(), rhs.size());
     return std::move(result);

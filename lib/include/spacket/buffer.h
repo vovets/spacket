@@ -1,5 +1,8 @@
 #pragma once
 
+#include <spacket/result.h>
+#include <spacket/result_utils.h>
+
 #include <memory>
 #include <cstring>
 
@@ -11,18 +14,22 @@ public:
     static constexpr size_t maxSize() { return MAX_SIZE; }
     
 public:
-    BufferT(size_t size);
-    BufferT(std::initializer_list<uint8_t> l);
-    BufferT(std::vector<uint8_t> v);
-    BufferT(BufferT&& toMove);
-    BufferT& operator=(BufferT&& toMove);
+    static Result<BufferT> create(size_t size);
+    static Result<BufferT> create(std::initializer_list<uint8_t> l);
+    static Result<BufferT> create(std::vector<uint8_t> v);
+    
+    BufferT(BufferT&& toMove) noexcept;
+    BufferT& operator=(BufferT&& toMove) noexcept;
     
     uint8_t* begin() const;
     uint8_t* end() const;
     size_t size() const;
-    BufferT prefix(size_t size) const;
-    BufferT suffix(uint8_t* begin) const;
-    BufferT copy() const { return prefix(size()); }
+    Result<BufferT> prefix(size_t size) const;
+    Result<BufferT> suffix(uint8_t* begin) const;
+    Result<BufferT> copy() const { return prefix(size()); }
+
+private:
+    BufferT(uint8_t* data, size_t size);
     
 private:
     struct Deleter{
@@ -41,30 +48,39 @@ void BufferT<Allocator, MAX_SIZE>::Deleter::operator()(uint8_t* p) const {
 
 template<typename Allocator, size_t MAX_SIZE>
 inline
-BufferT<Allocator, MAX_SIZE>::BufferT(size_t size)
-    : data(Allocator().allocate(size))
+BufferT<Allocator, MAX_SIZE>::BufferT(uint8_t* data, size_t size)
+    : data(data)
     , size_(size) {
 }
 
 template<typename Allocator, size_t MAX_SIZE>
 inline
-BufferT<Allocator, MAX_SIZE>::BufferT(std::initializer_list<uint8_t> l)
-    : data(Allocator().allocate(l.size()))
-    , size_(l.size()) {
-    std::memcpy(begin(), l.begin(), size_);
+Result<BufferT<Allocator, MAX_SIZE>> BufferT<Allocator, MAX_SIZE>::create(size_t size) {
+    returnOnFailT(p, BufferT, Allocator().allocate(size));
+    return ok(BufferT(p, size));
 }
 
 template<typename Allocator, size_t MAX_SIZE>
 inline
-BufferT<Allocator, MAX_SIZE>::BufferT(std::vector<uint8_t> v)
-    : data(Allocator().allocate(v.size()))
-    , size_(v.size()) {
-    std::memcpy(begin(), &v.front(), size_);
+Result<BufferT<Allocator, MAX_SIZE>> BufferT<Allocator, MAX_SIZE>::create(std::initializer_list<uint8_t> l) {
+    returnOnFailT(p, BufferT, Allocator().allocate(l.size()));
+    BufferT r(p, l.size());
+    std::memcpy(r.begin(), l.begin(), l.size());
+    return ok(std::move(r));
 }
 
 template<typename Allocator, size_t MAX_SIZE>
 inline
-BufferT<Allocator, MAX_SIZE>::BufferT(BufferT&& toMove)
+Result<BufferT<Allocator, MAX_SIZE>> BufferT<Allocator, MAX_SIZE>::create(std::vector<uint8_t> v) {
+    returnOnFailT(p, BufferT, Allocator().allocate(v.size()));
+    BufferT r(p, v.size());
+    std::memcpy(r.begin(), &v.front(), v.size());
+    return ok(std::move(r));
+}
+
+template<typename Allocator, size_t MAX_SIZE>
+inline
+BufferT<Allocator, MAX_SIZE>::BufferT(BufferT&& toMove) noexcept
     : data(std::move(toMove.data))
     , size_(toMove.size_) {
     toMove.size_ = 0;
@@ -72,7 +88,7 @@ BufferT<Allocator, MAX_SIZE>::BufferT(BufferT&& toMove)
 
 template<typename Allocator, size_t MAX_SIZE>
 inline
-BufferT<Allocator, MAX_SIZE>& BufferT<Allocator, MAX_SIZE>::operator=(BufferT&& toMove) {
+BufferT<Allocator, MAX_SIZE>& BufferT<Allocator, MAX_SIZE>::operator=(BufferT&& toMove) noexcept {
     data = std::move(toMove.data);
     size_ = toMove.size_;
     toMove.size_ = 0;
@@ -98,16 +114,16 @@ size_t BufferT<Allocator, MAX_SIZE>::size() const {
 
 template<typename Allocator, size_t MAX_SIZE>
 inline
-BufferT<Allocator, MAX_SIZE> BufferT<Allocator, MAX_SIZE>::prefix(size_t n) const {
-    auto prefix = This(std::min(n, size_));
+Result<BufferT<Allocator, MAX_SIZE>> BufferT<Allocator, MAX_SIZE>::prefix(size_t n) const {
+    returnOnFail(prefix, BufferT::create(std::min(n, size_)));
     std::memcpy(prefix.begin(), begin(), prefix.size());
     return std::move(prefix);
 }
 
 template<typename Allocator, size_t MAX_SIZE>
 inline
-BufferT<Allocator, MAX_SIZE> BufferT<Allocator, MAX_SIZE>::suffix(uint8_t* begin) const {
-    auto prefix = This(end() - begin);
+Result<BufferT<Allocator, MAX_SIZE>> BufferT<Allocator, MAX_SIZE>::suffix(uint8_t* begin) const {
+    returnOnFail(prefix, BufferT::create(end() - begin));
     std::memcpy(prefix.begin(), begin, prefix.size());
     return std::move(prefix);
 }
