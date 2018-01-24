@@ -2,6 +2,8 @@
 
 tmp_dir=$(mktemp -d jlink_connect.XXXX)
 jlink_pid=$tmp_dir/jlink_pid
+jlink_commands=$tmp_dir/jlink_commands
+
 
 do_cleanup() {
     (
@@ -21,25 +23,26 @@ for reason in INT TERM EXIT; do
     trap "handler $reason" $reason
 done
 
-run_test() {
-    echo "Running test..."
-    PYTHONPATH=${SPACKET_ROOT}/tests/python:$PYTHONPATH ${host_test_executable}
-}
-
-echo "Flashing fw..."
-${CMAKE_COMMAND} --build ${CMAKE_CURRENT_BINARY_DIR} --target ${fw_project}_flash
+cat >$jlink_commands <<EOF
+r
+go
+EOF
 
 echo "Starting RTT server..."
-${JLINK_RTT_COMMAND} >jlink_rtt.out & echo -n $! >$jlink_pid
+${JLINK_RTT_COMMAND} -commandfile $jlink_commands >jlink_rtt.out & echo -n $! >$jlink_pid
 
-echo -n "Waiting for RTT server to connect to target"
+echo -n "Waiting for RTT server to connect to target and reset target"
 for attempt in 1 2 3 4 5 6 7 8 9 last; do
     echo -n .
     sleep 0.1
-    egrep -q -e "identified.$" jlink_rtt.out && break
+    egrep -q -e "Script processing completed.$" jlink_rtt.out && break
 done
 echo
 
 [ $attempt = last ] && echo "Failed to connect to target" && false
 
-run_test
+echo "Waiting for Ctrl-C to stop..."
+while true; do
+    sleep infinity &
+    wait $!
+done

@@ -8,5 +8,5 @@
 
 void systemHaltHook(const char* reason) {
     palClearPad(GPIOC, GPIOC_LED);
-    chprintf(&rttStream, "%s\n", reason);
+    chprintf(&rttStream, "FATAL: %s\n", reason);
 }

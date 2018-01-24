@@ -18,6 +18,7 @@ function(fw_tests_add_fw_subdirectory name source_dir)
   ExternalProject_Add(${name}
     SOURCE_DIR "${source_dir}"
     BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/${name}"
+    CMAKE_ARGS "-DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}" "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}"
     CMAKE_CACHE_ARGS "-DCMAKE_TOOLCHAIN_FILE:FILEPATH=${SPACKET_ROOT}/cmake/toolchain_gcc_arm-none-eabi.cmake"
     INSTALL_COMMAND ""
     USES_TERMINAL_BUILD 1
@@ -29,6 +30,8 @@ endfunction()
 function(fw_tests_add_jlink_test test_name fw_project host_test_executable)
   set(jlink_test_wrapper ${CMAKE_CURRENT_BINARY_DIR}/jlink_test_wrapper.sh)
   configure_file("${SPACKET_ROOT}/tests/misc/jlink_test_wrapper.sh.in" ${jlink_test_wrapper})
+  set(jlink_connect ${CMAKE_CURRENT_BINARY_DIR}/jlink_connect.sh)
+  configure_file("${SPACKET_ROOT}/tests/misc/jlink_connect.sh.in" ${jlink_connect})
   add_test(NAME ${test_name}
     COMMAND sh -e ${jlink_test_wrapper}
     )

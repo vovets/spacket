@@ -30,7 +30,7 @@ set(debug_flags -ggdb)
 set(c_warn_flags -Wall -Wextra -Wundef -Wstrict-prototypes)
 set(cxx_warn_flags -Wall -Wextra -Wundef -Wno-literal-suffix)
 set(cxx_features_flags -fno-exceptions -fno-rtti)
-set(debug_optimization_flags -O0)
+set(debug_optimization_flags -Og)
 set(release_optimization_flags -O2 -s)
 set(linker_flags
   "${mc_flags}"
@@ -58,6 +58,7 @@ add_compile_options(
 
 add_definitions(
   ${thumb_defs}
+  -DSHELL_CONFIG_FILE
   -DBOOST_STRICT_CONFIG
   )
 

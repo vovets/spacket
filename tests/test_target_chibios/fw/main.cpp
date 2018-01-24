@@ -36,11 +36,11 @@ static void writerThreadFunction(void*);
 static void cmd_start_write(BaseSequentialStream *chp, int argc, char *argv[]) {
     (void)argv;
     if (argc > 0) {
-        chprintf(chp, "Usage: start_write\r\n");
+        chprintf(chp, "Usage: start_write\n");
         return;
     }
     if(writerThreadPtr) {
-        chprintf(chp, "already running\r\n");
+        chprintf(chp, "already running\n");
         return;
     }
     writerThreadPtr = writerThread.create(NORMALPRIO, writerThreadFunction, 0);
@@ -50,17 +50,17 @@ static void cmd_start_write(BaseSequentialStream *chp, int argc, char *argv[]) {
 static void cmd_stop_write(BaseSequentialStream *chp, int argc, char *argv[]) {
     (void)argv;
     if (argc > 0) {
-        chprintf(chp, "Usage: stop_write\r\n");
+        chprintf(chp, "Usage: stop_write\n");
         return;
     }
     if (!writerThreadPtr) {
-        chprintf(chp, "not running\r\n");
+        chprintf(chp, "not running\n");
         return;
     }
     chThdTerminate(writerThreadPtr);
     chThdWait(writerThreadPtr);
     writerThreadPtr = nullptr;
-    chprintf(chp, "stopped\r\n");
+    chprintf(chp, "stopped\n");
 }
 
 static const ShellCommand commands[] = {
@@ -128,7 +128,7 @@ int __attribute__((noreturn)) main(void) {
   halInit();
   chSysInit();
 
-  chprintf(&rttStream, "RTT ready\n\r");
+  chprintf(&rttStream, "RTT ready\n");
   
   sdStart(&SD1, NULL);
 

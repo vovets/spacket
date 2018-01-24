@@ -30,7 +30,7 @@ set(c_warn_flags -Wall -Wextra -Wundef -Wstrict-prototypes)
 set(cxx_warn_flags -Wall -Wextra -Wundef -Wno-literal-suffix)
 set(cxx_features_flags -fno-exceptions -fno-rtti)
 set(debug_optimization_flags -Og)
-set(release_optimization_flags -O2 -s)
+set(release_optimization_flags -O0 -s)
 set(linker_flags
   "${mc_flags}"
   "${thumb_flags}"
@@ -78,6 +78,7 @@ gt_include(fw
   "${SPACKET_ROOT}/tests/target_boards/STM32F103C8_MINIMAL/sources.cmake"
   "${SPACKET_ROOT}/lib/sources.cmake"
   "${SPACKET_ROOT}/lib/chibios/sources.cmake"
+  "${SPACKET_ROOT}/tests/target_utils/sources.cmake"
   )
 
 target_include_directories(fw PUBLIC
@@ -93,6 +94,7 @@ target_sources(fw PRIVATE
   main.cpp
   system_halt_hook.cpp
   rtt_stream.cpp
+  shell_commands.cpp
   )
 
 ch_add_linker_flags(fw "${linker_flags}")

@@ -1,6 +1,8 @@
 #include "ch.h"
 #include "hal.h"
+#include "shell.h"
 #include "chprintf.h"
+#include "shell_commands.h"
 
 #include "rtt_stream.h"
 
@@ -19,6 +21,7 @@ using Buffer = BufferT<BufferAllocator, MAX_BUFFER_SIZE>;
 
 StaticThread<176> blinkerThread{};
 StaticThread<256> echoThread{};
+StaticThread<512> shellThread_{};
 
 static __attribute__((noreturn)) THD_FUNCTION(blinkerThreadFunction, arg) {
     (void)arg;
@@ -36,7 +39,7 @@ static __attribute__((noreturn)) THD_FUNCTION(echoThreadFunction, arg) {
     (void)arg;
     chRegSetThreadName("echo");
     for (;;) {
-        FATAL_ERROR("hello from echo thread!");
+        chThdSleepMilliseconds(1);
     }
 }
 
@@ -44,12 +47,11 @@ int __attribute__((noreturn)) main(void) {
   halInit();
   chSysInit();
 
-  chprintf(&rttStream, "RTT ready\n\r");
+  chprintf(&rttStream, "RTT ready\n");
   
-  sdStart(&SD1, NULL);
-
-  blinkerThread.create(NORMALPRIO, blinkerThreadFunction, 0);
-  echoThread.create(NORMALPRIO, echoThreadFunction, 0);
+  blinkerThread.create(NORMALPRIO - 2, blinkerThreadFunction, 0);
+  echoThread.create(NORMALPRIO - 1, echoThreadFunction, 0);
+  shellThread_.create(NORMALPRIO, shellThread, const_cast<ShellConfig*>(&shellConfig));
 
   while (true) {
     port_wait_for_interrupt();
