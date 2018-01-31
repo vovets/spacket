@@ -2,6 +2,8 @@ import telnetlib
 import argparse
 
 
+lineend = b"\r\n"
+
 class NoMatch(Exception):
     pass
 
@@ -12,14 +14,18 @@ class Connection:
         self.response_timeout = response_timeout
         self.telnet = telnetlib.Telnet(host, port, connect_timeout)
 
-    def send(self, message):
-        self.telnet.write(message)
+    def send_line(self, line):
+        self.telnet.write(line + lineend)
 
-    def expect(self, message):
-        index, _, bytes_read = self.telnet.expect([message], self.response_timeout)
+    def expect(self, line):
+        index, _, bytes_read = self.telnet.expect(
+            [line], self.response_timeout)
         print("read: ", bytes_read)
         if index == -1:
             raise NoMatch
+
+    def expect_line(self, line):
+        self.expect(line + lineend)
 
 def main(test, timeout=0.5):
     parser = argparse.ArgumentParser(description='Run test using telnet protocol.')

@@ -2,7 +2,8 @@
 
 #define CHECK(expr)                             \
     if (expr) {                                 \
-        chprintf(chp, "SUCCESS\n\n");           \
+        chprintf(chp, "SUCCESS\r\n");           \
     } else {                                    \
-        chprintf(chp, "FAILURE\n\n");           \
+        chprintf(chp, "FAILURE\r\n");           \
+        return;                                 \
     }

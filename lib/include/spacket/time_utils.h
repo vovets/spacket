@@ -1,8 +1,7 @@
 #pragma once
 
-#include <chrono>
+#include <spacket/time_utils_impl.h>
 
-using Clock = std::chrono::steady_clock;
-using Timestamp = Clock::time_point;
-using Duration = Clock::duration;
 using Timeout = Duration;
+
+constexpr Timeout INFINITE_TIMEOUT = infiniteTimeout();

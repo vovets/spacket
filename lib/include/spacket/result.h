@@ -30,7 +30,7 @@ using ErrorT = typename boost::mpl::at<typename Result::types, boost::mpl::int_<
 
 template <typename Result>
 SuccessT<Result> getOkUnsafe(Result&& r) {
-    return std::move(boost::get<SuccessT<Result>>(r));
+    return std::move(*boost::get<SuccessT<Result>>(&r));
 }
 
 template <typename Result>
@@ -44,7 +44,7 @@ SuccessT<Result> getOkLoc(Result& r, const char* file, int line) {
 
 template <typename Result>
 ErrorT<Result> getFailUnsafe(Result& r) {
-    return boost::get<ErrorT<Result>>(r);
+    return *boost::get<ErrorT<Result>>(&r);
 }
 
 template <typename Result>

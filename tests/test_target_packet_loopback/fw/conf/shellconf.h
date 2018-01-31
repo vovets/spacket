@@ -4,4 +4,4 @@
 #define SHELL_CMD_MEM_ENABLED  FALSE
 #define SHELL_CMD_EXIT_ENABLED FALSE
 #define SHELL_USE_ESC_SEQ      FALSE
-#define SHELL_NEWLINE_STR      "\n"
+#define SHELL_NEWLINE_STR      "\r\n"

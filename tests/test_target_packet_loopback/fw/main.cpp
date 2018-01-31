@@ -7,17 +7,7 @@
 #include "rtt_stream.h"
 
 #include <spacket/util/static_thread.h>
-#include <spacket/util/guarded_memory_pool.h>
-#include <spacket/buffer_pool_allocator.h>
 #include <spacket/fatal_error.h>
-#include <spacket/buffer.h>
-
-const size_t MAX_BUFFER_SIZE = 256;
-
-using Pool = GuardedMemoryPoolT<MAX_BUFFER_SIZE, 8>;
-Pool pool;
-using BufferAllocator = PoolAllocatorT<Pool, pool>;
-using Buffer = BufferT<BufferAllocator, MAX_BUFFER_SIZE>;
 
 StaticThread<176> blinkerThread{};
 StaticThread<256> echoThread{};
@@ -47,7 +37,7 @@ int __attribute__((noreturn)) main(void) {
   halInit();
   chSysInit();
 
-  chprintf(&rttStream, "RTT ready\n");
+  chprintf(&rttStream, "RTT ready\r\n");
   
   blinkerThread.create(NORMALPRIO - 2, blinkerThreadFunction, 0);
   echoThread.create(NORMALPRIO - 1, echoThreadFunction, 0);

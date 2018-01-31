@@ -2,14 +2,24 @@ import test_utils
 
 
 def test(c):
-    c.expect(b"RTT ready\n")
+    c.expect_line(b"RTT ready")
     c.expect(b"ch> ")
 
-    c.send(b"test_create\r")
+    c.send_line(b"test_create")
 
-    c.expect(b"test_create\n")
-    c.expect(b"SUCCESS\n\n")
+    c.expect_line(b"test_create")
+    c.expect_line(b"SUCCESS")
+    c.expect_line(b"SUCCESS")
     c.expect(b"ch> ")
+
+    c.send_line(b"test_rx_timeout")
+
+    c.expect_line(b"test_rx_timeout")
+    c.expect_line(b"SUCCESS")
+    c.expect_line(b"SUCCESS")
+    c.expect(b"ch> ")
+
+timeout = 1
 
 if __name__ == "__main__":
-    test_utils.main(test)
+    test_utils.main(test, timeout)

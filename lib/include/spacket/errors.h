@@ -15,6 +15,7 @@
     X(ID(DevInitFailed),             CODE(400), SEP()) \
     X(ID(DevReadFailed),             CODE(401), SEP()) \
     X(ID(DevWriteFailed),            CODE(402), SEP()) \
+    X(ID(DevReadTimeout),             CODE(403), SEP()) \
     X(ID(PacketTooBig),              CODE(500), SEP()) \
     X(ID(CobsBadEncoding),           CODE(600), SEP()) \
     X(ID(PoolAllocatorObjectTooBig), CODE(700), SEP()) \

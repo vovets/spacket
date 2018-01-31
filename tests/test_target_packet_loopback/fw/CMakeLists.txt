@@ -95,6 +95,7 @@ target_sources(fw PRIVATE
   system_halt_hook.cpp
   rtt_stream.cpp
   shell_commands.cpp
+  buffer.cpp
   )
 
 ch_add_linker_flags(fw "${linker_flags}")

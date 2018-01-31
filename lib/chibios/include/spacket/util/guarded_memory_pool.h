@@ -2,6 +2,7 @@
 
 #include <spacket/result.h>
 
+#include "ch.h"
 #include "chmempools.h"
 
 template <size_t OBJECT_SIZE, size_t NUM_OBJECTS>
@@ -27,9 +28,9 @@ public:
     static constexpr size_t objectSize() { return OBJECT_SIZE; }
     
 private:
-    Result<uint8_t*> allocateCheck(uint8_t* p) {
+    Result<uint8_t*> allocateCheck(void* p) {
         if (!p) { return fail<uint8_t*>(Error::GuardedPoolOutOfMem); }
-        return ok(p);
+        return ok(static_cast<uint8_t*>(p));
     }
     
 private:

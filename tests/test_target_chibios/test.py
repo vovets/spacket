@@ -4,9 +4,9 @@ import test_utils
 def test(c):
     c.expect(b"ch> ")
 
-    c.send(b"test\r")
+    c.send_line(b"test")
     
-    c.expect(b"Final result: SUCCESS\r\n")
+    c.expect_line(b"Final result: SUCCESS")
     c.expect(b"ch> ")
 
 timeout = 30

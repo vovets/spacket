@@ -76,6 +76,8 @@ ch_include(fw
   /test/rt/test.cmake
   )
 
+list(APPEND SPACKET_EXCLUDED_FEATURES serial_device)
+
 gt_include(fw
   "${SPACKET_ROOT}/tests/target_boards/STM32F103C8_MINIMAL/sources.cmake"
   "${SPACKET_ROOT}/lib/sources.cmake"
