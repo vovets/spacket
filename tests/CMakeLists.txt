@@ -8,11 +8,23 @@ list(APPEND CMAKE_MODULE_PATH "${SPACKET_ROOT}/cmake")
 
 include(util)
 
-set(JLINK_EXE /opt/SEGGER/JLink/JLinkExe)
+set(JLINK_EXE
+  /opt/SEGGER/JLink/JLinkExe
+  CACHE
+  FILEPATH
+  "Path to JLinkExe binary on host system"
+  )
+
+set(JLINK_DEVICE_NAME
+  STM32F103C8
+  CACHE
+  STRING
+  "Device name that is recognized by j-link for -device option"
+  )
 
 set(JLINK_CONNECT_OPTIONS
   -autoconnect 1
-  -device STM32F103C8
+  -device ${JLINK_DEVICE_NAME}
   -if SWD
   -speed 4000
   )
@@ -29,6 +41,13 @@ util_join_cl(JLINK_RTT_COMMAND
   ${JLINK_EXE}
   ${JLINK_CONNECT_OPTIONS}
   ${JLINK_RTT_OPTIONS}
+  )
+
+set(SPACKET_FW_TOOLCHAIN_FILE
+  "${SPACKET_ROOT}/cmake/toolchain_gcc_arm-none-eabi.cmake"
+  CACHE
+  FILEPATH
+  "Toolchain file for building firmware projects"
   )
 
 add_subdirectory(host_spacket)
