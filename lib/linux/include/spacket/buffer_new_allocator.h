@@ -7,11 +7,13 @@
 
 class NewAllocator {
 public:
-    Result<uint8_t*> allocate(std::size_t count) {
-        return ok(static_cast<uint8_t*>(::operator new[](count)));
+    static constexpr size_t maxSize() { return 1024 * 1024; }
+    
+    Result<void*> allocate(std::size_t count) {
+        return ok(::operator new[](count));
     }
 
-    void deallocate(uint8_t* ptr) {
+    void deallocate(void* ptr) {
         ::operator delete[](ptr);
     }
 };

@@ -23,7 +23,6 @@ Result<Buffer> unstuff(Buffer source) {
     return result.prefix(r);
 }
 
-template<typename Buffer>
-constexpr size_t maxUnstuffedSizeT() { return (Buffer::maxSize() - 1) * 254 / 255; }
+constexpr size_t maxUnstuffedSize(size_t size) { return (size - 1) * 254 / 255; }
 
 } // cobs

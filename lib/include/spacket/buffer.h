@@ -1,19 +1,49 @@
 #pragma once
 
 #include <spacket/result.h>
+#include <spacket/bind.h>
 #include <spacket/result_utils.h>
 
-#include <memory>
+#include <boost/intrusive_ptr.hpp>
 #include <cstring>
 
-template<typename Allocator, size_t MAX_SIZE>
+namespace impl {
+
+}
+
+template<typename Allocator>
 class BufferT {
-    using This = BufferT<Allocator, MAX_SIZE>;
+    // using This = BufferT<Allocator>;
+
+private:
+    static constexpr size_t headerSize() { return sizeof(Header); }
+
+    struct Header {
+        size_t size;
+        uint8_t refCnt;
+    };
+
+    struct Storage {
+        Header header;
+        uint8_t buffer[];
+    };
+
+    friend void intrusive_ptr_add_ref(Storage* s) {
+        if (s->header.refCnt < std::numeric_limits<decltype(s->header.refCnt)>::max()) {
+            ++s->header.refCnt;
+        }
+    }
     
+    friend void intrusive_ptr_release(Storage* s) {
+        --s->header.refCnt;
+        if (s->header.refCnt == 0) {
+            Allocator().deallocate(s);
+        }
+    }
+
 public:
-    static constexpr size_t maxSize() { return MAX_SIZE; }
+    static constexpr size_t maxSize() { return Allocator::maxSize() - headerSize(); }
     
-public:
     static Result<BufferT> create(size_t size);
     static Result<BufferT> create(std::initializer_list<uint8_t> l);
     static Result<BufferT> create(std::vector<uint8_t> v);
@@ -21,109 +51,142 @@ public:
     BufferT(BufferT&& toMove) noexcept;
     BufferT& operator=(BufferT&& toMove) noexcept;
     
-    uint8_t* begin() const;
-    uint8_t* end() const;
+    BufferT(const BufferT& src) noexcept;
+    BufferT& operator=(const BufferT& src) noexcept;
+
+    uint8_t* begin();
+    uint8_t* end();
+    size_t size();
+
+    const uint8_t* begin() const;
+    const uint8_t* end() const;
     size_t size() const;
+    
     Result<BufferT> prefix(size_t size) const;
     Result<BufferT> suffix(uint8_t* begin) const;
     Result<BufferT> copy() const { return prefix(size()); }
 
 private:
-    BufferT(uint8_t* data, size_t size);
+    BufferT(Storage* data);
+
+    static Storage* storage(void* p) { return static_cast<Storage*>(p); }
     
 private:
-    struct Deleter{
-        void operator()(uint8_t*) const;
-    };
-    using DataPtr = std::unique_ptr<uint8_t, Deleter>;
+    using DataPtr = boost::intrusive_ptr<Storage>;
     DataPtr data;
-    size_t size_;
 };
 
-template<typename Allocator, size_t MAX_SIZE>
+template<typename Allocator>
 inline
-void BufferT<Allocator, MAX_SIZE>::Deleter::operator()(uint8_t* p) const {
-    Allocator().deallocate(p);
+BufferT<Allocator>::BufferT(Storage* data)
+    : data(data) {
 }
 
-template<typename Allocator, size_t MAX_SIZE>
+template<typename Allocator>
 inline
-BufferT<Allocator, MAX_SIZE>::BufferT(uint8_t* data, size_t size)
-    : data(data)
-    , size_(size) {
+Result<BufferT<Allocator>> BufferT<Allocator>::create(size_t size) {
+    returnOnFailT(p, BufferT, Allocator().allocate(size + headerSize()));
+    Storage* s = storage(p);
+    s->header.size = size;
+    return ok(BufferT(s));
 }
 
-template<typename Allocator, size_t MAX_SIZE>
+template<typename Allocator>
 inline
-Result<BufferT<Allocator, MAX_SIZE>> BufferT<Allocator, MAX_SIZE>::create(size_t size) {
-    returnOnFailT(p, BufferT, Allocator().allocate(size));
-    return ok(BufferT(p, size));
-}
-
-template<typename Allocator, size_t MAX_SIZE>
-inline
-Result<BufferT<Allocator, MAX_SIZE>> BufferT<Allocator, MAX_SIZE>::create(std::initializer_list<uint8_t> l) {
-    returnOnFailT(p, BufferT, Allocator().allocate(l.size()));
-    BufferT r(p, l.size());
+Result<BufferT<Allocator>> BufferT<Allocator>::create(std::initializer_list<uint8_t> l) {
+    returnOnFailT(p, BufferT, Allocator().allocate(l.size() + headerSize()));
+    Storage* s = storage(p);
+    s->header.size = l.size();
+    BufferT r(s);
     std::memcpy(r.begin(), l.begin(), l.size());
     return ok(std::move(r));
 }
 
-template<typename Allocator, size_t MAX_SIZE>
+template<typename Allocator>
 inline
-Result<BufferT<Allocator, MAX_SIZE>> BufferT<Allocator, MAX_SIZE>::create(std::vector<uint8_t> v) {
-    returnOnFailT(p, BufferT, Allocator().allocate(v.size()));
-    BufferT r(p, v.size());
+Result<BufferT<Allocator>> BufferT<Allocator>::create(std::vector<uint8_t> v) {
+    returnOnFailT(p, BufferT, Allocator().allocate(v.size() + headerSize()));
+    Storage* s = storage(p);
+    s->header.size = v.size();
+    BufferT r(s);
     std::memcpy(r.begin(), &v.front(), v.size());
     return ok(std::move(r));
 }
 
-template<typename Allocator, size_t MAX_SIZE>
+template<typename Allocator>
 inline
-BufferT<Allocator, MAX_SIZE>::BufferT(BufferT&& toMove) noexcept
-    : data(std::move(toMove.data))
-    , size_(toMove.size_) {
-    toMove.size_ = 0;
+BufferT<Allocator>::BufferT(BufferT&& toMove) noexcept
+    : data(std::move(toMove.data)) {
 }
 
-template<typename Allocator, size_t MAX_SIZE>
+template<typename Allocator>
 inline
-BufferT<Allocator, MAX_SIZE>& BufferT<Allocator, MAX_SIZE>::operator=(BufferT&& toMove) noexcept {
+BufferT<Allocator>& BufferT<Allocator>::operator=(BufferT&& toMove) noexcept {
     data = std::move(toMove.data);
-    size_ = toMove.size_;
-    toMove.size_ = 0;
+    return *this;
 }
 
-template<typename Allocator, size_t MAX_SIZE>
+template<typename Allocator>
 inline
-uint8_t* BufferT<Allocator, MAX_SIZE>::begin() const {
-    return data.get();
+BufferT<Allocator>::BufferT(const BufferT& src) noexcept
+    : data(src.data) {
 }
 
-template<typename Allocator, size_t MAX_SIZE>
+template<typename Allocator>
 inline
-uint8_t* BufferT<Allocator, MAX_SIZE>::end() const {
-    return data.get() + size_;
+BufferT<Allocator>& BufferT<Allocator>::operator=(const BufferT& src) noexcept {
+    data = src.data;
+    return *this;
 }
 
-template<typename Allocator, size_t MAX_SIZE>
+template<typename Allocator>
 inline
-size_t BufferT<Allocator, MAX_SIZE>::size() const {
-    return size_;
+uint8_t* BufferT<Allocator>::begin() {
+    return data.get()->buffer;
 }
 
-template<typename Allocator, size_t MAX_SIZE>
+template<typename Allocator>
 inline
-Result<BufferT<Allocator, MAX_SIZE>> BufferT<Allocator, MAX_SIZE>::prefix(size_t n) const {
-    returnOnFail(prefix, BufferT::create(std::min(n, size_)));
+uint8_t* BufferT<Allocator>::end() {
+    return data.get()->buffer + size();
+}
+
+template<typename Allocator>
+inline
+size_t BufferT<Allocator>::size() {
+    return data.get()->header.size;
+}
+
+template<typename Allocator>
+inline
+const uint8_t* BufferT<Allocator>::begin() const {
+    return data.get()->buffer;
+}
+
+template<typename Allocator>
+inline
+const uint8_t* BufferT<Allocator>::end() const {
+    return data.get()->buffer + size();
+}
+
+template<typename Allocator>
+inline
+size_t BufferT<Allocator>::size() const {
+    return data.get()->header.size;
+}
+
+template<typename Allocator>
+inline
+Result<BufferT<Allocator>> BufferT<Allocator>::prefix(size_t n) const {
+    returnOnFail(prefix, BufferT::create(std::min(n, size())));
     std::memcpy(prefix.begin(), begin(), prefix.size());
-    return std::move(prefix);
+    return ok(std::move(prefix));
 }
 
-template<typename Allocator, size_t MAX_SIZE>
+template<typename Allocator>
 inline
-Result<BufferT<Allocator, MAX_SIZE>> BufferT<Allocator, MAX_SIZE>::suffix(uint8_t* begin) const {
+Result<BufferT<Allocator>> BufferT<Allocator>::suffix(uint8_t* begin) const {
     returnOnFail(prefix, BufferT::create(end() - begin));
     std::memcpy(prefix.begin(), begin, prefix.size());
-    return std::move(prefix);
+    return ok(std::move(prefix));
 }

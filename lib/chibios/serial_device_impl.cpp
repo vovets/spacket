@@ -5,9 +5,13 @@
 
 namespace {
 
+void txend2(UARTDriver*) {}
+
 UARTConfig config = {
     .txend1_cb = nullptr,
-    .txend2_cb = nullptr,
+    // without this callback driver won't enable TC interrupt
+    // so uartSendFullTimeout will stuck forever
+    .txend2_cb = txend2,
     .rxend_cb = nullptr,
     .rxchar_cb = nullptr,
     .rxerr_cb = nullptr,
@@ -22,18 +26,36 @@ UARTConfig config = {
 
 SerialDevice::SerialDevice(UARTDriver* driver): driver(driver) {}
 
-SerialDevice::~SerialDevice() {
-    if (driver) { uartStop(driver); }
-}
-
 Result<SerialDevice> SerialDevice::open(UARTDriver* driver) {
+    if (driver->refCnt > 0) {
+        return fail<SerialDevice>(Error::DevAlreadyOpened);
+    }
     uartStart(driver, &config);
     return ok(SerialDevice(driver));
 }
 
-Result<size_t> SerialDevice::read(Timeout t, uint8_t* buffer, size_t maxRead) {
+SerialDevice::SerialDevice(SerialDevice&& src) noexcept
+    : driver(std::move(src.driver)) {
+}
+    
+SerialDevice& SerialDevice::operator=(SerialDevice&& src) noexcept {
+    driver = std::move(src.driver);
+    return *this;
+}
+
+SerialDevice::SerialDevice(const SerialDevice& src) noexcept
+    : driver(src.driver) {
+}
+
+SerialDevice& SerialDevice::operator=(const SerialDevice& src) noexcept {
+    driver = src.driver;
+    return *this;
+}
+
+
+Result<size_t> SerialDevice::read(uint8_t* buffer, size_t maxRead, Timeout t) {
     size_t received = maxRead;
-    auto msg = uartReceiveTimeout(driver, &received, buffer, toSystime(t));
+    auto msg = uartReceiveTimeout(driver.get(), &received, buffer, toSystime(t));
     if (msg != MSG_OK) {
         if (received > 0) {
             return ok(received);
@@ -43,9 +65,9 @@ Result<size_t> SerialDevice::read(Timeout t, uint8_t* buffer, size_t maxRead) {
     return ok(received);
 }
 
-Result<boost::blank> SerialDevice::write(uint8_t* buffer, size_t size) {
-    auto msg = uartSendFullTimeout(driver, &size, buffer, toSystime(INFINITE_TIMEOUT));
-    return msg == MSG_OK ? ok(boost::blank()) : fail<boost::blank>(Error::DevWriteFailed);
+Result<boost::blank> SerialDevice::write(const uint8_t* buffer, size_t size, Timeout t) {
+    auto msg = uartSendFullTimeout(driver.get(), &size, buffer, toSystime(t));
+    return msg == MSG_OK ? ok(boost::blank()) : fail<boost::blank>(Error::DevWriteTimeout);
 }
 
 #pragma GCC diagnostic pop

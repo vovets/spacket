@@ -30,8 +30,8 @@ size_t timeoutFromBaud(Baud b) {
 struct SerialDevice::Impl {
     Impl(int fd, struct timeval byteTimeout);
     ~Impl();
-    Result<size_t> read(Timeout t, uint8_t* buffer, size_t maxRead);
-    Result<boost::blank> write(uint8_t* buffer, size_t size);
+    Result<size_t> read(uint8_t* buffer, size_t maxRead, Timeout t);
+    Result<boost::blank> write(const uint8_t* buffer, size_t size);
     Result<boost::blank> flush();
 
     int fd;
@@ -72,11 +72,11 @@ Result<SerialDevice> SerialDevice::open(PortConfig portConfig) {
     return ok(SerialDevice(std::move(impl)));
 }
 
-Result<size_t> SerialDevice::read(Timeout t, uint8_t* buffer, size_t maxRead) {
-    return impl->read(t, buffer, maxRead);
+Result<size_t> SerialDevice::read(uint8_t* buffer, size_t maxRead, Timeout t) {
+    return impl->read(buffer, maxRead, t);
 }
 
-Result<boost::blank> SerialDevice::write(uint8_t* buffer, size_t size) {
+Result<boost::blank> SerialDevice::write(const uint8_t* buffer, size_t size) {
     return impl->write(buffer, size);
 }
 
@@ -93,7 +93,7 @@ SerialDevice::Impl::~Impl() {
     ::close(fd);
 }
 
-Result<size_t> SerialDevice::Impl::read(Timeout t, uint8_t* buffer, size_t maxRead) {
+Result<size_t> SerialDevice::Impl::read(uint8_t* buffer, size_t maxRead, Timeout t) {
     TRACE("===>");
     auto f = [] { return fail<size_t>(Error::DevReadFailed); };
     auto now = Clock::now();
@@ -114,7 +114,7 @@ Result<size_t> SerialDevice::Impl::read(Timeout t, uint8_t* buffer, size_t maxRe
                 continue;
             }
             TRACE("<1== " << cur - buffer);
-            return ok(cur - buffer);
+            return ok(static_cast<size_t>(cur - buffer));
         }
         if (!FD_ISSET(fd, &fds)) {
             TRACE("fd not ready");
@@ -129,13 +129,13 @@ Result<size_t> SerialDevice::Impl::read(Timeout t, uint8_t* buffer, size_t maxRe
     if (cur == buffer) {
         return fail<size_t>(Error::Timeout);
     }
-    return ok(cur - buffer);
+    return ok(static_cast<size_t>(cur - buffer));
 }
 
-Result<boost::blank> SerialDevice::Impl::write(uint8_t* buffer, size_t size) {
+Result<boost::blank> SerialDevice::Impl::write(const uint8_t* buffer, size_t size) {
     auto f = []{ return fail<b::blank>(Error::DevWriteFailed); };
-    uint8_t* cur = buffer;
-    uint8_t* end = buffer + size;
+    const uint8_t* cur = buffer;
+    const uint8_t* end = buffer + size;
     while (cur < end) {
         callv(
             bytesWritten,

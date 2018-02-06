@@ -6,7 +6,7 @@ function(fw_tests_add_flash_target fw_project)
   set(jlink_flash_hex "${BINARY_DIR}/fw.hex")
   set(jlink_flash_commandfile "${BINARY_DIR}/flash.jlink")
   configure_file("${SPACKET_ROOT}/tests/misc/flash.jlink.in" "${jlink_flash_commandfile}")
-  set(target "${fw_project}_flash")
+  set(target "${fw_project}-flash")
   add_custom_target(${target}
     ${JLINK_EXE} ${JLINK_CONNECT_OPTIONS} ${JLINK_FLASH_OPTIONS} -commandfile ${jlink_flash_commandfile}
     VERBATIM
@@ -24,6 +24,7 @@ function(fw_tests_add_fw_subdirectory name source_dir)
     USES_TERMINAL_BUILD 1
     BUILD_ALWAYS 1
     )
+  ExternalProject_Add_StepTargets(${name} configure build)
   fw_tests_add_flash_target("${name}")
 endfunction()
 

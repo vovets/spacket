@@ -14,7 +14,7 @@ Hr<Buffer> hr(const Buffer& b) { return Hr<Buffer>{b}; }
 template<typename Buffer>
 std::ostream& operator<<(std::ostream& os, Hr<Buffer> hr) {
     os  << hr.b.size() << ":[";
-    for (uint8_t* cur = hr.b.begin(); cur < hr.b.end(); ++cur) {
+    for (const uint8_t* cur = hr.b.begin(); cur < hr.b.end(); ++cur) {
         if (cur != hr.b.begin()) {
             os << ", ";
         }
@@ -29,12 +29,17 @@ Result<Buffer> operator+(const Buffer& lhs, const Buffer& rhs) {
     returnOnFail(result, Buffer::create(lhs.size() + rhs.size()));
     std::memcpy(result.begin(), lhs.begin(), lhs.size());
     std::memcpy(result.begin() + lhs.size(), rhs.begin(), rhs.size());
-    return std::move(result);
+    return ok(std::move(result));
 }
 
 template<typename Buffer>
 bool operator==(const Buffer& lhs, const Buffer& rhs) {
     return lhs.size() == rhs.size() && (0 == memcmp(lhs.begin(), rhs.begin(), lhs.size()));
+}
+
+template<typename Buffer>
+bool operator!=(const Buffer& lhs, const Buffer& rhs) {
+    return !operator==(lhs, rhs);
 }
 
 template<typename Buffer>

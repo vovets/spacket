@@ -7,6 +7,9 @@
 #include "chprintf.h"
 
 #include <spacket/serial_device.h>
+#include <spacket/buffer_utils.h>
+#include <spacket/util/mailbox.h>
+#include <spacket/util/static_thread.h>
 
 #include <chrono>
 
@@ -16,9 +19,7 @@ auto uartDriver = &UARTD1;
 
 }
 
-static void cmd_test_create(BaseSequentialStream *chp, int argc, char *argv[]) {
-    (void)argc;
-    (void)argv;
+static void cmd_test_create(BaseSequentialStream *stream, int, char*[]) {
     {
         auto sd = SerialDevice::open(uartDriver);
         CHECK(isOk(sd));
@@ -26,20 +27,18 @@ static void cmd_test_create(BaseSequentialStream *chp, int argc, char *argv[]) {
     CHECK(uartDriver->state == UART_STOP);
 }
 
-static void cmd_test_rx_timeout(BaseSequentialStream *chp, int argc, char *argv[]) {
-    (void)argc;
-    (void)argv;
+static void cmd_test_rx_timeout(BaseSequentialStream *stream, int, char*[]) {
     auto result =
-    SerialDevice::open(uartDriver) >>=
+    SerialDevice::open(uartDriver) >=
     [&](SerialDevice&& sd) {
         return
-        Buffer::create(10) >>=
+        Buffer::create(10) >=
         [&](Buffer&& b) {
-            chprintf(chp, "created: %d\n", b.size());
+            chprintf(stream, "created: %d\r\n", b.size());
             return
-            sd.read(std::chrono::milliseconds(100), std::move(b)) >>=
+            sd.read(std::move(b), std::chrono::milliseconds(100)) >=
             [&](Buffer&& b) {
-                chprintf(chp, "read: %d\n", b.size());
+                chprintf(stream, "read: %d\r\n", b.size());
                 return ok(b.size());
             };
         };
@@ -48,9 +47,105 @@ static void cmd_test_rx_timeout(BaseSequentialStream *chp, int argc, char *argv[
     CHECK(getFail(result) == Error::DevReadTimeout);
 }
 
+static MailboxT<SerialDevice, 1> rxInMailbox;
+static MailboxT<Result<Buffer>, 1> rxOutMailbox;
+constexpr Timeout RX_TIMEOUT = std::chrono::milliseconds(100);
+
+static Result<Buffer> testBuffer(size_t size) {
+    return
+    Buffer::create(size) >=
+    [&](Buffer&& b) {
+        for (size_t i = 0; i < size - 1; ++i) {
+            *(b.begin() + i) = '0' + i % 10;
+        }
+        *(b.end() - 1) = '\0';
+        return ok(std::move(b));
+    };
+}
+
+THD_FUNCTION(rxThreadFunction, arg) {
+    static_cast<void>(arg);
+    while (true) {
+        rxInMailbox.fetch(INFINITE_TIMEOUT) >=
+        [&](SerialDevice&& sd) {
+            return
+            Buffer::create(Buffer::maxSize()) >=
+            [&](Buffer&& b) {
+                auto r = sd.read(b, RX_TIMEOUT);
+                return
+                rxOutMailbox.post(r, INFINITE_TIMEOUT);
+            } <=
+            [&](Error e) {
+                auto r = fail<Buffer>(e);
+                return
+                rxOutMailbox.post(r, INFINITE_TIMEOUT);
+            };
+        };
+    }
+}
+
+static Result<bool> test_loopback(SerialDevice sd, size_t packetSize, BaseSequentialStream *stream) {
+    return
+    testBuffer(packetSize) >=
+    [&](Buffer&& reference) {
+        SerialDevice sdCopy = sd;
+        return
+        rxInMailbox.post(sdCopy, INFINITE_TIMEOUT) >
+        [&]{ return sd.write(reference); } >
+        []{ return rxOutMailbox.fetch(INFINITE_TIMEOUT); } >=
+        [&](Result<Buffer>&& r) {
+            returnOnFailT(b, bool, std::move(r));
+            if (b != reference) {
+                chprintf(stream, "created : [%d]%s\r\n", b.size(), b.begin());
+                chprintf(stream, "received: [%d]%s\r\n", b.size(), b.begin());
+                return ok(false);
+            }
+            return ok(true);
+        };
+    };
+}
+
+static void cmd_test_loopback(BaseSequentialStream *stream, int argc, char* argv[]) {
+    if (argc < 2) {
+        chprintf(stream, "FAILURE[Bad args]\r\n");
+        return;
+    }
+    size_t packetSize = std::atol(argv[0]);
+    size_t repetitions = std::atol(argv[1]);
+    SerialDevice::open(uartDriver) >=
+    [&](SerialDevice&& sd) {
+        bool passed = false;
+        for (size_t i = 0; i < repetitions; ++i) {
+            auto result = test_loopback(sd, packetSize, stream) >=
+            [&](bool packetsEqual) {
+                if (!packetsEqual) {
+                    chprintf(
+                        stream,
+                        "FAILURE[Packets differ %d %d]\r\n",
+                        packetSize,
+                        i);
+                    return ok(false);
+                }
+                return ok(true);
+            };
+            returnOnFail(passed_, result);
+            passed = passed_;
+        };
+        if (passed) {
+            chprintf(stream, "SUCCESS\r\n");
+        }
+        return ok(false);
+    } <=
+    [&](Error e) {
+        chprintf(stream, "FAILURE[%s]\r\n", toString(e));
+        return ok(false);
+    };
+}
+
 static const ShellCommand commands[] = {
     {"test_create", cmd_test_create},
     {"test_rx_timeout", cmd_test_rx_timeout},
+    {"test_loopback", cmd_test_loopback},
     {NULL, NULL}
 };
 

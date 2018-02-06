@@ -11,9 +11,9 @@ template <class Impl>
 class SerialDeviceBase {
 public:
     template<typename Buffer>
-    Result<Buffer> read(Timeout t, Buffer b) {
+    Result<Buffer> read(Buffer b, Timeout t) {
         return
-        impl().read(t, b.begin(), b.size()) >>=
+        impl().read(b.begin(), b.size(), t) >=
         [&](size_t size) {
             return b.prefix(size);
         };
@@ -21,11 +21,14 @@ public:
 
     template<typename Buffer>
     Result<boost::blank> write(const Buffer& b) {
-        return
-        impl().write(b.begin(), b.size()) >>=
-        [&](boost::blank&&) {
-            return ok(boost::blank{});
-        };
+        return impl().write(b.begin(), b.size());
+    }
+
+    // not every platform support write with timeout
+    // so there may be error here about missing impl().write()
+    template<typename Buffer>
+    Result<boost::blank> write(const Buffer& b, Timeout t) {
+        return impl().write(b.begin(), b.size(), t);
     }
     
 protected:

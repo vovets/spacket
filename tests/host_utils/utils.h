@@ -88,7 +88,7 @@ public:
             throw std::logic_error("test buffer too big");
         }
         ++index;
-        return std::move(b);
+        return ok(std::move(b));
     }
 
 private:

@@ -27,7 +27,7 @@ run_test() {
 }
 
 echo "Flashing fw..."
-${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${fw_project}_flash
+${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${fw_project}-flash
 
 echo "Starting RTT server..."
 ${JLINK_RTT_COMMAND} >jlink_rtt.out & echo -n $! >$jlink_pid

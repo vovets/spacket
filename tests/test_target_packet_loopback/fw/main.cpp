@@ -9,9 +9,10 @@
 #include <spacket/util/static_thread.h>
 #include <spacket/fatal_error.h>
 
-StaticThread<176> blinkerThread{};
-StaticThread<256> echoThread{};
-StaticThread<512> shellThread_{};
+StaticThreadT<176> blinkerThread;
+StaticThreadT<256> echoThread;
+StaticThreadT<1024> shellThread_;
+StaticThreadT<176> rxThread;
 
 static __attribute__((noreturn)) THD_FUNCTION(blinkerThreadFunction, arg) {
     (void)arg;
@@ -42,6 +43,7 @@ int __attribute__((noreturn)) main(void) {
   blinkerThread.create(NORMALPRIO - 2, blinkerThreadFunction, 0);
   echoThread.create(NORMALPRIO - 1, echoThreadFunction, 0);
   shellThread_.create(NORMALPRIO, shellThread, const_cast<ShellConfig*>(&shellConfig));
+  rxThread.create(NORMALPRIO + 1, rxThreadFunction, 0);
 
   while (true) {
     port_wait_for_interrupt();

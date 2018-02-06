@@ -24,7 +24,7 @@ std::vector<Baud> bauds = {Baud::B_921600};
 const size_t REPETITIONS = 10;
 const size_t BYTE_TIMEOUT_US = 0;
 
-using Buffer = BufferT<NewAllocator, 1024>;
+using Buffer = BufferT<NewAllocator>;
 
 Buffer buffer(size_t size) { return std::move(throwOnFail(Buffer::create(size))); }
 
@@ -48,14 +48,14 @@ TEST_CASE("read prefix", "[loopback]") {
         pc.byteTimeout_us = BYTE_TIMEOUT_US;
 
         auto result =
-        SerialDevice::open(pc) >>=
+        SerialDevice::open(pc) >=
         [&](SerialDevice&& sd) {
             auto wb = createTestBuffer<Buffer>(size);
             return
-            sd.write(wb) >>=
+            sd.write(wb) >=
             [&](boost::blank&&) {
                 return
-                sd.read(ch::seconds(1), buffer(MAX_READ)) >>=
+                sd.read(buffer(MAX_READ), ch::seconds(1)) >=
                 [&](Buffer&& rb) {
                     CAPTURE(rb);
                     REQUIRE(isPrefix(rb, wb));
@@ -76,15 +76,18 @@ TEST_CASE("read whole", "[loopback]") {
         pc.byteTimeout_us = BYTE_TIMEOUT_US;
 
         auto result =
-        SerialDevice::open(pc) >>=
+        SerialDevice::open(pc) >=
         [&](SerialDevice&& sd) {
             auto wb = createTestBuffer<Buffer>(size);
             return
-            sd.write(wb) >>=
+            sd.write(wb) >=
             [&](boost::blank&&) {
                 Buffer rb = buffer(0);
                 while (rb.size() < wb.size()) {
-                    returnOnFailT(tmp, boost::blank, sd.read(ch::seconds(1), buffer(MAX_READ)));
+                    returnOnFailT(
+                        tmp,
+                        boost::blank,
+                        sd.read(buffer(MAX_READ), ch::seconds(1)));
                     CAPTURE(tmp);
                     if (!rb.size()) {
                         REQUIRE(isPrefix(tmp, wb));
@@ -110,15 +113,18 @@ TEST_CASE("timeout", "[loopback]") {
         pc.byteTimeout_us = BYTE_TIMEOUT_US;
 
         auto result =
-        SerialDevice::open(pc) >>=
+        SerialDevice::open(pc) >=
         [&](SerialDevice&& sd) {
             auto wb = createTestBuffer<Buffer>(size);
             return
-            sd.write(wb) >>=
+            sd.write(wb) >=
             [&](boost::blank&&) {
                 Buffer rb = buffer(0);
                 while (rb.size() < wb.size()) {
-                    returnOnFailT(tmp, boost::blank, sd.read(ch::seconds(1), buffer(MAX_READ)));
+                    returnOnFailT(
+                        tmp,
+                        boost::blank,
+                        sd.read(buffer(MAX_READ), ch::seconds(1)));
                     CAPTURE(tmp);
                     if (!rb.size()) {
                         REQUIRE(isPrefix(tmp, wb));
@@ -127,7 +133,7 @@ TEST_CASE("timeout", "[loopback]") {
                     rb = std::move(sum);
                 }
                 REQUIRE_THAT(rb, isEqualTo(wb));
-                auto r = sd.read(ch::milliseconds(10), buffer(MAX_READ));
+                auto r = sd.read(buffer(MAX_READ), ch::milliseconds(10));
                 REQUIRE(isFail(r));
                 REQUIRE(getFailUnsafe(r) == Error::Timeout);
                 return ok(boost::blank{});

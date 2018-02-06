@@ -13,24 +13,24 @@ public:
         chGuardedPoolLoadArray(&pool, data, NUM_OBJECTS);
     }
 
-    Result<uint8_t*> allocate() {
+    Result<void*> allocate() {
         return allocateCheck(chGuardedPoolAllocTimeout(&pool, TIME_INFINITE));
     }
 
-    Result<uint8_t*> allocateS() {
+    Result<void*> allocateS() {
         return allocateCheck(chGuardedPoolAllocTimeoutS(&pool, TIME_INFINITE));
     }
 
-    void deallocate(uint8_t* p) {
+    void deallocate(void* p) {
         chGuardedPoolFree(&pool, p);
     }
 
     static constexpr size_t objectSize() { return OBJECT_SIZE; }
     
 private:
-    Result<uint8_t*> allocateCheck(void* p) {
-        if (!p) { return fail<uint8_t*>(Error::GuardedPoolOutOfMem); }
-        return ok(static_cast<uint8_t*>(p));
+    Result<void*> allocateCheck(void* p) {
+        if (!p) { return fail<void*>(Error::GuardedPoolOutOfMem); }
+        return ok(static_cast<void*>(p));
     }
     
 private:

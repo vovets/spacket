@@ -5,3 +5,4 @@
 using Timeout = Duration;
 
 constexpr Timeout INFINITE_TIMEOUT = infiniteTimeout();
+constexpr Timeout IMMEDIATE_TIMEOUT = immediateTimeout();

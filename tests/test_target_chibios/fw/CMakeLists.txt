@@ -29,8 +29,8 @@ set(thumb_defs -DTHUMB -DTHUMB_NO_INTERWORKING)
 set(debug_flags -ggdb)
 set(c_warn_flags -Wall -Wextra -Wundef -Wstrict-prototypes)
 set(cxx_warn_flags -Wall -Wextra -Wundef -Wno-literal-suffix)
-set(cxx_features_flags -fno-exceptions -fno-rtti)
-set(debug_optimization_flags -Og)
+set(cxx_features_flags -fno-exceptions -fno-rtti -fno-unwind-tables)
+set(debug_optimization_flags -Os)
 set(release_optimization_flags -O2 -s)
 set(linker_flags
   "${mc_flags}"

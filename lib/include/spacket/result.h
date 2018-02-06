@@ -8,34 +8,37 @@
 #include <boost/preprocessor/cat.hpp>
 
 template <typename Success>
-using Result = boost::variant<Error, Success>;
+struct Result {
+    using ValueType = boost::variant<Error, Success>;
+    ValueType value;
+};
 
 template <typename Success>
-Result<Success> ok(Success value) { return Result<Success>(std::move(value)); }
+Result<Success> ok(Success value) { return Result<Success>{std::move(value)}; }
 
 template <typename Success>
-Result<Success> fail(Error error) { return Result<Success>(std::move(error)); }
+Result<Success> fail(Error error) { return Result<Success>{std::move(error)}; }
 
 template <typename Result>
-bool isOk(const Result& r) { return !boost::get<Error>(&r); }
+bool isOk(const Result& r) { return !boost::get<Error>(&r.value); }
 
 template <typename Result>
 bool isFail(const Result& r) { return !isOk(r); }
 
 template <typename Result>
-using SuccessT = typename boost::mpl::at<typename Result::types, boost::mpl::int_<1>>::type;
+using SuccessT = typename boost::mpl::at<typename Result::ValueType::types, boost::mpl::int_<1>>::type;
 
 template <typename Result>
-using ErrorT = typename boost::mpl::at<typename Result::types, boost::mpl::int_<0>>::type;
+using ErrorT = typename boost::mpl::at<typename Result::ValueType::types, boost::mpl::int_<0>>::type;
 
 template <typename Result>
 SuccessT<Result> getOkUnsafe(Result&& r) {
-    return std::move(*boost::get<SuccessT<Result>>(&r));
+    return std::move(*boost::get<SuccessT<Result>>(&r.value));
 }
 
 template <typename Result>
 SuccessT<Result> getOkLoc(Result& r, const char* file, int line) {
-    auto p = boost::get<SuccessT<Result>>(&r);
+    auto p = boost::get<SuccessT<Result>>(&r.value);
     if (!p) {
         fatalError("getOk called upon error result", file, line);
     }
@@ -44,17 +47,17 @@ SuccessT<Result> getOkLoc(Result& r, const char* file, int line) {
 
 template <typename Result>
 ErrorT<Result> getFailUnsafe(Result& r) {
-    return *boost::get<ErrorT<Result>>(&r);
+    return *boost::get<ErrorT<Result>>(&r.value);
 }
 
 template <typename Result>
 ErrorT<Result> getFailUnsafe(const Result& r) {
-    return boost::get<ErrorT<Result>>(r);
+    return *boost::get<ErrorT<Result>>(&r.value);
 }
 
 template <typename Result>
 ErrorT<Result> getFailLoc(Result& r, const char* file, int line) {
-    auto p = boost::get<ErrorT<Result>>(&r);
+    auto p = boost::get<ErrorT<Result>>(&r.value);
     if (!p) {
         fatalError("getFail called upon success result", file, line);
     }

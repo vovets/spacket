@@ -26,10 +26,10 @@
 using RTTStream = RTTStreamT<0, 10>;
 
 RTTStream rttStream{};
-StaticThread<176> blinkerThread{};
-StaticThread<128> writerThread{};
+StaticThreadT<176> blinkerThread{};
+StaticThreadT<128> writerThread{};
 thread_t* writerThreadPtr = nullptr;
-StaticThread<2048> shellThread_{};
+StaticThreadT<2048> shellThread_{};
 
 static void writerThreadFunction(void*);
 

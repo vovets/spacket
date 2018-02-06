@@ -356,6 +356,8 @@
 #define UART_USE_MUTUAL_EXCLUSION   FALSE
 #endif
 
+#define UART_DRIVER_EXT_FIELDS size_t refCnt;
+
 #endif /* _HALCONF_H_ */
 
 /** @} */

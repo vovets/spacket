@@ -7,8 +7,8 @@
 
 #include <catch.hpp>
 
-using Buffer = BufferT<NewAllocator, 2048>;
-constexpr size_t maxUnstuffed = cobs::maxUnstuffedSizeT<Buffer>();
+using Buffer = BufferT<NewAllocator>;
+constexpr size_t maxUnstuffed = cobs::maxUnstuffedSize(2048);
 
 namespace Catch {
 template<> struct StringMaker<Buffer>: public StringMakerBase<Buffer> {}; 

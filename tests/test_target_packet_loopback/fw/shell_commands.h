@@ -3,3 +3,5 @@
 #include "shell.h"
 
 extern "C" const ShellConfig shellConfig;
+
+void rxThreadFunction(void* arg);

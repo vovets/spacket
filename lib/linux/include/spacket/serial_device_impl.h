@@ -9,15 +9,18 @@ class SerialDevice: public SerialDeviceBase<SerialDevice> {
     
 public:
     static Result<SerialDevice> open(PortConfig portConfig);
+
     SerialDevice(SerialDevice&& r);
     ~SerialDevice();
+
     using SerialDeviceBase<SerialDevice>::write;
     using SerialDeviceBase<SerialDevice>::read;
+
     Result<boost::blank> flush();
 
 private:
-    Result<size_t> read(Timeout t, uint8_t* buffer, size_t maxRead);
-    Result<boost::blank> write(uint8_t* buffer, size_t size);
+    Result<size_t> read(uint8_t* buffer, size_t maxRead, Timeout t);
+    Result<boost::blank> write(const uint8_t* buffer, size_t size);
 
 private:
     struct Impl;

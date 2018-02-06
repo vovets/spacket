@@ -3,7 +3,7 @@
 #include "ch.h"
 
 template <size_t STACK_SIZE>
-class StaticThread {
+class StaticThreadT {
 public:
     thread_t* create(tprio_t prio, tfunc_t f, void* arg) {
         return chThdCreateStatic(

@@ -8,7 +8,7 @@
 
 #include <catch.hpp>
 
-using Buffer = BufferT<NewAllocator, 1024>;
+using Buffer = BufferT<NewAllocator>;
 using TestSource = TestSourceT<Buffer>;
 
 Buffer buffer(std::initializer_list<uint8_t> l) {
