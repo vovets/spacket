@@ -52,6 +52,10 @@
 #define GPIOD_OSC_IN            0
 #define GPIOD_OSC_OUT           1
 
+#define GPIOA_DBG0              0
+#define GPIOA_DBG1              1
+
+
 /* J1 connector */
 
 // pin 1:       AV+
@@ -125,12 +129,14 @@
 /*
  * Port A setup.
  * Everything input with pull-up except:
+ * PA0  - Open Drain 50 MHz (DEBUG LED 0)
+ * PA1  - Open Drain 50 MHz (DEBUG LED 1)
  * PA2  - Alternate output  (USART2 TX).
  * PA3  - Normal input      (USART2 RX).
  * PA9  - Alternate output  (USART1 TX).
  * PA10 - Normal input      (USART1 RX).
  */
-#define VAL_GPIOACRL            0x88884B88      /*  PA7...PA0 */
+#define VAL_GPIOACRL            0x88884B77      /*  PA7...PA0 */
 #define VAL_GPIOACRH            0x888884B8      /* PA15...PA8 */
 #define VAL_GPIOAODR            0xFFFFFFFF
 

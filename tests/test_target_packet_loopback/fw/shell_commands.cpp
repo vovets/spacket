@@ -47,9 +47,13 @@ static void cmd_test_rx_timeout(BaseSequentialStream *stream, int, char*[]) {
     CHECK(getFail(result) == Error::DevReadTimeout);
 }
 
-static MailboxT<SerialDevice, 1> rxInMailbox;
+struct RxContext {
+    SerialDevice sd;
+    Timeout timeout;
+};
+
+static MailboxT<RxContext, 1> rxInMailbox;
 static MailboxT<Result<Buffer>, 1> rxOutMailbox;
-constexpr Timeout RX_TIMEOUT = std::chrono::milliseconds(100);
 
 static Result<Buffer> testBuffer(size_t size) {
     return
@@ -65,18 +69,20 @@ static Result<Buffer> testBuffer(size_t size) {
 
 THD_FUNCTION(rxThreadFunction, arg) {
     static_cast<void>(arg);
+    chRegSetThreadName("rx");
     while (true) {
         rxInMailbox.fetch(INFINITE_TIMEOUT) >=
-        [&](SerialDevice&& sd) {
+        [&](RxContext&& c) {
             return
             Buffer::create(Buffer::maxSize()) >=
             [&](Buffer&& b) {
-                auto r = sd.read(b, RX_TIMEOUT);
+                auto r = c.sd.read(b, c.timeout);
                 return
                 rxOutMailbox.post(r, INFINITE_TIMEOUT);
             } <=
             [&](Error e) {
                 auto r = fail<Buffer>(e);
+                palSetPad(GPIOA, GPIOA_DBG0);
                 return
                 rxOutMailbox.post(r, INFINITE_TIMEOUT);
             };
@@ -84,19 +90,19 @@ THD_FUNCTION(rxThreadFunction, arg) {
     }
 }
 
-static Result<bool> test_loopback(SerialDevice sd, size_t packetSize, BaseSequentialStream *stream) {
+static Result<bool> test_loopback(SerialDevice sd, size_t packetSize, Timeout rxTimeout, BaseSequentialStream *stream) {
     return
     testBuffer(packetSize) >=
     [&](Buffer&& reference) {
-        SerialDevice sdCopy = sd;
+        RxContext rxContext{sd, rxTimeout};
         return
-        rxInMailbox.post(sdCopy, INFINITE_TIMEOUT) >
+        [&]{ return rxInMailbox.post(rxContext, INFINITE_TIMEOUT); }() >
         [&]{ return sd.write(reference); } >
         []{ return rxOutMailbox.fetch(INFINITE_TIMEOUT); } >=
         [&](Result<Buffer>&& r) {
             returnOnFailT(b, bool, std::move(r));
             if (b != reference) {
-                chprintf(stream, "created : [%d]%s\r\n", b.size(), b.begin());
+                chprintf(stream, "created : [%d]%s\r\n", reference.size(), reference.begin());
                 chprintf(stream, "received: [%d]%s\r\n", b.size(), b.begin());
                 return ok(false);
             }
@@ -105,23 +111,17 @@ static Result<bool> test_loopback(SerialDevice sd, size_t packetSize, BaseSequen
     };
 }
 
-static void cmd_test_loopback(BaseSequentialStream *stream, int argc, char* argv[]) {
-    if (argc < 2) {
-        chprintf(stream, "FAILURE[Bad args]\r\n");
-        return;
-    }
-    size_t packetSize = std::atol(argv[0]);
-    size_t repetitions = std::atol(argv[1]);
+static void test_loopback_loop(BaseSequentialStream *stream, size_t packetSize, size_t repetitions, Timeout rxTimeout) {
     SerialDevice::open(uartDriver) >=
     [&](SerialDevice&& sd) {
         bool passed = false;
         for (size_t i = 0; i < repetitions; ++i) {
-            auto result = test_loopback(sd, packetSize, stream) >=
+            auto result = test_loopback(sd, packetSize, rxTimeout, stream) >=
             [&](bool packetsEqual) {
                 if (!packetsEqual) {
                     chprintf(
                         stream,
-                        "FAILURE[Packets differ %d %d]\r\n",
+                        "FAILURE[Packets differ] s=%d r=%d\r\n",
                         packetSize,
                         i);
                     return ok(false);
@@ -140,6 +140,23 @@ static void cmd_test_loopback(BaseSequentialStream *stream, int argc, char* argv
         chprintf(stream, "FAILURE[%s]\r\n", toString(e));
         return ok(false);
     };
+}
+
+static void cmd_test_loopback(BaseSequentialStream *stream, int argc, char* argv[]) {
+    if (argc < 2) {
+        chprintf(stream, "FAILURE[Bad args]\r\n");
+        return;
+    }
+    size_t packetSize = std::atol(argv[0]);
+    size_t repetitions = std::atol(argv[1]);
+    size_t milliseconds = argc > 2 ? std::atol(argv[2]) : 0;
+    Timeout timeout = milliseconds > 0
+    ? std::chrono::milliseconds(milliseconds)
+    : INFINITE_TIMEOUT;
+
+    chDbgResumeTrace(CH_DBG_TRACE_MASK_SWITCH);
+    test_loopback_loop(stream, packetSize, repetitions, timeout);
+    chDbgSuspendTrace(CH_DBG_TRACE_MASK_SWITCH);
 }
 
 static const ShellCommand commands[] = {
