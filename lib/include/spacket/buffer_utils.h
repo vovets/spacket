@@ -25,7 +25,10 @@ std::ostream& operator<<(std::ostream& os, Hr<Buffer> hr) {
 }
 
 template<typename Buffer>
-Result<Buffer> operator+(const Buffer& lhs, const Buffer& rhs) {
+typename std::enable_if<
+    std::is_same<typename Buffer::TypeId, BufferTypeId>::value,
+    Result<Buffer>>::type
+operator+(const Buffer& lhs, const Buffer& rhs) {
     returnOnFail(result, Buffer::create(lhs.size() + rhs.size()));
     std::memcpy(result.begin(), lhs.begin(), lhs.size());
     std::memcpy(result.begin() + lhs.size(), rhs.begin(), rhs.size());

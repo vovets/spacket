@@ -29,7 +29,7 @@ function(fw_tests_add_fw_subdirectory name source_dir)
 endfunction()
 
 function(fw_tests_add_jlink_test test_name fw_project host_test_executable)
-  set(jlink_test_wrapper ${CMAKE_CURRENT_BINARY_DIR}/jlink_test_wrapper.sh)
+  set(jlink_test_wrapper ${CMAKE_CURRENT_BINARY_DIR}/${test_name}.sh)
   configure_file("${SPACKET_ROOT}/tests/misc/jlink_test_wrapper.sh.in" ${jlink_test_wrapper})
   set(jlink_connect ${CMAKE_CURRENT_BINARY_DIR}/jlink_connect.sh)
   configure_file("${SPACKET_ROOT}/tests/misc/jlink_connect.sh.in" ${jlink_connect})

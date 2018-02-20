@@ -11,10 +11,10 @@ namespace impl {
 
 }
 
+struct BufferTypeId {};
+
 template<typename Allocator>
 class BufferT {
-    // using This = BufferT<Allocator>;
-
 private:
     static constexpr size_t headerSize() { return sizeof(Header); }
 
@@ -40,6 +40,9 @@ private:
             Allocator().deallocate(s);
         }
     }
+
+public:
+    using TypeId = BufferTypeId;
 
 public:
     static constexpr size_t maxSize() { return Allocator::maxSize() - headerSize(); }

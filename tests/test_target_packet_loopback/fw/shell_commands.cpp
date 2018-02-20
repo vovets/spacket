@@ -8,8 +8,10 @@
 
 #include <spacket/serial_device.h>
 #include <spacket/buffer_utils.h>
+#include <spacket/serial_utils.h>
 #include <spacket/util/mailbox.h>
 #include <spacket/util/static_thread.h>
+#include <spacket/util/time_measurement.h>
 
 #include <chrono>
 
@@ -17,6 +19,14 @@ namespace {
 
 auto uartDriver = &UARTD1;
 
+}
+
+template <typename Buffer>
+void print(BaseSequentialStream* stream, const Buffer& b) {
+    chprintf(stream, "[%d]", b.size());
+    for (auto c: b) {
+        streamPut(stream, c);
+    }
 }
 
 static void cmd_test_create(BaseSequentialStream *stream, int, char*[]) {
@@ -59,10 +69,11 @@ static Result<Buffer> testBuffer(size_t size) {
     return
     Buffer::create(size) >=
     [&](Buffer&& b) {
-        for (size_t i = 0; i < size - 1; ++i) {
-            *(b.begin() + i) = '0' + i % 10;
+        size_t i = 0;
+        for (auto& c: b) {
+            c = '0' + i % 10;
+            ++i;
         }
-        *(b.end() - 1) = '\0';
         return ok(std::move(b));
     };
 }
@@ -102,8 +113,12 @@ static Result<bool> test_loopback(SerialDevice sd, size_t packetSize, Timeout rx
         [&](Result<Buffer>&& r) {
             returnOnFailT(b, bool, std::move(r));
             if (b != reference) {
-                chprintf(stream, "created : [%d]%s\r\n", reference.size(), reference.begin());
-                chprintf(stream, "received: [%d]%s\r\n", b.size(), b.begin());
+                chprintf(stream, "created : ");
+                print(stream, reference);
+                chprintf(stream, "\r\n");
+                chprintf(stream, "received: ");
+                print(stream, b);
+                chprintf(stream, "\r\n");
                 return ok(false);
             }
             return ok(true);
@@ -115,7 +130,9 @@ static void test_loopback_loop(BaseSequentialStream *stream, size_t packetSize, 
     SerialDevice::open(uartDriver) >=
     [&](SerialDevice&& sd) {
         bool passed = false;
+        TimeMeasurement tm;
         for (size_t i = 0; i < repetitions; ++i) {
+            tm.start();
             auto result = test_loopback(sd, packetSize, rxTimeout, stream) >=
             [&](bool packetsEqual) {
                 if (!packetsEqual) {
@@ -129,10 +146,11 @@ static void test_loopback_loop(BaseSequentialStream *stream, size_t packetSize, 
                 return ok(true);
             };
             returnOnFail(passed_, result);
+            tm.stop();
             passed = passed_;
         };
         if (passed) {
-            chprintf(stream, "SUCCESS\r\n");
+            chprintf(stream, "SUCCESS %d %d\r\n", tm.tm.best, tm.tm.worst);
         }
         return ok(false);
     } <=
@@ -159,10 +177,20 @@ static void cmd_test_loopback(BaseSequentialStream *stream, int argc, char* argv
     chDbgSuspendTrace(CH_DBG_TRACE_MASK_SWITCH);
 }
 
+static void cmd_test_info(BaseSequentialStream *stream, int, char*[]) {
+    for (size_t size = 1; size < 249; ++size) {
+        auto pt = packetTime(921600, size).count();
+        auto pt64 = packetTime64(921600, size).count();
+        chprintf(stream, "%d %d %d\r\n", size, pt, pt64);
+    }
+    chprintf(stream, "SUCCESS\r\n");
+}
+
 static const ShellCommand commands[] = {
     {"test_create", cmd_test_create},
     {"test_rx_timeout", cmd_test_rx_timeout},
     {"test_loopback", cmd_test_loopback},
+    {"test_info", cmd_test_info},
     {NULL, NULL}
 };
 

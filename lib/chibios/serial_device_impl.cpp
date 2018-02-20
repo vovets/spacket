@@ -1,7 +1,5 @@
 #include <spacket/serial_device_impl.h>
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
+#include <spacket/serial_utils.h>
 
 namespace {
 
@@ -53,21 +51,30 @@ SerialDevice& SerialDevice::operator=(const SerialDevice& src) noexcept {
 }
 
 
-Result<size_t> SerialDevice::read(uint8_t* buffer, size_t maxRead, Timeout t) {
-    size_t received = maxRead;
-    auto msg = uartReceiveTimeout(driver.get(), &received, buffer, toSystime(t));
-    if (msg != MSG_OK) {
+Result<size_t> SerialDevice::read(uint8_t* buffer, size_t maxRead, Timeout t_) {
+    systime_t t = toSystime(t_);
+    systime_t maxReadTimeout = toSystime(packetTime(
+        driver.get()->config->speed,
+        maxRead));
+
+    do {
+        systime_t curTimeout = std::max(std::min(t, maxReadTimeout), minTimeout());
+        size_t received = maxRead;
+        auto msg = uartReceiveTimeout(driver.get(), &received, buffer, curTimeout);
+        if (msg == MSG_OK) {
+            return ok(received);
+        }        
         if (received > 0) {
             return ok(received);
         }
-        return fail<size_t>(Error::DevReadTimeout);
-    }
-    return ok(received);
+        if (t != TIME_INFINITE) {
+            t -= curTimeout;
+        }
+    } while (t > 0);
+    return fail<size_t>(Error::DevReadTimeout);
 }
 
 Result<boost::blank> SerialDevice::write(const uint8_t* buffer, size_t size, Timeout t) {
     auto msg = uartSendFullTimeout(driver.get(), &size, buffer, toSystime(t));
     return msg == MSG_OK ? ok(boost::blank()) : fail<boost::blank>(Error::DevWriteTimeout);
 }
-
-#pragma GCC diagnostic pop

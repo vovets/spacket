@@ -12,7 +12,7 @@
 StaticThreadT<176> blinkerThread;
 StaticThreadT<256> echoThread;
 StaticThreadT<1024> shellThread_;
-StaticThreadT<176> rxThread;
+StaticThreadT<256> rxThread;
 
 static __attribute__((noreturn)) THD_FUNCTION(blinkerThreadFunction, arg) {
     (void)arg;
