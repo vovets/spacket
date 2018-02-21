@@ -41,8 +41,8 @@ def test(c):
     # test idle line detection
     # different sizes with infinite timeout
     rep = 80
-    for size in range(98, 100):
-        for i in range(0, 40):
+    for size in range(69, 120):
+        for i in range(0, 10):
             c.send_line(b"test_loopback %d %d 0" % (size, rep))
             
             c.expect_line(b"test_loopback %d %d 0" % (size, rep))
