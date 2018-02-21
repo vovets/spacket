@@ -1,8 +1,5 @@
 #include <spacket/serial_device_impl.h>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-
 namespace {
 
 void txend2(UARTDriver*) {}
@@ -69,5 +66,3 @@ Result<boost::blank> SerialDevice::write(const uint8_t* buffer, size_t size, Tim
     auto msg = uartSendFullTimeout(driver.get(), &size, buffer, toSystime(t));
     return msg == MSG_OK ? ok(boost::blank()) : fail<boost::blank>(Error::DevWriteTimeout);
 }
-
-#pragma GCC diagnostic pop
