@@ -23,7 +23,17 @@ done
 
 run_test() {
     echo "Running test..."
-    PYTHONPATH=${SPACKET_ROOT}/tests/python:$PYTHONPATH ${host_test_executable}
+    code=0
+    PYTHONPATH=${SPACKET_ROOT}/tests/python:$PYTHONPATH ${host_test_executable} || code=$?
+    if [ $code -ne 0 ] ; then
+        if [ $code -eq 2 ] ; then
+            echo "Test asked to keep jlink running, waiting for INT"
+            while true; do
+                sleep 1
+            done
+        fi
+    fi
+    return $code
 }
 
 echo "Flashing fw..."

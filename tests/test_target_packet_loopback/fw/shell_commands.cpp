@@ -154,9 +154,7 @@ static void cmd_test_loopback(BaseSequentialStream *stream, int argc, char* argv
     ? std::chrono::milliseconds(milliseconds)
     : INFINITE_TIMEOUT;
 
-    chDbgResumeTrace(CH_DBG_TRACE_MASK_SWITCH);
     test_loopback_loop(stream, packetSize, repetitions, timeout);
-    chDbgSuspendTrace(CH_DBG_TRACE_MASK_SWITCH);
 }
 
 static const ShellCommand commands[] = {

@@ -27,7 +27,11 @@ class Connection:
     def expect_line(self, line):
         self.expect(line + lineend)
 
-def main(test, timeout=0.5):
+def default_timeout_handler():
+        print("FAILED")
+        exit(1)
+    
+def main(test, timeout=0.5, timeout_handler=default_timeout_handler):
     parser = argparse.ArgumentParser(description='Run test using telnet protocol.')
     parser.add_argument('-p', metavar='P', type=int, nargs=1, default=19021,
                         help='port to connect to')
@@ -37,5 +41,4 @@ def main(test, timeout=0.5):
     try:
         test(Connection(port=args.p, response_timeout=timeout))
     except NoMatch:
-        print("FAILED")
-        exit(1)
+        timeout_handler()
