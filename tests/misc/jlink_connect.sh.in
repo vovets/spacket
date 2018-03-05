@@ -25,7 +25,7 @@ done
 
 cat >$jlink_commands <<EOF
 r
-go
+g
 EOF
 
 echo "Starting RTT server..."

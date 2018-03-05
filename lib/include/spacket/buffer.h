@@ -7,24 +7,28 @@
 #include <boost/intrusive_ptr.hpp>
 #include <cstring>
 
-namespace impl {
+namespace buffer_impl {
 
+struct TypeId {};
+
+struct Header {
+    uint16_t size;
+    uint8_t refCnt;
+} __attribute__((packed));
+
+static constexpr size_t headerSize() { return sizeof(Header); }
+
+static constexpr size_t allocSize(size_t dataSize) {
+    return dataSize + headerSize();
 }
 
-struct BufferTypeId {};
+}
 
 template<typename Allocator>
 class BufferT {
 private:
-    static constexpr size_t headerSize() { return sizeof(Header); }
-
-    struct Header {
-        size_t size;
-        uint8_t refCnt;
-    };
-
     struct Storage {
-        Header header;
+        buffer_impl::Header header;
         uint8_t buffer[];
     };
 
@@ -42,11 +46,17 @@ private:
     }
 
 public:
-    using TypeId = BufferTypeId;
+    using TypeId = buffer_impl::TypeId;
 
 public:
-    static constexpr size_t maxSize() { return Allocator::maxSize() - headerSize(); }
-    
+    static constexpr size_t maxSize() {
+        return
+        std::min(
+            Allocator::maxSize(),
+            static_cast<size_t>(std::numeric_limits<decltype(buffer_impl::Header::size)>::max()))
+        - buffer_impl::headerSize();
+    }
+
     static Result<BufferT> create(size_t size);
     static Result<BufferT> create(std::initializer_list<uint8_t> l);
     static Result<BufferT> create(std::vector<uint8_t> v);
@@ -88,7 +98,7 @@ BufferT<Allocator>::BufferT(Storage* data)
 template<typename Allocator>
 inline
 Result<BufferT<Allocator>> BufferT<Allocator>::create(size_t size) {
-    returnOnFailT(p, BufferT, Allocator().allocate(size + headerSize()));
+    returnOnFailT(p, BufferT, Allocator().allocate(size + buffer_impl::headerSize()));
     Storage* s = storage(p);
     s->header.size = size;
     return ok(BufferT(s));
@@ -97,7 +107,7 @@ Result<BufferT<Allocator>> BufferT<Allocator>::create(size_t size) {
 template<typename Allocator>
 inline
 Result<BufferT<Allocator>> BufferT<Allocator>::create(std::initializer_list<uint8_t> l) {
-    returnOnFailT(p, BufferT, Allocator().allocate(l.size() + headerSize()));
+    returnOnFailT(p, BufferT, Allocator().allocate(l.size() + buffer_impl::headerSize()));
     Storage* s = storage(p);
     s->header.size = l.size();
     BufferT r(s);
@@ -108,7 +118,7 @@ Result<BufferT<Allocator>> BufferT<Allocator>::create(std::initializer_list<uint
 template<typename Allocator>
 inline
 Result<BufferT<Allocator>> BufferT<Allocator>::create(std::vector<uint8_t> v) {
-    returnOnFailT(p, BufferT, Allocator().allocate(v.size() + headerSize()));
+    returnOnFailT(p, BufferT, Allocator().allocate(v.size() + buffer_impl::headerSize()));
     Storage* s = storage(p);
     s->header.size = v.size();
     BufferT r(s);

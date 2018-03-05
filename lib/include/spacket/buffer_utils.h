@@ -26,7 +26,7 @@ std::ostream& operator<<(std::ostream& os, Hr<Buffer> hr) {
 
 template<typename Buffer>
 typename std::enable_if<
-    std::is_same<typename Buffer::TypeId, BufferTypeId>::value,
+    std::is_same<typename Buffer::TypeId, buffer_impl::TypeId>::value,
     Result<Buffer>>::type
 operator+(const Buffer& lhs, const Buffer& rhs) {
     returnOnFail(result, Buffer::create(lhs.size() + rhs.size()));

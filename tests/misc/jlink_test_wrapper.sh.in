@@ -9,6 +9,10 @@ do_cleanup() {
         [ -d $tmp_dir ] || exit 0
         echo $1 trap:
         [ -e $jlink_pid ] && { pid=$(cat $jlink_pid) && echo killing jlink $pid && kill $pid ; }
+        # without this delay sometimes jlink process is still there (after receiving TERM sig)
+        # when the next test starts
+        # that causes 'Register failed. Emulator has reached maximum number of connections.' error
+        sleep 0.5
         rm -r $tmp_dir
     ) 9<"$0"
 }

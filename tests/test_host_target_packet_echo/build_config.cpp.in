@@ -1,0 +1,3 @@
+#include "build_config.h"
+
+const std::string DEVICE_CONFIG_PATH = "@DEVICE_CONFIG_PATH@";

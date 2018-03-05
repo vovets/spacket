@@ -24,7 +24,7 @@ public:
         return impl().write(b.begin(), b.size());
     }
 
-    // not every platform support write with timeout
+    // not every platform supports write with timeout
     // so there may be error here about missing impl().write()
     template<typename Buffer>
     Result<boost::blank> write(const Buffer& b, Timeout t) {

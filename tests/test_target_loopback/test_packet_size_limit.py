@@ -1,14 +1,18 @@
 import test_utils
 
 
+# test that packet size limit works
+# constant originates in fw/constants.h
+BUFFER_MAX_SIZE = 256
+BUFFER_SIZE = BUFFER_MAX_SIZE + 1
+
 def test(c):
     c.expect_line(b"RTT ready")
     c.expect(b"ch> ")
 
-    # test that packet size limit works
-    c.send_line(b"test_loopback 249 100")
+    c.send_line(b"test_loopback %d 100" % BUFFER_SIZE)
 
-    c.expect_line(b"test_loopback 249 100")
+    c.expect_line(b"test_loopback %d 100" % BUFFER_SIZE)
     c.expect_line(b"FAILURE\[700:PoolAllocatorObjectTooBig\]")
     c.expect(b"ch> ")
 

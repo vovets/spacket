@@ -16,8 +16,7 @@ public:
     Equals(const Buffer& reference): reference(reference) {}
 
     bool match(const Buffer& b) const override {
-        if (b.size() != reference.size()) { return false; }
-        return std::memcmp(b.begin(), reference.begin(), b.size()) == 0;
+        return b == reference;
     }
 
     std::string describe() const {
@@ -42,6 +41,9 @@ struct StringMakerBase {
     }
 };
 
+// make this specialization for concrete buffer type available to compiler for Catch to be
+// able to print buffers contents from asserions
+//
 // namespace Catch {
 // template<> struct StringMaker<ConcreteBuffer>: public StringMakerBase<ConcreteBuffer> {}; 
 // }
