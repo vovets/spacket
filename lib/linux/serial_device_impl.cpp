@@ -1,4 +1,4 @@
-#include <spacket/serial_device.h>
+#include <spacket/serial_device_impl.h>
 #include "logging.h"
 #include "traced_call.h"
 #include "namespaces.h"
@@ -27,7 +27,7 @@ size_t timeoutFromBaud(Baud b) {
     }
 }
 
-struct SerialDevice::Impl {
+struct SerialDeviceImpl::Impl {
     Impl(int fd, struct timeval byteTimeout);
     ~Impl();
     Result<size_t> read(uint8_t* buffer, size_t maxRead, Timeout t);
@@ -38,17 +38,30 @@ struct SerialDevice::Impl {
     struct timeval byteTimeout;
 };
 
-SerialDevice::SerialDevice(ImplPtr p): impl(std::move(p)) {}
-SerialDevice::SerialDevice(SerialDevice&& r): impl(std::move(r.impl)) {}
-SerialDevice::~SerialDevice() {}
 
-Result<SerialDevice> SerialDevice::open(PortConfig portConfig) {
+SerialDeviceImpl::SerialDeviceImpl(ImplPtr p) noexcept: impl(std::move(p)) {}
+
+SerialDeviceImpl::SerialDeviceImpl(const SerialDeviceImpl& r) noexcept: impl(r.impl) {}
+
+SerialDeviceImpl& SerialDeviceImpl::operator=(const SerialDeviceImpl& src) noexcept {
+    impl = src.impl;
+}
+
+SerialDeviceImpl::SerialDeviceImpl(SerialDeviceImpl&& r) noexcept: impl(std::move(r.impl)) {}
+
+SerialDeviceImpl& SerialDeviceImpl::operator=(SerialDeviceImpl&& src) noexcept {
+    impl = std::move(src.impl);
+}
+
+SerialDeviceImpl::~SerialDeviceImpl() {}
+
+Result<SerialDeviceImpl> SerialDeviceImpl::doOpen(PortConfig portConfig) {
     using TvMsec = decltype(timeval().tv_usec);
     
-    auto f = [] { return fail<SerialDevice>(Error::DevInitFailed); };
+    auto f = [] { return fail<SerialDeviceImpl>(Error::DevInitFailed); };
     
     if (portConfig.baud == Baud::NonStandard) {
-        return fail<SerialDevice>(Error::ConfigBadBaud);
+        return fail<SerialDeviceImpl>(Error::ConfigBadBaud);
     }
     
     struct timeval byteTimeout{
@@ -69,31 +82,31 @@ Result<SerialDevice> SerialDevice::open(PortConfig portConfig) {
     termios.c_cc[VTIME] = 0;
     call(f, ::tcsetattr, fd, TCSANOW, &termios);
     call(f, ::tcflush, fd, TCIOFLUSH);
-    return ok(SerialDevice(std::move(impl)));
+    return ok(SerialDeviceImpl(std::move(impl)));
 }
 
-Result<size_t> SerialDevice::read(uint8_t* buffer, size_t maxRead, Timeout t) {
+Result<size_t> SerialDeviceImpl::read(uint8_t* buffer, size_t maxRead, Timeout t) {
     return impl->read(buffer, maxRead, t);
 }
 
-Result<boost::blank> SerialDevice::write(const uint8_t* buffer, size_t size) {
+Result<boost::blank> SerialDeviceImpl::write(const uint8_t* buffer, size_t size) {
     return impl->write(buffer, size);
 }
 
-Result<boost::blank> SerialDevice::flush() {
+Result<boost::blank> SerialDeviceImpl::flush() {
     return impl->flush();
 }
 
-SerialDevice::Impl::Impl(int fd, struct timeval byteTimeout)
+SerialDeviceImpl::Impl::Impl(int fd, struct timeval byteTimeout)
     : fd(fd)
     , byteTimeout(byteTimeout) {
 }
 
-SerialDevice::Impl::~Impl() {
+SerialDeviceImpl::Impl::~Impl() {
     ::close(fd);
 }
 
-Result<size_t> SerialDevice::Impl::read(uint8_t* buffer, size_t maxRead, Timeout t) {
+Result<size_t> SerialDeviceImpl::Impl::read(uint8_t* buffer, size_t maxRead, Timeout t) {
     TRACE("===>");
     auto f = [] { return fail<size_t>(Error::DevReadFailed); };
     auto now = Clock::now();
@@ -132,7 +145,7 @@ Result<size_t> SerialDevice::Impl::read(uint8_t* buffer, size_t maxRead, Timeout
     return ok(static_cast<size_t>(cur - buffer));
 }
 
-Result<boost::blank> SerialDevice::Impl::write(const uint8_t* buffer, size_t size) {
+Result<boost::blank> SerialDeviceImpl::Impl::write(const uint8_t* buffer, size_t size) {
     auto f = []{ return fail<b::blank>(Error::DevWriteFailed); };
     const uint8_t* cur = buffer;
     const uint8_t* end = buffer + size;
@@ -149,7 +162,7 @@ Result<boost::blank> SerialDevice::Impl::write(const uint8_t* buffer, size_t siz
     return ok(b::blank());
 }
 
-Result<boost::blank> SerialDevice::Impl::flush() {
+Result<boost::blank> SerialDeviceImpl::Impl::flush() {
     auto f = []{ return fail<b::blank>(Error::DevWriteFailed); };
     call(f, ::tcflush, fd, TCIOFLUSH);
     return ok(boost::blank{});

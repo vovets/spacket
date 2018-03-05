@@ -1,10 +1,13 @@
 #pragma once
 
-#include <spacket/serial_device_base.h>
+#include <spacket/result.h>
+#include <spacket/time_utils.h>
 
 #include "hal.h"
 
 #include <boost/intrusive_ptr.hpp>
+
+#include <limits>
 
 #if !defined(HAL_USE_UART) || HAL_USE_UART != TRUE
 #error SerialDevice needs '#define HAL_USE_UART TRUE' in halconf.h \
@@ -30,23 +33,26 @@ void intrusive_ptr_release(UARTDriver* d) {
     }
 }
     
-class SerialDevice: public SerialDeviceBase<SerialDevice> {
-    friend class SerialDeviceBase<SerialDevice>;
-
+class SerialDeviceImpl {
 public:
-    static Result<SerialDevice> open(UARTDriver* driver);
+    template <typename SerialDevice>
+    static Result<SerialDevice> open(UARTDriver* driver) {
+        if (driver->refCnt > 0) {
+            return fail<SerialDevice>(Error::DevAlreadyOpened);
+        }
+        start(driver);
+        return ok(SerialDevice(SerialDeviceImpl(driver)));
+    }
 
-    SerialDevice(SerialDevice&& src) noexcept;
-    SerialDevice& operator=(SerialDevice&& src) noexcept;
+    static void start(UARTDriver* driver);
 
-    SerialDevice(const SerialDevice& src) noexcept;
-    SerialDevice& operator=(const SerialDevice& src) noexcept;
+    SerialDeviceImpl(SerialDeviceImpl&& src) noexcept;
+    SerialDeviceImpl& operator=(SerialDeviceImpl&& src) noexcept;
 
-    using SerialDeviceBase<SerialDevice>::write;
-    using SerialDeviceBase<SerialDevice>::read;
+    SerialDeviceImpl(const SerialDeviceImpl& src) noexcept;
+    SerialDeviceImpl& operator=(const SerialDeviceImpl& src) noexcept;
 
-private:
-    SerialDevice(UARTDriver* driver);
+    SerialDeviceImpl(UARTDriver* driver);
 
     Result<size_t> read(uint8_t* buffer, size_t maxRead, Timeout t);
     Result<boost::blank> write(const uint8_t* buffer, size_t size, Timeout t);

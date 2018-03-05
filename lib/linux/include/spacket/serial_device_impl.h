@@ -1,33 +1,44 @@
 #pragma once
 
-#include <spacket/serial_device_base.h>
 #include <spacket/result.h>
 #include <spacket/port_config.h>
+#include <spacket/time_utils.h>
 
-class SerialDevice: public SerialDeviceBase<SerialDevice> {
-    friend class SerialDeviceBase<SerialDevice>;
+#include <memory>
+
+class SerialDeviceImpl {
+    friend class SerialDevice;
     
 public:
-    static Result<SerialDevice> open(PortConfig portConfig);
+    template <typename SerialDevice>
+    static Result<SerialDevice> open(PortConfig portConfig) {
+        return
+        doOpen(portConfig) >=
+        [&](SerialDeviceImpl&& impl) {
+            return ok(SerialDevice(std::move(impl)));
+        };
+    }
 
-    SerialDevice(SerialDevice&& r);
-    ~SerialDevice();
+    static Result<SerialDeviceImpl> doOpen(PortConfig portConfig);
 
-    using SerialDeviceBase<SerialDevice>::write;
-    using SerialDeviceBase<SerialDevice>::read;
+    SerialDeviceImpl(const SerialDeviceImpl& r) noexcept;
+    SerialDeviceImpl& operator=(const SerialDeviceImpl& src) noexcept;
 
+    SerialDeviceImpl(SerialDeviceImpl&& r) noexcept;
+    SerialDeviceImpl& operator=(SerialDeviceImpl&& src) noexcept;
+    
+    ~SerialDeviceImpl();
+
+    Result<size_t> read(uint8_t* buffer, size_t maxRead, Timeout t);
+    Result<boost::blank> write(const uint8_t* buffer, size_t size);
     Result<boost::blank> flush();
 
 private:
-    Result<size_t> read(uint8_t* buffer, size_t maxRead, Timeout t);
-    Result<boost::blank> write(const uint8_t* buffer, size_t size);
-
-private:
     struct Impl;
-    using ImplPtr = std::unique_ptr<Impl>;
+    using ImplPtr = std::shared_ptr<Impl>;
 
 private:
-    SerialDevice(ImplPtr p);
+    SerialDeviceImpl(ImplPtr p) noexcept;
 
 private:
     ImplPtr impl;

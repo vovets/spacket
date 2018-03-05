@@ -21,36 +21,32 @@ UARTConfig config = {
 
 }
 
-SerialDevice::SerialDevice(UARTDriver* driver): driver(driver) {}
+SerialDeviceImpl::SerialDeviceImpl(UARTDriver* driver): driver(driver) {}
 
-Result<SerialDevice> SerialDevice::open(UARTDriver* driver) {
-    if (driver->refCnt > 0) {
-        return fail<SerialDevice>(Error::DevAlreadyOpened);
-    }
+void SerialDeviceImpl::start(UARTDriver* driver) {
     uartStart(driver, &config);
-    return ok(SerialDevice(driver));
 }
 
-SerialDevice::SerialDevice(SerialDevice&& src) noexcept
+SerialDeviceImpl::SerialDeviceImpl(SerialDeviceImpl&& src) noexcept
     : driver(std::move(src.driver)) {
 }
     
-SerialDevice& SerialDevice::operator=(SerialDevice&& src) noexcept {
+SerialDeviceImpl& SerialDeviceImpl::operator=(SerialDeviceImpl&& src) noexcept {
     driver = std::move(src.driver);
     return *this;
 }
 
-SerialDevice::SerialDevice(const SerialDevice& src) noexcept
+SerialDeviceImpl::SerialDeviceImpl(const SerialDeviceImpl& src) noexcept
     : driver(src.driver) {
 }
 
-SerialDevice& SerialDevice::operator=(const SerialDevice& src) noexcept {
+SerialDeviceImpl& SerialDeviceImpl::operator=(const SerialDeviceImpl& src) noexcept {
     driver = src.driver;
     return *this;
 }
 
 
-Result<size_t> SerialDevice::read(uint8_t* buffer, size_t maxRead, Timeout t) {
+Result<size_t> SerialDeviceImpl::read(uint8_t* buffer, size_t maxRead, Timeout t) {
     size_t received = maxRead;
     auto msg = uartReceiveTimeout(driver.get(), &received, buffer, toSystime(t));
     if (msg != MSG_OK) {
@@ -62,7 +58,7 @@ Result<size_t> SerialDevice::read(uint8_t* buffer, size_t maxRead, Timeout t) {
     return ok(received);
 }
 
-Result<boost::blank> SerialDevice::write(const uint8_t* buffer, size_t size, Timeout t) {
+Result<boost::blank> SerialDeviceImpl::write(const uint8_t* buffer, size_t size, Timeout t) {
     auto msg = uartSendFullTimeout(driver.get(), &size, buffer, toSystime(t));
     return msg == MSG_OK ? ok(boost::blank()) : fail<boost::blank>(Error::DevWriteTimeout);
 }
