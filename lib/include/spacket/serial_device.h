@@ -22,12 +22,14 @@ public:
         
     SerialDevice& operator=(SerialDevice&& src) noexcept {
         static_cast<SerialDeviceImpl>(*this) = src;
+        return *this;
     }
 
     SerialDevice(const SerialDevice& src) noexcept : SerialDeviceImpl(src) {}
     
     SerialDevice& operator=(const SerialDevice& src) noexcept {
         static_cast<SerialDeviceImpl>(*this) = src;
+        return *this;
     }
 
     template<typename Buffer>

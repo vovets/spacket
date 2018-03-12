@@ -1,27 +1,83 @@
 #pragma once
 
-#include <spacket/result.h>
 #include <spacket/buffer.h>
-#include <spacket/time_utils.h>
+#include <spacket/result.h>
 
 template <typename Buffer>
-using Source = std::function<Result<Buffer>(Timeout t, size_t maxRead)>;
+class PacketizerT {
+public:
+    enum Result { Continue, Finished, Overflow };
+    
+public:
+    PacketizerT(Buffer& b)
+        : out(&b)
+        , next(out->begin())
+    {}
 
-template <typename Buffer>
-struct ReadResult {
-    Buffer packet;
-    Buffer suffix;
+    PacketizerT(PacketizerT&& src)
+        : out(src.out)
+        , next(out->begin())
+    {
+        src.out = nullptr;
+        src.next = nullptr;
+    }
+
+    PacketizerT& operator=(PacketizerT&& rhs) noexcept {
+        out = rhs.out;
+        next = out->begin();
+        rhs.out = nullptr;
+        rhs.next = nullptr;
+        return *this;
+    }
+
+    Result consume(uint8_t byte) {
+        if (next == out->begin()) {
+            return consumeBegin(byte);
+        } else {
+            if (next == out->end()) {
+                return consumeEnd(byte);
+            } else {
+                return consumeWithin(byte);
+            }
+        }
+    }
+
+    size_t size() const {
+        return next - out->begin();
+    }
+
+private:
+    Result consumeBegin(uint8_t byte) {
+        if (byte == 0) {
+            return Continue;
+        } else {
+            if (next == out->end()) {
+                return Overflow;
+            } else {
+                *next++ = byte;
+                return Continue;
+            }
+        }
+    }
+
+    Result consumeEnd(uint8_t byte) {
+        if (byte == 0) {
+            return Finished;
+        } else {
+            return Overflow;
+        }
+    }
+
+    Result consumeWithin(uint8_t byte) {
+        if (byte == 0) {
+            return Finished;
+        } else {
+            *next++ = byte;
+            return Continue;
+        }
+    }
+
+private:
+    Buffer* out;
+    uint8_t* next;
 };
-
-template<typename Buffer>
-Result<ReadResult<Buffer>> readPacket(
-    Source<Buffer> s,
-    Buffer next,
-    size_t maxRead,
-    size_t maxPacketSize,
-    Timeout t);
-
-template<typename Buffer>
-Result<ReadResult<Buffer>> readPacket(Source<Buffer> s, Buffer prefix, size_t maxRead, Timeout t);
-
-#include <spacket/impl/packetizer-impl.h>

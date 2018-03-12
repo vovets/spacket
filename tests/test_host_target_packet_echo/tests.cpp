@@ -70,7 +70,7 @@ TEST_CASE("packet loopback") {
             } >
             [&]() {
                 if (counter % 100 == 0) {
-                    WARN("size: " << size);
+                    WARN("size: " << size << ", counter: " << counter);
                 }
                 REQUIRE(rb == wb);
                 return ok(boost::blank{});

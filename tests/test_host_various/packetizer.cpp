@@ -3,13 +3,16 @@
 #include <spacket/errors.h>
 #include <spacket/buffer_utils.h>
 #include <spacket/buffer_new_allocator.h>
-#include <spacket/packetizer.h>
+#include <spacket/read_packet.h>
 #include <spacket/result_utils.h>
 
 #include <catch.hpp>
 
 using Buffer = BufferT<NewAllocator>;
 using TestSource = TestSourceT<Buffer>;
+namespace Catch {
+template<> struct StringMaker<Buffer>: public StringMakerBase<Buffer> {}; 
+}
 
 Buffer buffer(std::initializer_list<uint8_t> l) {
     return throwOnFail(Buffer::create(l));
@@ -31,7 +34,6 @@ TEST_CASE("1", "[nodev][read]") {
 TEST_CASE("2", "[nodev][read]") {
     TestSource ts({{0, 0, 0, 0, 0, 0}});
     Buffer next = buffer(0);
-    const size_t MAX_READ = 6;
     auto source = [&] (Timeout t, size_t maxRead) { return ts.read(t, maxRead); };
     auto result = readPacket<Buffer>(source, std::move(next), 6, ch::milliseconds(1));
     REQUIRE(isFail(result));

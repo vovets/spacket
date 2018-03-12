@@ -19,6 +19,7 @@
     X(ID(DevReadTimeout),            CODE(404),   SEP())  \
     X(ID(DevAlreadyOpened),          CODE(405),   SEP())  \
     X(ID(PacketTooBig),              CODE(500),   SEP())  \
+    X(ID(PacketCreateTooBig),        CODE(501),   SEP())  \
     X(ID(CobsBadEncoding),           CODE(600),   SEP())  \
     X(ID(PoolAllocatorObjectTooBig), CODE(700),   SEP())  \
     X(ID(ChMsgTimeout),              CODE(800),   SEP())  \

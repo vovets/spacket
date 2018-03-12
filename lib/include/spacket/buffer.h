@@ -14,6 +14,10 @@ struct TypeId {};
 struct Header {
     uint16_t size;
     uint8_t refCnt;
+    // TODO: proper alignment
+
+    Header(uint16_t size): size(size), refCnt(0) {}
+
 } __attribute__((packed));
 
 static constexpr size_t headerSize() { return sizeof(Header); }
@@ -83,6 +87,9 @@ private:
     BufferT(Storage* data);
 
     static Storage* storage(void* p) { return static_cast<Storage*>(p); }
+    static auto toHeaderSize(size_t size) {
+        return static_cast<decltype(buffer_impl::Header::size)>(size);
+    }
     
 private:
     using DataPtr = boost::intrusive_ptr<Storage>;
@@ -98,18 +105,24 @@ BufferT<Allocator>::BufferT(Storage* data)
 template<typename Allocator>
 inline
 Result<BufferT<Allocator>> BufferT<Allocator>::create(size_t size) {
-    returnOnFailT(p, BufferT, Allocator().allocate(size + buffer_impl::headerSize()));
+    if (size > maxSize()) {
+        return fail<BufferT>(Error::PacketCreateTooBig);
+    }
+    returnOnFailT(p, BufferT, Allocator().allocate(buffer_impl::allocSize(size)));
     Storage* s = storage(p);
-    s->header.size = size;
+    s->header = { toHeaderSize(size) };
     return ok(BufferT(s));
 }
 
 template<typename Allocator>
 inline
 Result<BufferT<Allocator>> BufferT<Allocator>::create(std::initializer_list<uint8_t> l) {
-    returnOnFailT(p, BufferT, Allocator().allocate(l.size() + buffer_impl::headerSize()));
+    if (l.size() > maxSize()) {
+        return fail<BufferT>(Error::PacketCreateTooBig);
+    }
+    returnOnFailT(p, BufferT, Allocator().allocate(buffer_impl::allocSize(l.size())));
     Storage* s = storage(p);
-    s->header.size = l.size();
+    s->header = { toHeaderSize(l.size()) };
     BufferT r(s);
     std::memcpy(r.begin(), l.begin(), l.size());
     return ok(std::move(r));
@@ -118,9 +131,12 @@ Result<BufferT<Allocator>> BufferT<Allocator>::create(std::initializer_list<uint
 template<typename Allocator>
 inline
 Result<BufferT<Allocator>> BufferT<Allocator>::create(std::vector<uint8_t> v) {
-    returnOnFailT(p, BufferT, Allocator().allocate(v.size() + buffer_impl::headerSize()));
+    if (v.size() > maxSize()) {
+        return fail<BufferT>(Error::PacketCreateTooBig);
+    }
+    returnOnFailT(p, BufferT, Allocator().allocate(buffer_impl::allocSize(v.size())));
     Storage* s = storage(p);
-    s->header.size = v.size();
+    s->header = { toHeaderSize(v.size()) };
     BufferT r(s);
     std::memcpy(r.begin(), &v.front(), v.size());
     return ok(std::move(r));

@@ -13,7 +13,7 @@ def test(c):
     c.send_line(b"test_loopback %d 100" % BUFFER_SIZE)
 
     c.expect_line(b"test_loopback %d 100" % BUFFER_SIZE)
-    c.expect_line(b"FAILURE\[700:PoolAllocatorObjectTooBig\]")
+    c.expect_line(b"FAILURE\[501:PacketCreateTooBig\]")
     c.expect(b"ch> ")
 
 timeout = 1
