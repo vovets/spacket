@@ -53,7 +53,10 @@ Result<size_t> SerialDeviceImpl::read(uint8_t* buffer, size_t maxRead, Timeout t
         if (received > 0) {
             return ok(received);
         }
-        return fail<size_t>(Error::DevReadTimeout);
+        if (msg == MSG_TIMEOUT) {
+            return fail<size_t>(Error::DevReadTimeout);
+        }
+        return fail<size_t>(Error::DevReadError);
     }
     return ok(received);
 }

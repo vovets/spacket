@@ -21,7 +21,7 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_executable(test_host_target_packetizer_echo tests.cpp "${CMAKE_CURRENT_BINARY_DIR}/build_config.cpp")
 
-target_link_libraries(test_host_target_packetizer_echo spacket utils)
+target_link_libraries(test_host_target_packetizer_echo spacket utils pthread)
 
 fw_tests_add_fw_subdirectory(test_host_target_packetizer_echo_fw "${CMAKE_CURRENT_SOURCE_DIR}/fw")
 

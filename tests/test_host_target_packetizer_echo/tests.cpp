@@ -13,6 +13,7 @@
 
 #include <chrono>
 #include <thread>
+#include <future>
 
 using Buffer = BufferT<NewAllocator>;
 
@@ -38,9 +39,36 @@ struct TestCase {
     Result<Buffer> expected;
 };
 
+Result<Buffer> readFull(SerialDevice& sd, Timeout timeout) {
+    bool finished = false;
+    Result<Buffer> result = ok(buf(0));
+    while (!finished) {
+        sd.read(buf(BUFFER_MAX_SIZE), timeout) >=
+        [&](Buffer&& read) {
+            return
+            std::move(result) >=
+            [&](Buffer&& result_) {
+                result = result_ + read;
+                return ok(boost::blank{});
+            };
+        } <=
+        [&](Error e) {
+            finished = true;
+            if (e == Error::DevReadTimeout) {
+                return ok(boost::blank{});
+            }
+            result = fail<SuccessT<decltype(result)>>(e);
+            return ok(boost::blank{});
+        };
+    }
+    return result;
+}
+
 void runCaseOnce(const PortConfig& pc, TestCase c) {
     SerialDevice::open(pc) >=
     [&](SerialDevice&& sd) {
+        auto future = std::async(
+            std::launch::async, readFull, std::ref(sd), Timeout(std::chrono::milliseconds(100)));
         for (const auto& bufferToSend: c.send) {
             sd.write(bufferToSend) <=
             [&](Error e) {
@@ -52,7 +80,7 @@ void runCaseOnce(const PortConfig& pc, TestCase c) {
                 return ok(boost::blank{});
             };
         }
-        auto result = sd.read(buf(BUFFER_MAX_SIZE), std::chrono::milliseconds(100));
+        auto result = future.get();
         REQUIRE(result == c.expected);
         return ok(boost::blank{});
     };
@@ -101,7 +129,7 @@ TEST_CASE("overflow") {
             createTestBufferNoZero<Buffer>(1),
             buf({0})
         },
-        fail<Buffer>(Error::Timeout)
+        ok(buf(0))
     },
     REP);
 }

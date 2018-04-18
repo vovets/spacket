@@ -33,7 +33,7 @@ template<typename Buffer>
 Equals<Buffer> isEqualTo(const Buffer& reference) { return Equals<Buffer>(reference); }
 
 template<typename Buffer>
-struct StringMakerBase {
+struct StringMakerBufferBase {
     static std::string convert( Buffer const& value ) {
         std::ostringstream ss;
         ss << hr(value);
@@ -41,11 +41,25 @@ struct StringMakerBase {
     }
 };
 
-// make this specialization for concrete buffer type available to compiler for Catch to be
+template<typename Result>
+struct StringMakerResultBase {
+    static std::string convert( Result const& value ) {
+        std::ostringstream ss;
+        if (isOk(value)) {
+            ss << hr(getOkUnsafe(value));
+        } else {
+            ss << toString(getFailUnsafe(value));
+        }
+        return ss.str();
+    }
+};
+
+// make this specialization(s) for concrete buffer and result types available to compiler for Catch to be
 // able to print buffers contents from asserions
 //
 // namespace Catch {
-// template<> struct StringMaker<ConcreteBuffer>: public StringMakerBase<ConcreteBuffer> {}; 
+// template<> struct StringMaker<ConcreteBuffer>: public StringMakerBufferBase<ConcreteBuffer> {}; 
+// template<> struct StringMaker<ConcreteResult>: public StringMakerResultBase<ConcreteResult> {}; 
 // }
 
 template<typename Buffer>
@@ -54,6 +68,16 @@ Buffer createTestBuffer(size_t size) {
     auto c = buffer.begin();
     for (size_t i = 0; i < size; ++i, ++c) {
         *c = i % 256;
+    }
+    return std::move(buffer);
+}
+
+template<typename Buffer>
+Buffer createTestBufferNoZero(size_t size) {
+    Buffer buffer = throwOnFail(Buffer::create(size));
+    auto c = buffer.begin();
+    for (size_t i = 0; i < size; ++i, ++c) {
+        *c = i % 255 + 1;
     }
     return std::move(buffer);
 }
@@ -81,13 +105,13 @@ public:
         return std::move(result);
     }
 
-    Result<Buffer> read(Timeout t, size_t maxSize) {
+    Result<Buffer> read(Timeout t, size_t maxRead) {
         if (index >= buffers.size()) {
             return fail<Buffer>(Error::Timeout);
         }
         Buffer b = std::move(buffers[index]);
-        if (b.size() > maxSize) {
-            throw std::logic_error("test buffer too big");
+        if (b.size() > maxRead) {
+            throw std::logic_error("TestSource: maxRead exceeded in read");
         }
         ++index;
         return ok(std::move(b));

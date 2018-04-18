@@ -8,10 +8,10 @@
 #include <catch.hpp>
 
 using Buffer = BufferT<NewAllocator>;
-constexpr size_t maxUnstuffed = cobs::maxUnstuffedSize(2048);
+constexpr size_t maxPayload = cobs::maxPayloadSize(2048);
 
 namespace Catch {
-template<> struct StringMaker<Buffer>: public StringMakerBase<Buffer> {}; 
+template<> struct StringMaker<Buffer>: public StringMakerBufferBase<Buffer> {}; 
 }
 
 Buffer fill(uint8_t byte, size_t size) {
@@ -41,13 +41,13 @@ void test(Buffer b) {
 }
 
 TEST_CASE("1") {
-    for (size_t size = 1; size <= maxUnstuffed; ++size) {
+    for (size_t size = 1; size <= maxPayload; ++size) {
         test(fill(0, size));
     }
 }
 
 TEST_CASE("2") {
-    for (size_t size = 2; size <= maxUnstuffed; ++size) {
+    for (size_t size = 2; size <= maxPayload; ++size) {
         test(fill(42, size));
     }
 }

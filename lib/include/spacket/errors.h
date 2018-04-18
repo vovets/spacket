@@ -13,17 +13,18 @@
     X(ID(ConfigNoDevSpecified),      CODE(300),   SEP())  \
     X(ID(ConfigBadBaud),             CODE(301),   SEP())  \
     X(ID(DevInitFailed),             CODE(400),   SEP())  \
-    X(ID(DevReadFailed),             CODE(401),   SEP())  \
-    X(ID(DevWriteFailed),            CODE(402),   SEP())  \
+    X(ID(DevReadError),              CODE(401),   SEP())  \
+    X(ID(DevWriteError),             CODE(402),   SEP())  \
     X(ID(DevWriteTimeout),           CODE(403),   SEP())  \
     X(ID(DevReadTimeout),            CODE(404),   SEP())  \
     X(ID(DevAlreadyOpened),          CODE(405),   SEP())  \
-    X(ID(PacketTooBig),              CODE(500),   SEP())  \
-    X(ID(PacketCreateTooBig),        CODE(501),   SEP())  \
+    X(ID(BufferCreateTooBig),        CODE(500),   SEP())  \
     X(ID(CobsBadEncoding),           CODE(600),   SEP())  \
     X(ID(PoolAllocatorObjectTooBig), CODE(700),   SEP())  \
     X(ID(ChMsgTimeout),              CODE(800),   SEP())  \
     X(ID(ChMsgReset),                CODE(801),   SEP())  \
+    X(ID(PacketizerOverflow),        CODE(900),   SEP())  \
+    X(ID(PacketDropped),             CODE(1000),  SEP())  \
     X(ID(MiserableFailure0),         CODE(10000), SEP())  \
     X(ID(MiserableFailure1),         CODE(10001), SEP())  \
     X(ID(MiserableFailure9),         CODE(10010), )

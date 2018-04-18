@@ -3,9 +3,11 @@
 #include <spacket/result.h>
 #include <spacket/bind.h>
 #include <spacket/result_utils.h>
+#include <spacket/debug_print.h>
 
 #include <boost/intrusive_ptr.hpp>
 #include <cstring>
+
 
 namespace buffer_impl {
 
@@ -20,19 +22,31 @@ struct Header {
 
 } __attribute__((packed));
 
-static constexpr size_t headerSize() { return sizeof(Header); }
+inline
+constexpr size_t headerSize() { return sizeof(Header); }
 
-static constexpr size_t allocSize(size_t dataSize) {
+inline
+constexpr size_t allocSize(size_t dataSize) {
     return dataSize + headerSize();
 }
+
+#ifdef BUFFER_ENABLE_DEBUG_TRACE
+template <typename... U>
+void debugPrintLine(const char* fmt, U&&... u) {
+    ::debugPrintLine(fmt, std::forward<U>(u)...);
+}
+#else
+template <typename... U>
+void debugPrintLine(const char*, U&&...) {}
+#endif
 
 }
 
 template<typename Allocator>
 class BufferT {
 private:
-    struct Storage {
-        buffer_impl::Header header;
+    struct Storage { 
+       buffer_impl::Header header;
         uint8_t buffer[];
     };
 
@@ -73,57 +87,62 @@ public:
 
     uint8_t* begin();
     uint8_t* end();
-    size_t size();
+
+    void resize(size_t newSize);
+    void release() { storage.reset(); }
 
     const uint8_t* begin() const;
     const uint8_t* end() const;
     size_t size() const;
+    void* id() const { return storage.get(); }
     
     Result<BufferT> prefix(size_t size) const;
     Result<BufferT> suffix(uint8_t* begin) const;
     Result<BufferT> copy() const { return prefix(size()); }
 
 private:
-    BufferT(Storage* data);
+    using StoragePtr = boost::intrusive_ptr<Storage>;
 
-    static Storage* storage(void* p) { return static_cast<Storage*>(p); }
+private:
+    BufferT(StoragePtr&& data);
+
     static auto toHeaderSize(size_t size) {
         return static_cast<decltype(buffer_impl::Header::size)>(size);
     }
     
 private:
-    using DataPtr = boost::intrusive_ptr<Storage>;
-    DataPtr data;
+    StoragePtr storage;
 };
 
 template<typename Allocator>
 inline
-BufferT<Allocator>::BufferT(Storage* data)
-    : data(data) {
+BufferT<Allocator>::BufferT(StoragePtr&& storage)
+    : storage(std::move(storage)) {
+    buffer_impl::debugPrintLine("buffer created: %x", this->storage.get());
 }
 
 template<typename Allocator>
 inline
 Result<BufferT<Allocator>> BufferT<Allocator>::create(size_t size) {
     if (size > maxSize()) {
-        return fail<BufferT>(Error::PacketCreateTooBig);
+        return fail<BufferT>(Error::BufferCreateTooBig);
     }
     returnOnFailT(p, BufferT, Allocator().allocate(buffer_impl::allocSize(size)));
-    Storage* s = storage(p);
+    Storage* s = static_cast<Storage*>(p);
     s->header = { toHeaderSize(size) };
-    return ok(BufferT(s));
+    return ok(BufferT(StoragePtr(s)));
 }
 
 template<typename Allocator>
 inline
 Result<BufferT<Allocator>> BufferT<Allocator>::create(std::initializer_list<uint8_t> l) {
     if (l.size() > maxSize()) {
-        return fail<BufferT>(Error::PacketCreateTooBig);
+        return fail<BufferT>(Error::BufferCreateTooBig);
     }
     returnOnFailT(p, BufferT, Allocator().allocate(buffer_impl::allocSize(l.size())));
-    Storage* s = storage(p);
+    Storage* s = static_cast<Storage*>(p);
     s->header = { toHeaderSize(l.size()) };
-    BufferT r(s);
+    BufferT<Allocator> r{StoragePtr(s)};
     std::memcpy(r.begin(), l.begin(), l.size());
     return ok(std::move(r));
 }
@@ -132,12 +151,12 @@ template<typename Allocator>
 inline
 Result<BufferT<Allocator>> BufferT<Allocator>::create(std::vector<uint8_t> v) {
     if (v.size() > maxSize()) {
-        return fail<BufferT>(Error::PacketCreateTooBig);
+        return fail<BufferT>(Error::BufferCreateTooBig);
     }
     returnOnFailT(p, BufferT, Allocator().allocate(buffer_impl::allocSize(v.size())));
-    Storage* s = storage(p);
+    Storage* s = static_cast<Storage*>(p);
     s->header = { toHeaderSize(v.size()) };
-    BufferT r(s);
+    BufferT<Allocator> r{StoragePtr(s)};
     std::memcpy(r.begin(), &v.front(), v.size());
     return ok(std::move(r));
 }
@@ -145,63 +164,65 @@ Result<BufferT<Allocator>> BufferT<Allocator>::create(std::vector<uint8_t> v) {
 template<typename Allocator>
 inline
 BufferT<Allocator>::BufferT(BufferT&& toMove) noexcept
-    : data(std::move(toMove.data)) {
+    : storage(std::move(toMove.storage)) {
+    buffer_impl::debugPrintLine("buffer: moved %x", storage.get());
 }
 
 template<typename Allocator>
 inline
 BufferT<Allocator>& BufferT<Allocator>::operator=(BufferT&& toMove) noexcept {
-    data = std::move(toMove.data);
+    storage = std::move(toMove.storage);
+    buffer_impl::debugPrintLine("buffer: moved %x", storage.get());
     return *this;
 }
 
 template<typename Allocator>
 inline
 BufferT<Allocator>::BufferT(const BufferT& src) noexcept
-    : data(src.data) {
+    : storage(src.storage) {
 }
 
 template<typename Allocator>
 inline
 BufferT<Allocator>& BufferT<Allocator>::operator=(const BufferT& src) noexcept {
-    data = src.data;
+    storage = src.storage;
     return *this;
 }
 
 template<typename Allocator>
 inline
 uint8_t* BufferT<Allocator>::begin() {
-    return data.get()->buffer;
+    return storage->buffer;
 }
 
 template<typename Allocator>
 inline
 uint8_t* BufferT<Allocator>::end() {
-    return data.get()->buffer + size();
+    return storage->buffer + size();
 }
 
 template<typename Allocator>
 inline
-size_t BufferT<Allocator>::size() {
-    return data.get()->header.size;
+void BufferT<Allocator>::resize(size_t n) {
+    storage->header.size = toHeaderSize(std::min(n, maxSize()));
 }
 
 template<typename Allocator>
 inline
 const uint8_t* BufferT<Allocator>::begin() const {
-    return data.get()->buffer;
+    return storage->buffer;
 }
 
 template<typename Allocator>
 inline
 const uint8_t* BufferT<Allocator>::end() const {
-    return data.get()->buffer + size();
+    return storage->buffer + size();
 }
 
 template<typename Allocator>
 inline
 size_t BufferT<Allocator>::size() const {
-    return data.get()->header.size;
+    return storage->header.size;
 }
 
 template<typename Allocator>

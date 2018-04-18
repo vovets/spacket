@@ -32,25 +32,30 @@ public:
         return *this;
     }
 
-    template<typename Buffer>
+    template <typename Buffer>
     Result<Buffer> read(Buffer b, Timeout t) {
         return
         SerialDeviceImpl::read(b.begin(), b.size(), t) >=
         [&](size_t size) {
-            return b.prefix(size);
+            b.resize(size);
+            return ok(std::move(b));
         };
     }
 
-    template<typename Buffer>
+    template <typename Buffer>
     Result<boost::blank> write(const Buffer& b) {
         return SerialDeviceImpl::write(b.begin(), b.size());
     }
 
     // not every platform supports write with timeout
     // so there may be static assert error here
-    template<typename Buffer>
+    template <typename Buffer>
     Result<boost::blank> write(const Buffer& b, Timeout t) {
         return SerialDeviceImpl::write(b.begin(), b.size(), t);
+    }
+
+    Result<boost::blank> flush() {
+        return SerialDeviceImpl::flush();
     }
     
     ~SerialDevice() {}

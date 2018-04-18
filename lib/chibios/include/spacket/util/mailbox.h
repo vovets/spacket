@@ -116,7 +116,7 @@ Result<Message> MailboxT<Message, SIZE>::fetchS(Timeout timeout) {
 
         /* Is there a message in queue? if so then fetch.*/
         if (usedCountI() > 0) {
-            auto result = ok(Message(std::move(*rdptr)));
+            auto tmp = Message(std::move(*rdptr));
             rdptr->~Message();
 
             ++rdptr;
@@ -129,7 +129,7 @@ Result<Message> MailboxT<Message, SIZE>::fetchS(Timeout timeout) {
             chThdDequeueNextI(&qw, MSG_OK);
             chSchRescheduleS();
 
-            return std::move(result);
+            return ok(std::move(tmp));
         }
 
         /* No message in the queue, waiting for a message to become available.*/

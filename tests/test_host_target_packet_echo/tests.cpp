@@ -16,7 +16,7 @@
 using Buffer = BufferT<NewAllocator>;
 
 namespace Catch {
-template<> struct StringMaker<Buffer>: public StringMakerBase<Buffer> {}; 
+template<> struct StringMaker<Buffer>: public StringMakerBufferBase<Buffer> {}; 
 }
 
 

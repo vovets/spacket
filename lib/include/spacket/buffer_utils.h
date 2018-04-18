@@ -3,19 +3,22 @@
 #include <iomanip>
 #include <cstring>
 
-template<typename Buffer>
+template<typename Wrapped>
 struct Hr {
-    const Buffer& b;
+    const Wrapped& w;
 };
 
-template<typename Buffer>
-Hr<Buffer> hr(const Buffer& b) { return Hr<Buffer>{b}; }
+template<typename Wrapped>
+Hr<Wrapped> hr(const Wrapped& w) { return Hr<Wrapped>{w}; }
 
 template<typename Buffer>
-std::ostream& operator<<(std::ostream& os, Hr<Buffer> hr) {
-    os  << hr.b.size() << ":[";
-    for (const uint8_t* cur = hr.b.begin(); cur < hr.b.end(); ++cur) {
-        if (cur != hr.b.begin()) {
+typename std::enable_if_t<
+    std::is_same<typename Buffer::TypeId, buffer_impl::TypeId>::value,
+    std::ostream&>
+operator<<(std::ostream& os, Hr<Buffer> hr) {
+    os << std::dec << hr.w.size() << ":[";
+    for (const uint8_t* cur = hr.w.begin(); cur < hr.w.end(); ++cur) {
+        if (cur != hr.w.begin()) {
             os << ", ";
         }
         os << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(*cur);
@@ -24,10 +27,26 @@ std::ostream& operator<<(std::ostream& os, Hr<Buffer> hr) {
     return os;
 }
 
+template<typename Vector>
+typename std::enable_if_t<
+    std::is_same<typename Vector::value_type::TypeId, buffer_impl::TypeId>::value,
+    std::ostream&>
+operator<<(std::ostream& os, Hr<Vector> h) {
+    os << std::dec << h.w.size() << ":[";
+    for (size_t i = 0; i < h.w.size(); ++i) {
+        if (i != 0) {
+            os << ", ";
+        }
+        os << hr(h.w[i]);
+    }
+    os << "]";
+    return os;
+}
+
 template<typename Buffer>
-typename std::enable_if<
+typename std::enable_if_t<
     std::is_same<typename Buffer::TypeId, buffer_impl::TypeId>::value,
-    Result<Buffer>>::type
+    Result<Buffer>>
 operator+(const Buffer& lhs, const Buffer& rhs) {
     returnOnFail(result, Buffer::create(lhs.size() + rhs.size()));
     std::memcpy(result.begin(), lhs.begin(), lhs.size());
@@ -36,12 +55,18 @@ operator+(const Buffer& lhs, const Buffer& rhs) {
 }
 
 template<typename Buffer>
-bool operator==(const Buffer& lhs, const Buffer& rhs) {
+typename std::enable_if_t<
+    std::is_same<typename Buffer::TypeId, buffer_impl::TypeId>::value,
+    bool>
+operator==(const Buffer& lhs, const Buffer& rhs) {
     return lhs.size() == rhs.size() && (0 == memcmp(lhs.begin(), rhs.begin(), lhs.size()));
 }
 
 template<typename Buffer>
-bool operator!=(const Buffer& lhs, const Buffer& rhs) {
+typename std::enable_if_t<
+    std::is_same<typename Buffer::TypeId, buffer_impl::TypeId>::value,
+    bool>
+operator!=(const Buffer& lhs, const Buffer& rhs) {
     return !operator==(lhs, rhs);
 }
 

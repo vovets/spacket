@@ -59,6 +59,7 @@ public:
     Result<boost::blank> write(const uint8_t* buffer, size_t size) {
         return write(buffer, size, INFINITE_TIMEOUT);
     }
+    Result<boost::blank> flush() { return ok(boost::blank{}); }
 
 private:
     using Driver = boost::intrusive_ptr<UARTDriver>;

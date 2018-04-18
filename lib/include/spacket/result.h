@@ -14,6 +14,11 @@ struct Result {
 };
 
 template <typename Success>
+bool operator==(const Result<Success>& lhs, const Result<Success>& rhs) {
+    return lhs.value == rhs.value;
+}
+
+template <typename Success>
 Result<Success> ok(Success value) { return Result<Success>{std::move(value)}; }
 
 template <typename Success>
@@ -32,36 +37,51 @@ template <typename Result>
 using ErrorT = typename boost::mpl::at<typename Result::ValueType::types, boost::mpl::int_<0>>::type;
 
 template <typename Result>
-SuccessT<Result> getOkUnsafe(Result&& r) {
-    return std::move(*boost::get<SuccessT<Result>>(&r.value));
+SuccessT<Result>& getOkUnsafe(Result& r) {
+    return *boost::get<SuccessT<Result>>(&r.value);
 }
 
 template <typename Result>
-SuccessT<Result> getOkLoc(Result& r, const char* file, int line) {
+const SuccessT<Result>& getOkUnsafe(const Result& r) {
+    return *boost::get<SuccessT<Result>>(&r.value);
+}
+
+template <typename Result>
+SuccessT<Result> getOkLoc(Result&& r, const char* file, int line) {
     auto p = boost::get<SuccessT<Result>>(&r.value);
     if (!p) {
         fatalError("getOk called upon error result", file, line);
     }
-    return std::move(*p);
+    return *p;
 }
 
 template <typename Result>
-ErrorT<Result> getFailUnsafe(Result& r) {
-    return *boost::get<ErrorT<Result>>(&r.value);
+const SuccessT<Result>& getOkLoc(const Result& r, const char* file, int line) {
+    auto p = boost::get<SuccessT<Result>>(&r.value);
+    if (!p) {
+        fatalError("getOk called upon error result", file, line);
+    }
+    return *p;
 }
 
+// template <typename Result>
+// ErrorT<Result> getFailUnsafe(Result&& r) {
+//     return std::move(*boost::get<ErrorT<Result>>(&r.value));
+// }
+
+// ErrorT<Result> is supposedly cheaper to copy than to move
 template <typename Result>
 ErrorT<Result> getFailUnsafe(const Result& r) {
     return *boost::get<ErrorT<Result>>(&r.value);
 }
 
 template <typename Result>
-ErrorT<Result> getFailLoc(Result& r, const char* file, int line) {
+ErrorT<Result> getFailLoc(const Result& r, const char* file, int line) {
     auto p = boost::get<ErrorT<Result>>(&r.value);
     if (!p) {
         fatalError("getFail called upon success result", file, line);
     }
-    return std::move(*p);
+    return *p;
 }
 
 template <typename Success>

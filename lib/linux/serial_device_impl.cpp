@@ -108,7 +108,7 @@ SerialDeviceImpl::Impl::~Impl() {
 
 Result<size_t> SerialDeviceImpl::Impl::read(uint8_t* buffer, size_t maxRead, Timeout t) {
     TRACE("===>");
-    auto f = [] { return fail<size_t>(Error::DevReadFailed); };
+    auto f = [] { return fail<size_t>(Error::DevReadError); };
     auto now = Clock::now();
     auto deadline = now + t;
     uint8_t* cur = buffer;
@@ -140,13 +140,13 @@ Result<size_t> SerialDeviceImpl::Impl::read(uint8_t* buffer, size_t maxRead, Tim
     }
     TRACE("<2== " << cur - buffer);
     if (cur == buffer) {
-        return fail<size_t>(Error::Timeout);
+        return fail<size_t>(Error::DevReadTimeout);
     }
     return ok(static_cast<size_t>(cur - buffer));
 }
 
 Result<boost::blank> SerialDeviceImpl::Impl::write(const uint8_t* buffer, size_t size) {
-    auto f = []{ return fail<b::blank>(Error::DevWriteFailed); };
+    auto f = []{ return fail<b::blank>(Error::DevWriteError); };
     const uint8_t* cur = buffer;
     const uint8_t* end = buffer + size;
     while (cur < end) {
@@ -163,7 +163,7 @@ Result<boost::blank> SerialDeviceImpl::Impl::write(const uint8_t* buffer, size_t
 }
 
 Result<boost::blank> SerialDeviceImpl::Impl::flush() {
-    auto f = []{ return fail<b::blank>(Error::DevWriteFailed); };
+    auto f = []{ return fail<b::blank>(Error::DevWriteError); };
     call(f, ::tcflush, fd, TCIOFLUSH);
     return ok(boost::blank{});
 }
