@@ -43,6 +43,7 @@ echo
 
 echo "Waiting for Ctrl-C to stop..."
 while true; do
+    #TODO: kill sleep process on exit
     sleep infinity &
     wait $!
 done

@@ -14,18 +14,22 @@ class Connection:
         self.response_timeout = response_timeout
         self.telnet = telnetlib.Telnet(host, port, connect_timeout)
 
+    def close(self):
+        self.telnet.close()
+
     def send_line(self, line):
         self.telnet.write(line + lineend)
 
     def expect(self, line):
-        index, _, bytes_read = self.telnet.expect(
+        index, match, bytes_read = self.telnet.expect(
             [line], self.response_timeout)
         print("read: ", bytes_read)
         if index == -1:
             raise NoMatch
+        return match
 
     def expect_line(self, line):
-        self.expect(line + lineend)
+        return self.expect(line + lineend)
 
 def default_timeout_handler():
         print("FAILED")
