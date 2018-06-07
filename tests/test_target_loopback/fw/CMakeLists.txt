@@ -42,6 +42,7 @@ set(linker_flags
   -Wl,--defsym,__main_stack_size__=0x400
   -Wl,--defsym,__process_stack_size__=0x400
   -Wl,--gc-sections
+  --specs=nano.specs
   )
 
 add_compile_options(

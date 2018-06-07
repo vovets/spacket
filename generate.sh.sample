@@ -1,0 +1,5 @@
+#!/bin/sh -ex
+
+mkdir -p build
+cd build
+cmake -G 'Eclipse CDT4 - Ninja' -DCMAKE_BUILD_TYPE=Release ../tests
