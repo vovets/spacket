@@ -2,4 +2,4 @@
 
 mkdir -p build
 cd build
-cmake -G 'Eclipse CDT4 - Ninja' -DCMAKE_BUILD_TYPE=Release ../tests
+cmake -G 'Eclipse CDT4 - Ninja' -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE=ON ../tests
