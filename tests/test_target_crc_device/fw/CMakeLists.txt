@@ -9,8 +9,6 @@ list(APPEND CMAKE_MODULE_PATH "${SPACKET_ROOT}/cmake")
 include(gather)
 include(chibios)
 
-set(GATHER_DEBUG FALSE)
-
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 99)

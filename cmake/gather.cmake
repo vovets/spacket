@@ -1,3 +1,5 @@
+set(GATHER_DEBUG FALSE CACHE BOOL "Controls whether gt_* functions should output debug messages")
+
 function(gt_debug)
   foreach(message_ ${ARGV})
     if(GATHER_DEBUG)
