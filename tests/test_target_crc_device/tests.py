@@ -16,7 +16,7 @@ name="CRC-32/MPEG-2"
 
 
 import pytest
-from time import sleep
+from test_utils import reset_delay
 from binascii import hexlify, unhexlify
 
 
@@ -24,10 +24,6 @@ poly = 0x04c11db7
 init = 0xffffffff
 check = 0x0376e6e7
 check_bytes = b"123456789"
-
-
-def reset_delay():
-    sleep(0.02)
 
 
 def st_crc(prev_crc, data):
@@ -139,30 +135,28 @@ def conn(request):
     return c
 
 
+@pytest.fixture
+def reset(conn):
+    conn.send_line(b"reset")
+    reset_delay()
+    conn.expect_line(b"RTT ready")
+    conn.expect(b"ch> ")
+    print("reset OK")
+
 def test_reset(conn):
     conn.send_line(b"reset")
     conn.expect_line(b"RTT ready")
     conn.expect(b"ch> ")
 
 
-def test_open(conn):
-    conn.send_line(b"reset")
-    reset_delay()
-    conn.expect_line(b"RTT ready")
-    conn.expect(b"ch> ")
-
+def test_open(conn, reset):
     conn.send_line(b"open")
 
     conn.expect_line(b"open")
     conn.expect(b"ch> ")
 
 
-def test_double_open(conn):
-    conn.send_line(b"reset")
-    reset_delay()
-    conn.expect_line(b"RTT ready")
-    conn.expect(b"ch> ")
-
+def test_double_open(conn, reset):
     conn.send_line(b"open")
 
     conn.expect_line(b"open")
@@ -175,12 +169,7 @@ def test_double_open(conn):
     conn.expect(b"ch> ")
 
 
-def test_open_close(conn):
-    conn.send_line(b"reset")
-    reset_delay()
-    conn.expect_line(b"RTT ready")
-    conn.expect(b"ch> ")
-
+def test_open_close(conn, reset):
     conn.send_line(b"open")
 
     conn.expect_line(b"open")
@@ -192,12 +181,7 @@ def test_open_close(conn):
     conn.expect(b"ch> ")
 
 
-def test_not_opened(conn):
-    conn.send_line(b"reset")
-    reset_delay()
-    conn.expect_line(b"RTT ready")
-    conn.expect(b"ch> ")
-
+def test_not_opened(conn, reset):
     conn.send_line(b"add 0")
     conn.expect_line(b"device is not opened")
     conn.expect(b"ch> ")
@@ -223,13 +207,8 @@ def test_crc_bytes2():
     assert st_crc_bytes2(init, check_bytes) == check
 
 
-def test_dev_int(conn):
+def test_dev_int(conn, reset):
     bs = b"1234"
-
-    conn.send_line(b"reset")
-    reset_delay()
-    conn.expect_line(b"RTT ready")
-    conn.expect(b"ch> ")
 
     conn.send_line(b"open")
 

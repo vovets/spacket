@@ -29,6 +29,11 @@ void print(BaseSequentialStream* stream, const Buffer& b) {
     }
 }
 
+static void cmd_reset(BaseSequentialStream *stream, int, char*[]) {
+    chprintf(stream, "Bye!");
+    NVIC_SystemReset();
+}
+
 static void cmd_test_create(BaseSequentialStream *stream, int, char*[]) {
     {
         auto sd = SerialDevice::open(uartDriver);
@@ -185,6 +190,7 @@ static void cmd_test_info(BaseSequentialStream *stream, int, char*[]) {
 }
 
 static const ShellCommand commands[] = {
+    {"reset", cmd_reset},
     {"test_create", cmd_test_create},
     {"test_rx_timeout", cmd_test_rx_timeout},
     {"test_loopback", cmd_test_loopback},

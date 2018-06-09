@@ -10,5 +10,5 @@ fw_tests_add_fw_subdirectory(test_target_crc_device_fw "${CMAKE_CURRENT_SOURCE_D
 
 fw_tests_add_jlink_test(target_crc_device
   test_target_crc_device_fw
-  "py.test-3 ${CMAKE_CURRENT_SOURCE_DIR}/test.py"
+  "py.test-3 -vs ${CMAKE_CURRENT_SOURCE_DIR}/tests.py"
   )

@@ -1,15 +1,19 @@
-import test_utils
+import pytest
+from test_utils import reset_delay
 
 
-def test(c):
-    c.expect(b"ch> ")
+@pytest.fixture(scope="module")
+def conn(request):
+    import test_utils
+    c = test_utils.Connection(port=19021, connect_timeout=1, response_timeout=30)
+    request.addfinalizer(c.close)
+    return c
 
-    c.send_line(b"test")
+
+def test(conn):
+    conn.expect(b"ch> ")
+
+    conn.send_line(b"test")
     
-    c.expect_line(b"Final result: SUCCESS")
-    c.expect(b"ch> ")
-
-timeout = 30
-
-if __name__ == "__main__":
-    test_utils.main(test, timeout=timeout)
+    conn.expect_line(b"Final result: SUCCESS")
+    conn.expect(b"ch> ")
