@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ch.h"
 #include "stm32_rcc.h"
 
 namespace stm32 {
@@ -32,6 +33,8 @@ public:
         device->DR = v;
         return device->DR;
     }
+
+    uint32_t add(const uint8_t* data, size_t size);
 
     uint32_t last() {
         return device->DR;

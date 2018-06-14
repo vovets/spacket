@@ -25,6 +25,10 @@ public:
         return CrcImpl::add(v);
     }
 
+    uint32_t add(const uint8_t* data, size_t size) {
+        return CrcImpl::add(data, size);
+    }
+
     uint32_t last() {
         return CrcImpl::last();
     }
