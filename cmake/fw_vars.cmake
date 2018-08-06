@@ -5,7 +5,7 @@ set(CMAKE_C_STANDARD_REQUIRED)
 
 set(SPACKET_EXT "${SPACKET_ROOT}/external")
 set(CH_ROOT_DIR "${SPACKET_EXT}/chibios")
-set(CH_MCU_NAME STM32F103x8)
+set(CH_MCU_NAME STM32F103x8 CACHE STRING "MCU name for purposes of finding specific linker script, etc")
 set(CH_LINKER_LIBRARY_PATH "${CH_ROOT_DIR}/os/common/startup/ARMCMx/compilers/GCC/ld")
 set(CH_LINKER_SCRIPT "${CH_LINKER_LIBRARY_PATH}/${CH_MCU_NAME}.ld")
 set(CH_CPU cortex-m3)

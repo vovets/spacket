@@ -90,8 +90,8 @@ Result<std::vector<Buffer>> receive(SerialDevice& sd) {
             return ok(std::move(received));
         } <=
         [&](Error e) {
-            if (e == Error::DevReadTimeout) {
-                return fail<Buffer>(Error::Timeout);
+            if (e == toError(ErrorCode::DevReadTimeout)) {
+                return fail<Buffer>(toError(ErrorCode::Timeout));
             }
             return fail<Buffer>(e);
         };
@@ -117,7 +117,7 @@ Result<std::vector<Buffer>> receive(SerialDevice& sd) {
         } <=
         [&](Error e) {
             finished = true;
-            if (e == Error::Timeout) {
+            if (e == toError(ErrorCode::Timeout)) {
                 return ok(boost::blank{});
             }
             result = fail<SuccessT<decltype(result)>>(e);

@@ -7,6 +7,7 @@
 #include <boost/mpl/at.hpp>
 #include <boost/preprocessor/cat.hpp>
 
+
 template <typename Success>
 struct Result {
     using ValueType = boost::variant<Error, Success>;

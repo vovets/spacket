@@ -8,7 +8,7 @@ class PoolAllocatorT {
 public:
     Result<void*> allocate(std::size_t size) {
         if (size > Pool::objectSize()) {
-            return fail<void*>(Error::PoolAllocatorObjectTooBig);
+            return fail<void*>(toError(ErrorCode::PoolAllocatorObjectTooBig));
         }
         return pool.allocate();
     }

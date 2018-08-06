@@ -125,7 +125,7 @@ template<typename Allocator>
 inline
 Result<BufferT<Allocator>> BufferT<Allocator>::create(size_t size) {
     if (size > maxSize()) {
-        return fail<BufferT>(Error::BufferCreateTooBig);
+        return fail<BufferT>(toError(ErrorCode::BufferCreateTooBig));
     }
     returnOnFailT(p, BufferT, Allocator().allocate(buffer_impl::allocSize(size)));
     Storage* s = static_cast<Storage*>(p);
@@ -137,7 +137,7 @@ template<typename Allocator>
 inline
 Result<BufferT<Allocator>> BufferT<Allocator>::create(std::initializer_list<uint8_t> l) {
     if (l.size() > maxSize()) {
-        return fail<BufferT>(Error::BufferCreateTooBig);
+        return fail<BufferT>(toError(ErrorCode::BufferCreateTooBig));
     }
     returnOnFailT(p, BufferT, Allocator().allocate(buffer_impl::allocSize(l.size())));
     Storage* s = static_cast<Storage*>(p);
@@ -151,7 +151,7 @@ template<typename Allocator>
 inline
 Result<BufferT<Allocator>> BufferT<Allocator>::create(std::vector<uint8_t> v) {
     if (v.size() > maxSize()) {
-        return fail<BufferT>(Error::BufferCreateTooBig);
+        return fail<BufferT>(toError(ErrorCode::BufferCreateTooBig));
     }
     returnOnFailT(p, BufferT, Allocator().allocate(buffer_impl::allocSize(v.size())));
     Storage* s = static_cast<Storage*>(p);

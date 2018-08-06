@@ -58,10 +58,10 @@ SerialDeviceImpl::~SerialDeviceImpl() {}
 Result<SerialDeviceImpl> SerialDeviceImpl::doOpen(PortConfig portConfig) {
     using TvMsec = decltype(timeval().tv_usec);
     
-    auto f = [] { return fail<SerialDeviceImpl>(Error::DevInitFailed); };
+    auto f = [] { return fail<SerialDeviceImpl>(toError(ErrorCode::DevInitFailed)); };
     
     if (portConfig.baud == Baud::NonStandard) {
-        return fail<SerialDeviceImpl>(Error::ConfigBadBaud);
+        return fail<SerialDeviceImpl>(toError(ErrorCode::ConfigBadBaud));
     }
     
     struct timeval byteTimeout{
@@ -108,7 +108,7 @@ SerialDeviceImpl::Impl::~Impl() {
 
 Result<size_t> SerialDeviceImpl::Impl::read(uint8_t* buffer, size_t maxRead, Timeout t) {
     TRACE("===>");
-    auto f = [] { return fail<size_t>(Error::DevReadError); };
+    auto f = [] { return fail<size_t>(toError(ErrorCode::DevReadError)); };
     auto now = Clock::now();
     auto deadline = now + t;
     uint8_t* cur = buffer;
@@ -140,13 +140,13 @@ Result<size_t> SerialDeviceImpl::Impl::read(uint8_t* buffer, size_t maxRead, Tim
     }
     TRACE("<2== " << cur - buffer);
     if (cur == buffer) {
-        return fail<size_t>(Error::DevReadTimeout);
+        return fail<size_t>(toError(ErrorCode::DevReadTimeout));
     }
     return ok(static_cast<size_t>(cur - buffer));
 }
 
 Result<boost::blank> SerialDeviceImpl::Impl::write(const uint8_t* buffer, size_t size) {
-    auto f = []{ return fail<b::blank>(Error::DevWriteError); };
+    auto f = []{ return fail<b::blank>(toError(ErrorCode::DevWriteError)); };
     const uint8_t* cur = buffer;
     const uint8_t* end = buffer + size;
     while (cur < end) {
@@ -163,7 +163,7 @@ Result<boost::blank> SerialDeviceImpl::Impl::write(const uint8_t* buffer, size_t
 }
 
 Result<boost::blank> SerialDeviceImpl::Impl::flush() {
-    auto f = []{ return fail<b::blank>(Error::DevWriteError); };
+    auto f = []{ return fail<b::blank>(toError(ErrorCode::DevWriteError)); };
     call(f, ::tcflush, fd, TCIOFLUSH);
     return ok(boost::blank{});
 }

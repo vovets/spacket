@@ -54,14 +54,14 @@ Result<size_t> SerialDeviceImpl::read(uint8_t* buffer, size_t maxRead, Timeout t
             return ok(received);
         }
         if (msg == MSG_TIMEOUT) {
-            return fail<size_t>(Error::DevReadTimeout);
+            return fail<size_t>(toError(ErrorCode::DevReadTimeout));
         }
-        return fail<size_t>(Error::DevReadError);
+        return fail<size_t>(toError(ErrorCode::DevReadError));
     }
     return ok(received);
 }
 
 Result<boost::blank> SerialDeviceImpl::write(const uint8_t* buffer, size_t size, Timeout t) {
     auto msg = uartSendFullTimeout(driver.get(), &size, buffer, toSystime(t));
-    return msg == MSG_OK ? ok(boost::blank()) : fail<boost::blank>(Error::DevWriteTimeout);
+    return msg == MSG_OK ? ok(boost::blank()) : fail<boost::blank>(toError(ErrorCode::DevWriteTimeout));
 }

@@ -3,13 +3,15 @@
 #include "ch.h"
 
 //#include <spacket/guard.h>
+#include <spacket/time_utils.h>
 
+inline
 Error toError(msg_t msg) {
     switch (msg) {
-        case MSG_TIMEOUT: return Error::ChMsgTimeout;
-        case MSG_RESET:   return Error::ChMsgReset;
+        case MSG_TIMEOUT: return toError(ErrorCode::ChMsgTimeout);
+        case MSG_RESET:   return toError(ErrorCode::ChMsgReset);
     }
-    return Error::MiserableFailure1;
+    return toError(ErrorCode::MiserableFailure1);
 }
 
 template <typename Message, size_t SIZE>
@@ -19,9 +21,11 @@ public:
 
     Result<boost::blank> post(Message& msg, Timeout timeout);
     Result<boost::blank> postS(Message& msg, Timeout timeout);
+    Result<boost::blank> postI(Message& msg);
         
     Result<Message> fetch(Timeout timeout);
     Result<Message> fetchS(Timeout timeout);
+    Result<Message> fetchI();
 
 private:
     size_t usedCountI();
@@ -68,7 +72,7 @@ Result<boost::blank> MailboxT<Message, SIZE>::postS(Message& msg, Timeout timeou
     do {
         /* If the mailbox is in reset state then returns immediately.*/
         if (reset) {
-            return fail<boost::blank>(Error::ChMsgReset);
+            return fail<boost::blank>(toError(ErrorCode::ChMsgReset));
         }
 
         /* Is there a free message slot in queue? if so then post.*/
@@ -95,6 +99,35 @@ Result<boost::blank> MailboxT<Message, SIZE>::postS(Message& msg, Timeout timeou
 }
 
 template <typename Message, size_t SIZE>
+Result<boost::blank> MailboxT<Message, SIZE>::postI(Message& msg) {
+
+    chDbgCheckClassI();
+
+    /* If the mailbox is in reset state then returns immediately.*/
+    if (reset) {
+        return fail<boost::blank>(toError(ErrorCode::ChMsgReset));
+    }
+
+    /* Is there a free message slot in queue? if so then post.*/
+    if (freeCountI() > 0) {
+        new (wrptr) Message(std::move(msg));
+        ++wrptr;
+        if (wrptr >= buffer() + SIZE) {
+            wrptr = buffer();
+        }
+        ++cnt;
+
+        /* If there is a reader waiting then makes it ready.*/
+        chThdDequeueNextI(&qr, MSG_OK);
+
+        return ok(boost::blank{});
+    }
+
+    /* No space in the queue, immediate timeout.*/
+    return fail<boost::blank>(toError(ErrorCode::ChMsgTimeout));
+}
+
+template <typename Message, size_t SIZE>
 Result<Message> MailboxT<Message, SIZE>::fetch(Timeout timeout) {
     chSysLock();
     auto result = fetchS(timeout);
@@ -111,7 +144,7 @@ Result<Message> MailboxT<Message, SIZE>::fetchS(Timeout timeout) {
     do {
         /* If the mailbox is in reset state then returns immediately.*/
         if (reset) {
-            return fail<Message>(Error::ChMsgReset);
+            return fail<Message>(toError(ErrorCode::ChMsgReset));
         }
 
         /* Is there a message in queue? if so then fetch.*/
@@ -137,6 +170,37 @@ Result<Message> MailboxT<Message, SIZE>::fetchS(Timeout timeout) {
     } while (rdymsg == MSG_OK);
 
     return fail<Message>(toError(rdymsg));
+}
+
+template <typename Message, size_t SIZE>
+Result<Message> MailboxT<Message, SIZE>::fetchI() {
+
+    chDbgCheckClassI();
+
+    /* If the mailbox is in reset state then returns immediately.*/
+    if (reset) {
+        return fail<Message>(toError(ErrorCode::ChMsgReset));
+    }
+
+    /* Is there a message in queue? if so then fetch.*/
+    if (usedCountI() > 0) {
+        auto tmp = Message(std::move(*rdptr));
+        rdptr->~Message();
+
+        ++rdptr;
+        if (rdptr >= buffer() + SIZE) {
+            rdptr = buffer();
+        }
+        --cnt;
+
+        /* If there is a writer waiting then makes it ready.*/
+        chThdDequeueNextI(&qw, MSG_OK);
+
+        return ok(std::move(tmp));
+    }
+
+    /* No message in the queue, immediate timeout.*/
+    return fail<Message>(toError(ErrorCode::ChMsgTimeout));
 }
 
 template <typename Message, size_t SIZE>

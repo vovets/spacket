@@ -85,7 +85,7 @@ Buffer createTestBufferNoZero(size_t size) {
 template<typename Success>
 Result<Success> fatalT(Error e) {
     std::ostringstream ss;
-    ss << "fatal error " << toInt(e) << ":" << toString(e);
+    ss << "fatal error " << e.code << ":" << toString(e);
     throw std::runtime_error(ss.str());
 }
 
@@ -107,7 +107,7 @@ public:
 
     Result<Buffer> read(Timeout t, size_t maxRead) {
         if (index >= buffers.size()) {
-            return fail<Buffer>(Error::Timeout);
+            return fail<Buffer>(toError(ErrorCode::Timeout));
         }
         Buffer b = std::move(buffers[index]);
         if (b.size() > maxRead) {

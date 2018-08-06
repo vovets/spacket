@@ -46,7 +46,7 @@ public:
 private:
     Result<void*> allocateCheck(void* p) {
         if (!p) {
-            return fail<void*>(Error::GuardedPoolOutOfMem);
+            return fail<void*>(toError(ErrorCode::GuardedPoolOutOfMem));
         }
         guarded_memory_pool_impl::debugPrintLine("pool: allocated %x", p);
         return ok(static_cast<void*>(p));

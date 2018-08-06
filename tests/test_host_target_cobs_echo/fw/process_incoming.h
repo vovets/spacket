@@ -19,7 +19,7 @@ ProcessIncomingResult processIncoming(const Buffer& input, size_t inputOffset, P
         auto r = p.consume(*(input.begin() + offset));
         switch (r) {
             case Packetizer::Overflow:
-                return { offset, fail<Buffer>(Error::PacketizerOverflow) };
+                return { offset, fail<Buffer>(toError(ErrorCode::PacketizerOverflow)) };
             case Packetizer::Finished: {
                 return { offset + 1, ok(p.release()) };
             }

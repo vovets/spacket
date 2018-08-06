@@ -38,7 +38,7 @@ public:
     template <typename SerialDevice>
     static Result<SerialDevice> open(UARTDriver* driver) {
         if (driver->refCnt > 0) {
-            return fail<SerialDevice>(Error::DevAlreadyOpened);
+            return fail<SerialDevice>(toError(ErrorCode::DevAlreadyOpened));
         }
         start(driver);
         return ok(SerialDevice(SerialDeviceImpl(driver)));

@@ -24,7 +24,7 @@ void packetizerThreadFunctionT(Mailbox& in, Mailbox& out, ErrorReportF reportErr
                             fatal<Packetizer> >=
                             [&](Packetizer&& p) {
                                 pktz = std::move(p);
-                                return fail<boost::blank>(Error::PacketizerOverflow);
+                                return fail<boost::blank>(toError(ErrorCode::PacketizerOverflow));
                             } <=
                             [&](Error e) {
                                 reportError(e);

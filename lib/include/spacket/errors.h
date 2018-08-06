@@ -30,14 +30,32 @@
     X(ID(MiserableFailure9),         CODE(10010), )
 #endif
 
-enum class Error {
+struct Error {
+    using Code = unsigned;
+    Code code;
+    bool operator==(const Error& rhs) const {
+        return code == rhs.code;
+    }
+};
+
+enum class ErrorCode: Error::Code {
 #define X(ID, CODE, SEP) ID = CODE SEP
     ERROR_LIST(ID, ID, SEP_COMMA)
 #undef X
 };
 
-constexpr typename std::underlying_type<Error>::type toInt(Error e) noexcept {
-    return static_cast<typename std::underlying_type<Error>::type>(e);
+template <typename ErrorCode>
+constexpr typename std::underlying_type_t<ErrorCode> toInt(ErrorCode e) noexcept {
+    return static_cast<typename std::underlying_type_t<ErrorCode>>(e);
+}
+
+template <typename ErrorCode>
+constexpr Error toError(ErrorCode e) noexcept {
+    return Error{toInt(e)};
 }
 
 const char* toString(Error e);
+
+using ErrorToStringF = const char*(*)(Error);
+
+ErrorToStringF setErrorToStringHandler(ErrorToStringF handler);

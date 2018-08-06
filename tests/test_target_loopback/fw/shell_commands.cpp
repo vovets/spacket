@@ -59,7 +59,7 @@ static void cmd_test_rx_timeout(BaseSequentialStream *stream, int, char*[]) {
         };
     };
     CHECK(isFail(result));
-    CHECK(getFail(result) == Error::DevReadTimeout);
+    CHECK(getFail(result) == toError(ErrorCode::DevReadTimeout));
 }
 
 struct RxContext {

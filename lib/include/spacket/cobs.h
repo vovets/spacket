@@ -52,7 +52,7 @@ Result<Buffer> unstuff(Buffer source_) {
     Buffer source(std::move(source_));
     returnOnFail(result, Buffer::create(source.size()));
     auto r = ::unstuff(source.begin(), source.size(), result.begin());
-    if (!r) { return fail<Buffer>(Error::CobsBadEncoding); }
+    if (!r) { return fail<Buffer>(toError(ErrorCode::CobsBadEncoding)); }
     result.resize(r);
     return ok(std::move(result));
 }

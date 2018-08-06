@@ -24,7 +24,7 @@ Result<ReadResult<Buffer>> readPacket(
         auto r = pktz.consume(*ptr);
         switch (r) {
             case Packetizer::Overflow:
-                return fail<SType>(Error::PacketizerOverflow);
+                return fail<SType>(toError(ErrorCode::PacketizerOverflow));
             case Packetizer::Finished: {
                 Buffer packet = pktz.release();
                 return
@@ -41,14 +41,14 @@ Result<ReadResult<Buffer>> readPacket(
     for (;;) {
         auto now = Clock::now();
         if (now >= deadline) {
-            return fail<SType>(Error::Timeout);
+            return fail<SType>(toError(ErrorCode::Timeout));
         }
         returnOnFailT(b, SType, source(deadline - now, maxRead));
         for (uint8_t* ptr = b.begin(); ptr < b.end(); ++ptr) {
             auto r = pktz.consume(*ptr);
             switch (r) {
                 case Packetizer::Overflow:
-                    return fail<SType>(Error::PacketizerOverflow);
+                    return fail<SType>(toError(ErrorCode::PacketizerOverflow));
                 case Packetizer::Finished: {
                     Buffer packet = pktz.release();
                     return

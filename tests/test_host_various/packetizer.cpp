@@ -27,7 +27,7 @@ TEST_CASE("1", "[nodev][read]") {
     auto source = [&] (Timeout t, size_t maxRead) { return ts.read(t, maxRead); };
     auto result = readPacket<Buffer>(source, 6, ch::milliseconds(1));
     REQUIRE(isFail(result));
-    REQUIRE(getFailUnsafe(result) == Error::Timeout);
+    REQUIRE(getFailUnsafe(result) == toError(ErrorCode::Timeout));
 }
 
 TEST_CASE("1.1", "[nodev][read]") {
@@ -44,7 +44,7 @@ TEST_CASE("2", "[nodev][read]") {
     auto source = [&] (Timeout t, size_t maxRead) { return ts.read(t, maxRead); };
     auto result = readPacket<Buffer>(source, 6, ch::milliseconds(1));
     REQUIRE(isFail(result));
-    REQUIRE(getFailUnsafe(result) == Error::Timeout);
+    REQUIRE(getFailUnsafe(result) == toError(ErrorCode::Timeout));
 }
 
 TEST_CASE("3", "[nodev][read]") {
@@ -97,7 +97,7 @@ TEST_CASE("8", "[nodev][read]") {
     auto source = [&] (Timeout t, size_t maxRead) { return ts.read(t, maxRead); };
     auto result = readPacket<Buffer>(source, 3, ch::milliseconds(1));
     REQUIRE(isFail(result));
-    REQUIRE(getFailUnsafe(result) == Error::Timeout);
+    REQUIRE(getFailUnsafe(result) == toError(ErrorCode::Timeout));
 }
 
 TEST_CASE("9", "[nodev][read]") {
