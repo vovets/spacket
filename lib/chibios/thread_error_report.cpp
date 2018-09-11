@@ -4,5 +4,5 @@
 
 Result<boost::blank> threadErrorReport(Error e) {
     chprintf(errorReportStream, "E:%s: %s\r\n", chRegGetThreadNameX(chThdGetSelfX()), toString(e));
-    return ok(boost::blank{});
+    return fail<boost::blank>(e);
 }

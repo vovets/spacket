@@ -9,6 +9,7 @@ set(CH_MCU_NAME STM32F103x8 CACHE STRING "MCU name for purposes of finding speci
 set(CH_LINKER_LIBRARY_PATH "${CH_ROOT_DIR}/os/common/startup/ARMCMx/compilers/GCC/ld")
 set(CH_LINKER_SCRIPT "${CH_LINKER_LIBRARY_PATH}/${CH_MCU_NAME}.ld")
 set(CH_CPU cortex-m3)
+set(CH_PROCESS_STACK_SIZE 0x400 CACHE STRING "Stack size (in hex) allocated for main thread")
 
 set(mc_flags -mcpu=${CH_CPU})
 set(thumb_flags -mthumb -mno-thumb-interwork)
@@ -28,7 +29,7 @@ set(linker_flags
   "-Wl,--library-path,${CH_LINKER_LIBRARY_PATH}"
   "-Wl,--script,${CH_LINKER_SCRIPT}"
   -Wl,--defsym,__main_stack_size__=0x400
-  -Wl,--defsym,__process_stack_size__=0x400
+  -Wl,--defsym,__process_stack_size__=${CH_PROCESS_STACK_SIZE}
   -Wl,--gc-sections
   --specs=nano.specs
   )
