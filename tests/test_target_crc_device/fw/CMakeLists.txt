@@ -13,7 +13,11 @@ include(fw_vars)
 list(APPEND SPACKET_EXCLUDED_FEATURES serial_device)
 
 set(debug_optimization_flags -Os)
+set(CH_CPU cortex-m3)
+set(CH_MCU_NAME STM32F103x8)
+set(CH_ROOT_DIR [[${SPACKET_EXT}/chibios]])
 
+fw_vars_set()
 fw_add_executable(fw)
 
 fw_compile_definitions(fw

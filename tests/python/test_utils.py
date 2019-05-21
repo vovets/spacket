@@ -4,7 +4,7 @@ from time import sleep
 
 
 def reset_delay():
-    sleep(0.05)
+    sleep(0.1)
 
 
 lineend = b"\r\n"

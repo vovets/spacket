@@ -9,9 +9,12 @@ function(fw_add_executable name)
     "$<$<COMPILE_LANGUAGE:CXX>:${cxx_features_flags}>"
     "$<$<CONFIG:Debug>:${debug_optimization_flags}>"
     "$<$<CONFIG:Release>:${release_optimization_flags}>"
+     $<$<BOOL:${CH_USE_FPU}>:${fpu_flags}>
     )
   target_compile_definitions(${name} PUBLIC
     ${thumb_defs}
+    $<$<BOOL:${CH_USE_FPU}>:CORTEX_USE_FPU=TRUE>
+    $<$<NOT:$<BOOL:${CH_USE_FPU}>>:CORTEX_USE_FPU=FALSE>
     )
   ch_add_linker_flags(${name} "${linker_flags}")
   ch_add_hex_bin_targets(${name})
