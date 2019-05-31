@@ -1,7 +1,7 @@
 macro(fw_vars_require var)
     message("require: ${var}=${${var}}")
     if (NOT DEFINED ${var})
-        message(FATAL_ERROR "var required, like cortex-m4")
+        message(FATAL_ERROR "var ${var} is required to be set")
     endif()
     string(CONFIGURE ${${var}} ${var})
     message("require: ${var}=${${var}}")
