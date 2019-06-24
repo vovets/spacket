@@ -11,5 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_library(spacket "")
 
+target_include_directories(spacket PUBLIC ${SPACKET_ROOT}/external/boost_1_66_0)
+
 gt_include(spacket ${SPACKET_ROOT}/lib/sources.cmake)
 gt_include(spacket ${SPACKET_ROOT}/lib/linux/sources.cmake)

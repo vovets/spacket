@@ -6,28 +6,12 @@
 
 #include <memory>
 
-class SerialDeviceImpl {
-    friend class SerialDevice;
-    
+class NativeDevice {
 public:
-    template <typename SerialDevice>
-    static Result<SerialDevice> open(PortConfig portConfig) {
-        return
-        doOpen(portConfig) >=
-        [&](SerialDeviceImpl&& impl) {
-            return ok(SerialDevice(std::move(impl)));
-        };
-    }
+    static Result<NativeDevice> doOpen(PortConfig portConfig);
 
-    static Result<SerialDeviceImpl> doOpen(PortConfig portConfig);
-
-    SerialDeviceImpl(const SerialDeviceImpl& r) noexcept;
-    SerialDeviceImpl& operator=(const SerialDeviceImpl& src) noexcept;
-
-    SerialDeviceImpl(SerialDeviceImpl&& r) noexcept;
-    SerialDeviceImpl& operator=(SerialDeviceImpl&& src) noexcept;
-    
-    ~SerialDeviceImpl();
+    NativeDevice(NativeDevice&&) = default;
+    NativeDevice& operator=(NativeDevice&&) = default;
 
     Result<size_t> read(uint8_t* buffer, size_t maxRead, Timeout t);
     Result<boost::blank> write(const uint8_t* buffer, size_t size);
@@ -38,8 +22,56 @@ private:
     using ImplPtr = std::shared_ptr<Impl>;
 
 private:
-    SerialDeviceImpl(ImplPtr p) noexcept;
+    NativeDevice(ImplPtr p) noexcept;
 
 private:
     ImplPtr impl;
+};
+
+template <typename Buffer>
+class SerialDeviceImpl {
+public:
+    template <typename SerialDevice>
+    static Result<SerialDevice> open(PortConfig portConfig) {
+        return
+        NativeDevice::doOpen(portConfig) >=
+        [&](NativeDevice&& nativeDevice) {
+            return ok(SerialDevice(SerialDeviceImpl(std::move(nativeDevice))));
+        };
+    }
+
+    SerialDeviceImpl(SerialDeviceImpl&& r) noexcept
+        : nativeDevice(std::move(r.nativeDevice)) {
+    }
+
+    SerialDeviceImpl& operator=(SerialDeviceImpl&& src) noexcept {
+        nativeDevice = std::move(src.nativeDevice);
+    }
+    
+    Result<Buffer> read(Timeout t) {
+        return
+        Buffer::create(Buffer::maxSize()) >=
+        [&] (Buffer&& buffer) {
+            return
+            nativeDevice.read(buffer.begin(), Buffer::maxSize(), t) >=
+            [&] (std::size_t bytesRead) {
+                buffer.resize(bytesRead);
+                return ok(std::move(buffer));
+            };
+        };
+    }
+
+    Result<boost::blank> write(const uint8_t* buffer, size_t size) {
+        return nativeDevice.write(buffer, size);
+    }
+
+    Result<boost::blank> flush() {
+        return nativeDevice.flush();
+    }
+
+private:
+    SerialDeviceImpl(NativeDevice&& nativeDevice): nativeDevice(std::move(nativeDevice)) {}
+
+private:
+    NativeDevice nativeDevice;
 };

@@ -43,6 +43,11 @@ SuccessT<Result>& getOkUnsafe(Result& r) {
 }
 
 template <typename Result>
+SuccessT<Result>& getOkUnsafe(Result&& r) {
+    return *boost::get<SuccessT<Result>>(&r.value);
+}
+
+template <typename Result>
 const SuccessT<Result>& getOkUnsafe(const Result& r) {
     return *boost::get<SuccessT<Result>>(&r.value);
 }

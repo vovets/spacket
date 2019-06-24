@@ -20,6 +20,7 @@
 
 using Buffer = BufferT<NewAllocator>;
 using Buffers = std::vector<Buffer>;
+using SerialDevice = SerialDeviceT<Buffer>;
 namespace c = std::chrono;
 
 namespace Catch {
@@ -84,7 +85,7 @@ Result<std::vector<Buffer>> receive(SerialDevice& sd) {
     Source<Buffer> source =
     [&](Timeout t, size_t maxRead) {
         return
-        sd.read(buf(maxRead), t) >=
+        sd.read(t) >=
         [&](Buffer&& received) {
             WARN("received: " << hr(received));
             return ok(std::move(received));

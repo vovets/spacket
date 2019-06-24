@@ -4,6 +4,7 @@
 
 //#include <spacket/guard.h>
 #include <spacket/time_utils.h>
+#include <spacket/result.h>
 
 inline
 Error toError(msg_t msg) {

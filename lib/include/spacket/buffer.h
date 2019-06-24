@@ -209,6 +209,18 @@ void BufferT<Allocator>::resize(size_t n) {
 
 template<typename Allocator>
 inline
+void BufferT<Allocator>::releaseI() {
+    Storage* s = storage.detach();
+    if (s) {
+        --s->header.refCnt;
+        if (s->header.refCnt == 0) {
+            Allocator().deallocateI(s);
+        }
+    }
+}
+
+template<typename Allocator>
+inline
 const uint8_t* BufferT<Allocator>::begin() const {
     return storage->buffer;
 }

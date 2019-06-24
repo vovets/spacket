@@ -14,6 +14,7 @@
 #include <chrono>
 
 using Buffer = BufferT<NewAllocator>;
+using SerialDevice = SerialDeviceT<Buffer>;
 
 namespace Catch {
 template<> struct StringMaker<Buffer>: public StringMakerBufferBase<Buffer> {}; 
@@ -44,7 +45,7 @@ TEST_CASE("packet loopback") {
             auto readAppend =
             [&]() {
                 return
-                sd.read(buffer(BUFFER_MAX_SIZE), std::chrono::seconds(1)) >=
+                sd.read(std::chrono::seconds(1)) >=
                 [&](Buffer&& b) {
                     returnOnFailT(newBuf, bool, rb + b);
                     rb = std::move(newBuf);

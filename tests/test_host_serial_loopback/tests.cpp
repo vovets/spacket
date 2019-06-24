@@ -25,6 +25,7 @@ const size_t REPETITIONS = 10;
 const size_t BYTE_TIMEOUT_US = 0;
 
 using Buffer = BufferT<NewAllocator>;
+using SerialDevice = SerialDeviceT<Buffer>;
 
 Buffer buffer(size_t size) { return std::move(throwOnFail(Buffer::create(size))); }
 
@@ -55,7 +56,7 @@ TEST_CASE("read prefix", "[loopback]") {
             sd.write(wb) >=
             [&](boost::blank&&) {
                 return
-                sd.read(buffer(MAX_READ), ch::seconds(1)) >=
+                sd.read(ch::seconds(1)) >=
                 [&](Buffer&& rb) {
                     CAPTURE(rb);
                     REQUIRE(isPrefix(rb, wb));
@@ -87,7 +88,7 @@ TEST_CASE("read whole", "[loopback]") {
                     returnOnFailT(
                         tmp,
                         boost::blank,
-                        sd.read(buffer(MAX_READ), ch::seconds(1)));
+                        sd.read(ch::seconds(1)));
                     CAPTURE(tmp);
                     if (!rb.size()) {
                         REQUIRE(isPrefix(tmp, wb));
@@ -124,7 +125,7 @@ TEST_CASE("timeout", "[loopback]") {
                     returnOnFailT(
                         tmp,
                         boost::blank,
-                        sd.read(buffer(MAX_READ), ch::seconds(1)));
+                        sd.read(ch::seconds(1)));
                     CAPTURE(tmp);
                     if (!rb.size()) {
                         REQUIRE(isPrefix(tmp, wb));
@@ -133,7 +134,7 @@ TEST_CASE("timeout", "[loopback]") {
                     rb = std::move(sum);
                 }
                 REQUIRE_THAT(rb, isEqualTo(wb));
-                auto r = sd.read(buffer(MAX_READ), ch::milliseconds(10));
+                auto r = sd.read(ch::milliseconds(10));
                 REQUIRE(isFail(r));
                 REQUIRE(getFailUnsafe(r) == toError(ErrorCode::DevReadTimeout));
                 return ok(boost::blank{});

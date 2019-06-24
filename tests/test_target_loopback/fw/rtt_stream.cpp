@@ -2,3 +2,4 @@
 
 RTTStream rttStream{};
 BaseSequentialStream* debugPrintStream = &rttStream;
+BaseSequentialStream* errorReportStream = &rttStream;

@@ -45,7 +45,8 @@ int __attribute__((noreturn)) main(void) {
   
     blinkerThread.create(NORMALPRIO - 2, blinkerThreadFunction, 0);
     echoThread.create(NORMALPRIO - 1, echoThreadFunction, 0);
-    shellThread_.create(NORMALPRIO, shellThread, const_cast<ShellConfig*>(&shellConfig));
+    auto shellThreadHandle = shellThread_.create(NORMALPRIO, shellThread, const_cast<ShellConfig*>(&shellConfig));
+    chRegSetThreadNameX(shellThreadHandle, "shell");
     rxThread.create(NORMALPRIO + 1, rxThreadFunction, 0);
 
     while (true) {

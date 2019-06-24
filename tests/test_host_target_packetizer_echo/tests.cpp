@@ -16,6 +16,7 @@
 #include <future>
 
 using Buffer = BufferT<NewAllocator>;
+using SerialDevice = SerialDeviceT<Buffer>;
 
 namespace Catch {
 template<> struct StringMaker<Buffer>: public StringMakerBufferBase<Buffer> {}; 
@@ -43,7 +44,7 @@ Result<Buffer> readFull(SerialDevice& sd, Timeout timeout) {
     bool finished = false;
     Result<Buffer> result = ok(buf(0));
     while (!finished) {
-        sd.read(buf(BUFFER_MAX_SIZE), timeout) >=
+        sd.read(timeout) >=
         [&](Buffer&& read) {
             return
             std::move(result) >=

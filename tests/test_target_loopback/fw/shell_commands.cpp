@@ -12,8 +12,11 @@
 #include <spacket/util/mailbox.h>
 #include <spacket/util/static_thread.h>
 #include <spacket/util/time_measurement.h>
+#include <spacket/util/thread_error_report.h>
 
 #include <chrono>
+
+using SerialDevice = SerialDeviceT<Buffer>;
 
 namespace {
 
@@ -47,23 +50,19 @@ static void cmd_test_rx_timeout(BaseSequentialStream *stream, int, char*[]) {
     SerialDevice::open(uartDriver) >=
     [&](SerialDevice&& sd) {
         return
-        Buffer::create(10) >=
+        sd.read(std::chrono::milliseconds(100)) >=
         [&](Buffer&& b) {
-            chprintf(stream, "created: %d\r\n", b.size());
-            return
-            sd.read(std::move(b), std::chrono::milliseconds(100)) >=
-            [&](Buffer&& b) {
-                chprintf(stream, "read: %d\r\n", b.size());
-                return ok(b.size());
-            };
+            chprintf(stream, "read: %d\r\n", b.size());
+            return ok(b.size());
         };
     };
     CHECK(isFail(result));
-    CHECK(getFail(result) == toError(ErrorCode::DevReadTimeout));
+    auto e = getFail(result);
+    CHECK(e == toError(ErrorCode::DevReadTimeout));
 }
 
 struct RxContext {
-    SerialDevice sd;
+    SerialDevice& sd;
     Timeout timeout;
 };
 
@@ -89,32 +88,23 @@ THD_FUNCTION(rxThreadFunction, arg) {
     while (true) {
         rxInMailbox.fetch(INFINITE_TIMEOUT) >=
         [&](RxContext&& c) {
+            auto r = c.sd.read(c.timeout);
             return
-            Buffer::create(Buffer::maxSize()) >=
-            [&](Buffer&& b) {
-                auto r = c.sd.read(b, c.timeout);
-                return
-                rxOutMailbox.post(r, INFINITE_TIMEOUT);
-            } <=
-            [&](Error e) {
-                auto r = fail<Buffer>(e);
-                palSetPad(GPIOA, GPIOA_DBG0);
-                return
-                rxOutMailbox.post(r, INFINITE_TIMEOUT);
-            };
+            rxOutMailbox.post(r, INFINITE_TIMEOUT);
         };
     }
 }
 
-static Result<bool> test_loopback(SerialDevice sd, size_t packetSize, Timeout rxTimeout, BaseSequentialStream *stream) {
+static Result<bool> test_loopback(SerialDevice& sd, size_t packetSize, Timeout rxTimeout, BaseSequentialStream *stream) {
     return
     testBuffer(packetSize) >=
     [&](Buffer&& reference) {
         RxContext rxContext{sd, rxTimeout};
         return
-        [&]{ return rxInMailbox.post(rxContext, INFINITE_TIMEOUT); }() >
-        [&]{ return sd.write(reference); } >
-        []{ return rxOutMailbox.fetch(INFINITE_TIMEOUT); } >=
+        rxInMailbox.post(rxContext, INFINITE_TIMEOUT) >
+        [&] { return sd.write(reference); } >
+//        [] { debugPrintLine("written"); return ok(boost::blank()); } >
+        [] { return rxOutMailbox.fetch(INFINITE_TIMEOUT); } >=
         [&](Result<Buffer>&& r) {
             returnOnFailT(b, bool, std::move(r));
             if (b != reference) {

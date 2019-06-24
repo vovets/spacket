@@ -9,6 +9,9 @@
 #include <spacket/util/static_thread.h>
 #include <spacket/fatal_error.h>
 
+
+using SerialDevice = SerialDeviceT<Buffer>;
+
 StaticThreadT<256> echoThread;
 
 static __attribute__((noreturn)) THD_FUNCTION(echoThreadFunction, arg) {
@@ -28,12 +31,8 @@ static __attribute__((noreturn)) THD_FUNCTION(echoThreadFunction, arg) {
         };
         
         for (;;) {
-            Buffer::create(Buffer::maxSize()) >=
-            [&](Buffer&& b) {
-                return
-                sd.read(std::move(b), INFINITE_TIMEOUT) >=
-                writeBuffer;
-            } <=
+            sd.read(INFINITE_TIMEOUT) >=
+            writeBuffer <=
             [&](Error e) {
                 chprintf(&rttStream, "E: %s", toString(e));
                 return ok(boost::blank{});

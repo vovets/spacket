@@ -9,7 +9,7 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-
 
 #set(Boost_USE_STATIC_LIBS ON)
 
-find_package(Boost REQUIRED program_options)
+#find_package(Boost REQUIRED program_options)
 
 set(DEVICE_CONFIG_PATH "${CMAKE_CURRENT_SOURCE_DIR}/device_config.json")
 

@@ -16,10 +16,12 @@
 #include <spacket/buffer_debug.h>
 #include <spacket/packetizer.h>
 
+
 StaticThreadT<256> rxThread;
 StaticThreadT<512> txThread;
 
 using BufferMailbox = MailboxT<Buffer, MAILBOX_SIZE>;
+using SerialDevice = SerialDeviceT<Buffer>;
 
 BufferMailbox receivedMb;
 
@@ -32,6 +34,8 @@ public:
             return ok(Globals(std::move(sd)));
         };
     }
+
+    Globals(Globals&&) = default;
 
     SerialDevice& sd() { return sd_; }
 
@@ -70,14 +74,10 @@ static __attribute__((noreturn)) THD_FUNCTION(rxThreadFunction, arg) {
     Globals& g = *static_cast<Globals*>(arg);
     for (;;) {
         debugPrintLine("tick");
-        Buffer::create(Buffer::maxSize()) >=
-        [&](Buffer&& b) {
-            return
-            g.sd().read(std::move(b), INFINITE_TIMEOUT) >=
-            [&](Buffer&& read) {
-                DEBUG_PRINT_BUFFER(read);
-                return receivedMb.post(read, IMMEDIATE_TIMEOUT);
-            };
+        g.sd().read(INFINITE_TIMEOUT) >=
+        [&](Buffer&& read) {
+            DEBUG_PRINT_BUFFER(read);
+            return receivedMb.post(read, IMMEDIATE_TIMEOUT);
         } <=
         threadErrorReport;
     }
@@ -140,7 +140,7 @@ int __attribute__((noreturn)) main(void) {
     chprintf(&rttStream, "RTT ready\r\n");
     chprintf(&rttStream, "Buffer::maxSize(): %d\r\n", Buffer::maxSize());
 
-    auto globals = getOkUnsafe(Globals::init() <= fatal<Globals>);
+    auto globals = std::move(getOkUnsafe(Globals::init() <= fatal<Globals>));
 
     txThread.create(NORMALPRIO, txThreadFunction, &globals);
     rxThread.create(NORMALPRIO + 1, rxThreadFunction, &globals);
