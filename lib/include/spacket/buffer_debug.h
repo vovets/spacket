@@ -7,12 +7,20 @@
 void debugPrintBuffer(const char* message, const Buffer& b) {
     debugPrintStart();
     debugPrint("%s: %x %d:[", message, b.id(), b.size());
-#ifndef BUFFER_ENABLE_DEBUG_PRINT_BUFFER_SIZE_ONLY
+#ifdef BUFFER_ENABLE_DEBUG_PRINT_BUFFER_FULL
     bool first = true;
     for (auto c: b) {
-        if (!first) { chprintf(&rttStream, ", "); } else { first = false; }
+        if (!first) { debugPrint(", "); } else { first = false; }
         debugPrint("%x", c);
     }
+#elif defined BUFFER_ENABLE_DEBUG_PRINT_BUFFER_FIRST_ONLY
+    std::size_t i = 0;
+    for (;
+         i < std::min(b.size(), 3u); ++i) {
+        if (i) { debugPrint(", "); }
+        debugPrint("%x", *(b.begin() + i));
+    }
+    if (b.size() > i) { debugPrint(", ..."); }
 #endif
     debugPrint("]");
     debugPrintFinish();

@@ -44,10 +44,6 @@ public:
         return Impl::write(b.begin(), b.size(), t);
     }
 
-    Result<boost::blank> flush() {
-        return Impl::flush();
-    }
-    
     ~SerialDeviceT() {}
 
 private:

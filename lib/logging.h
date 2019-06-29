@@ -19,7 +19,7 @@ public:
 #error macro 'TRACE' already defined
 #endif
 
-#if 0
+#ifdef SPACKET_ENABLE_TRACE
 #define TRACE(E) do { Tracer() << E; } while(false)
 #else
 #define TRACE(E) do {} while(false)

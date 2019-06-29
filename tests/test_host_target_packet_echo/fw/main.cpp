@@ -10,6 +10,8 @@
 #include <spacket/fatal_error.h>
 
 
+constexpr tprio_t SD_THREAD_PRIORITY = NORMALPRIO + 1;
+
 using SerialDevice = SerialDeviceT<Buffer>;
 
 StaticThreadT<256> echoThread;
@@ -17,7 +19,7 @@ StaticThreadT<256> echoThread;
 static __attribute__((noreturn)) THD_FUNCTION(echoThreadFunction, arg) {
     (void)arg;
     chRegSetThreadName("echo");
-    SerialDevice::open(&UARTD1) >=
+    SerialDevice::open(&UARTD1, SD_THREAD_PRIORITY) >=
     [&](SerialDevice&& sd) {
         auto writeBuffer =
         [&](Buffer&& b) {

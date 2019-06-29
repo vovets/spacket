@@ -55,7 +55,7 @@ def test_idle_line(conn, reset):
             conn.expect_line(b"SUCCESS \d+ \d+")
             conn.expect(b"ch> ")
 
-    # test more thorough range where bug was found
+    # test more thoroughly range where bug was found
     rep = 80
     for size in range(69, 120):
         for i in range(0, 10):
@@ -103,8 +103,9 @@ def test_rx_timeout(conn, reset):
     conn.expect_line(b"test_loopback 100 10 1")
     for i in range(0, 10):
         conn.expect_line(b"created : \[100\]\d+")
-        conn.expect_line(b"received: \[\d\d\]\d+")
+        conn.expect_line(b"received: \[\d{1,3}\]\d+")
         conn.expect_line(b"FAILURE\[Packets differ\].*")
+    conn.expect(b"ch> ")
 
 
 def test_info(conn, reset):

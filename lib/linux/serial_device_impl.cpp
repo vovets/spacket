@@ -32,7 +32,6 @@ struct NativeDevice::Impl {
     ~Impl();
     Result<size_t> read(uint8_t* buffer, size_t maxRead, Timeout t);
     Result<boost::blank> write(const uint8_t* buffer, size_t size);
-    Result<boost::blank> flush();
 
     int fd;
     struct timeval byteTimeout;
@@ -67,7 +66,6 @@ Result<NativeDevice> NativeDevice::doOpen(PortConfig portConfig) {
     termios.c_cc[VMIN] = 0;
     termios.c_cc[VTIME] = 0;
     call(f, ::tcsetattr, fd, TCSANOW, &termios);
-    call(f, ::tcflush, fd, TCIOFLUSH);
     return ok(NativeDevice(std::move(impl)));
 }
 
@@ -77,10 +75,6 @@ Result<size_t> NativeDevice::read(uint8_t* buffer, size_t maxRead, Timeout t) {
 
 Result<boost::blank> NativeDevice::write(const uint8_t* buffer, size_t size) {
     return impl->write(buffer, size);
-}
-
-Result<boost::blank> NativeDevice::flush() {
-    return impl->flush();
 }
 
 NativeDevice::Impl::Impl(int fd, struct timeval byteTimeout)
@@ -146,10 +140,4 @@ Result<boost::blank> NativeDevice::Impl::write(const uint8_t* buffer, size_t siz
         cur += bytesWritten;
     }
     return ok(b::blank());
-}
-
-Result<boost::blank> NativeDevice::Impl::flush() {
-    auto f = []{ return fail<b::blank>(toError(ErrorCode::DevWriteError)); };
-    call(f, ::tcflush, fd, TCIOFLUSH);
-    return ok(boost::blank{});
 }

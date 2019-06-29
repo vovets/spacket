@@ -18,8 +18,7 @@ fw_add_executable(fw)
 
 fw_compile_definitions(fw
   -DBOOST_STRICT_CONFIG
-  -DBUFFER_ENABLE_DEBUG_PRINT_BUFFER
-  -DBUFFER_ENABLE_DEBUG_PRINT_BUFFER_SIZE_ONLY
+  # -DBUFFER_ENABLE_DEBUG_PRINT_BUFFER
   )
 
 ch_include(fw

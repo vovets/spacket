@@ -12,14 +12,17 @@ include(fw_vars)
 set(CH_CPU cortex-m3)
 set(CH_MCU_NAME STM32F103x8)
 set(CH_ROOT_DIR [[${SPACKET_EXT}/chibios]])
+set(debug_optimization_flags -Og)
 
 fw_vars_set()
 fw_add_executable(fw)
 
 fw_compile_definitions(fw
   -DBOOST_STRICT_CONFIG
-  -DBUFFER_ENABLE_DEBUG_PRINT_BUFFER
-  -DBUFFER_ENABLE_DEBUG_PRINT_BUFFER_SIZE_ONLY
+  # -DBUFFER_ENABLE_DEBUG_PRINT_BUFFER
+  # -DBUFFER_ENABLE_DEBUG_PRINT_BUFFER_FULL
+  -DBUFFER_ENABLE_DEBUG_PRINT_BUFFER_FIRST_ONLY
+  # -DSERIAL_DEVICE_ENABLE_DEBUG_PRINT
   )
 
 ch_include(fw

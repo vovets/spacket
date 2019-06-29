@@ -161,7 +161,7 @@
  *
  * @note    The default is @p TRUE.
  */
-#define CH_CFG_USE_WAITEXIT                 FALSE
+#define CH_CFG_USE_WAITEXIT                 TRUE
 
 /**
  * @brief   Semaphores APIs.

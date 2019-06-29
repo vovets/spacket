@@ -15,7 +15,6 @@ public:
 
     Result<size_t> read(uint8_t* buffer, size_t maxRead, Timeout t);
     Result<boost::blank> write(const uint8_t* buffer, size_t size);
-    Result<boost::blank> flush();
 
 private:
     struct Impl;
@@ -63,10 +62,6 @@ public:
 
     Result<boost::blank> write(const uint8_t* buffer, size_t size) {
         return nativeDevice.write(buffer, size);
-    }
-
-    Result<boost::blank> flush() {
-        return nativeDevice.flush();
     }
 
 private:

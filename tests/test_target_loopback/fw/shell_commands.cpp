@@ -21,6 +21,7 @@ using SerialDevice = SerialDeviceT<Buffer>;
 namespace {
 
 auto uartDriver = &UARTD1;
+tprio_t serialDeviceThreadPriority = NORMALPRIO + 2;
 
 }
 
@@ -39,7 +40,7 @@ static void cmd_reset(BaseSequentialStream *stream, int, char*[]) {
 
 static void cmd_test_create(BaseSequentialStream *stream, int, char*[]) {
     {
-        auto sd = SerialDevice::open(uartDriver);
+        auto sd = SerialDevice::open(uartDriver, serialDeviceThreadPriority);
         CHECK(isOk(sd));
     }
     CHECK(uartDriver->state == UART_STOP);
@@ -47,7 +48,7 @@ static void cmd_test_create(BaseSequentialStream *stream, int, char*[]) {
 
 static void cmd_test_rx_timeout(BaseSequentialStream *stream, int, char*[]) {
     auto result =
-    SerialDevice::open(uartDriver) >=
+    SerialDevice::open(uartDriver, serialDeviceThreadPriority) >=
     [&](SerialDevice&& sd) {
         return
         sd.read(std::chrono::milliseconds(100)) >=
@@ -103,7 +104,6 @@ static Result<bool> test_loopback(SerialDevice& sd, size_t packetSize, Timeout r
         return
         rxInMailbox.post(rxContext, INFINITE_TIMEOUT) >
         [&] { return sd.write(reference); } >
-//        [] { debugPrintLine("written"); return ok(boost::blank()); } >
         [] { return rxOutMailbox.fetch(INFINITE_TIMEOUT); } >=
         [&](Result<Buffer>&& r) {
             returnOnFailT(b, bool, std::move(r));
@@ -122,7 +122,7 @@ static Result<bool> test_loopback(SerialDevice& sd, size_t packetSize, Timeout r
 }
 
 static void test_loopback_loop(BaseSequentialStream *stream, size_t packetSize, size_t repetitions, Timeout rxTimeout) {
-    SerialDevice::open(uartDriver) >=
+    SerialDevice::open(uartDriver, serialDeviceThreadPriority) >=
     [&](SerialDevice&& sd) {
         bool passed = false;
         TimeMeasurement tm;

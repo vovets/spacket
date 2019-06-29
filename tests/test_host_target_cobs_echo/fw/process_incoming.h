@@ -3,9 +3,9 @@
 #include <boost/optional.hpp>
 
 struct ProcessIncomingResult {
-    // this is to keep track of position in incoming buffer between invokations
+    // this is to keep track of position in incoming buffer between invocations
     size_t inputOffset;
-    // there may be 3 outcomes of invokation:
+    // there may be 3 outcomes of invocation:
     // none - packetizer consumed incoming buffer but packet is not complete yet,
     // Error - packetizer overflowed and should be replaced,
     // Buffer - packetizer contains complete packet

@@ -34,7 +34,7 @@ constexpr size_t BYTE_TIMEOUT_US = 0;
 constexpr Baud BAUD = Baud::B_921600;
 constexpr size_t REP = 10;
 constexpr auto defaultHoldOff = c::milliseconds(2);
-
+constexpr auto readPacketTimeout = c::milliseconds(50);
 
 Buffer buf(size_t size) { return std::move(throwOnFail(Buffer::create(size))); }
 Buffer buf(size_t size, uint8_t fill) {
@@ -64,7 +64,6 @@ Result<boost::blank> send(SerialDevice& sd, Timeout holdOffTime, Buffer b) {
     return
     sd.write(b) >
     [&]() {
-        sd.flush();
         std::this_thread::sleep_for(holdOffTime);
         return ok(boost::blank{});
     } <=
@@ -81,7 +80,7 @@ Result<boost::blank> send(SerialDevice& sd, Timeout holdOffTime, std::vector<Buf
     return ok(boost::blank{});
 }
 
-Result<std::vector<Buffer>> receive(SerialDevice& sd) {
+Result<std::vector<Buffer>> receive(SerialDevice& sd, std::promise<void>& launched) {
     Source<Buffer> source =
     [&](Timeout t, size_t maxRead) {
         return
@@ -101,8 +100,9 @@ Result<std::vector<Buffer>> receive(SerialDevice& sd) {
     Result<Buffers> result = ok(Buffers{});
     bool finished = false;
     Buffer prefix = buf(0);
+    launched.set_value();
     while (!finished) {
-        readPacket(source, prefix, BUFFER_MAX_SIZE, std::chrono::milliseconds(100)) >=
+        readPacket(source, prefix, BUFFER_MAX_SIZE, readPacketTimeout) >=
         [&](ReadResult<Buffer>&& readResult) {
             prefix = std::move(readResult.suffix);
             return
@@ -131,7 +131,9 @@ Result<std::vector<Buffer>> receive(SerialDevice& sd) {
 void runCaseOnce(const PortConfig& pc, TestCase c) {
     SerialDevice::open(pc) >=
     [&](SerialDevice&& sd) {
-        auto future = std::async(std::launch::async, receive, std::ref(sd));
+        std::promise<void> launched;
+        auto future = std::async(std::launch::async, receive, std::ref(sd), std::ref(launched));
+        launched.get_future().wait();
         send(sd, c.holdOffTime, c.send);
         auto result = future.get();
         REQUIRE(result == c.expected);
@@ -146,6 +148,7 @@ void runCase(TestCase c, size_t repetitions) {
 
     for (size_t r = 0; r < repetitions; ++r) {
         CAPTURE(r);
+        WARN("rep=" << r);
         runCaseOnce(pc, c);
     }
 }
@@ -208,8 +211,9 @@ TEST_CASE("10") {
     // constexpr size_t WIRE_BUFFER_SIZE = BUFFER_MAX_SIZE;
     constexpr size_t WIRE_BUFFER_SIZE = 200;
     constexpr size_t PAYLOAD_SIZE = cobs::maxPayloadSizeDelimited(WIRE_BUFFER_SIZE);
+    constexpr size_t NUM_PACKETS = 5;
     std::vector<Buffer> bufs, stuffed;
-    for (uint8_t fill = 0; fill < 5; ++fill) {
+    for (uint8_t fill = 0; fill < NUM_PACKETS; ++fill) {
         bufs.emplace_back(buf(PAYLOAD_SIZE, fill));
         stuffed.emplace_back(cob(bufs.back()));
         REQUIRE(stuffed.back().size() <= BUFFER_MAX_SIZE);

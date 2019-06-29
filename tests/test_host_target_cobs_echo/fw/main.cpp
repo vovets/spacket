@@ -23,13 +23,15 @@ StaticThreadT<512> txThread;
 using BufferMailbox = MailboxT<Buffer, MAILBOX_SIZE>;
 using SerialDevice = SerialDeviceT<Buffer>;
 
+constexpr tprio_t SD_THREAD_PRIORITY = NORMALPRIO + 2;
+
 BufferMailbox receivedMb;
 
 class Globals {
 public:
     static Result<Globals> init() {
         return
-        SerialDevice::open(&UARTD1) >=
+        SerialDevice::open(&UARTD1, SD_THREAD_PRIORITY) >=
         [&](SerialDevice&& sd) {
             return ok(Globals(std::move(sd)));
         };
