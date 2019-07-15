@@ -5,6 +5,7 @@
 #include <spacket/buffer_utils.h>
 #include <spacket/time_utils.h>
 #include <spacket/port_config.h>
+#include <spacket/cobs.h>
 
 #include <catch.hpp>
 

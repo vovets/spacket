@@ -26,7 +26,7 @@ set(JLINK_CONNECT_OPTIONS
   -autoconnect 1
   -device ${JLINK_DEVICE_NAME}
   -if SWD
-  -speed 4000
+  -speed 9000
   )
 
 set(JLINK_FLASH_OPTIONS

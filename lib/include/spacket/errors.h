@@ -25,6 +25,7 @@
     X(ID(ChMsgReset),                CODE(801),   SEP())  \
     X(ID(PacketizerOverflow),        CODE(900),   SEP())  \
     X(ID(PacketDropped),             CODE(1000),  SEP())  \
+    X(ID(PacketTooBig),              CODE(1001),  SEP())  \
     X(ID(MiserableFailure0),         CODE(10000), SEP())  \
     X(ID(MiserableFailure1),         CODE(10001), SEP())  \
     X(ID(MiserableFailure9),         CODE(10010), )

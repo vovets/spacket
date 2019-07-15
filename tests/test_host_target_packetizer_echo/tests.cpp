@@ -28,12 +28,7 @@ constexpr size_t BYTE_TIMEOUT_US = 0;
 constexpr Baud BAUD = Baud::B_921600;
 constexpr size_t REP = 10;
 
-
-Buffer buf(size_t size) { return std::move(throwOnFail(Buffer::create(size))); }
-
-Buffer buf(std::initializer_list<uint8_t> l) {
-    return throwOnFail(Buffer::create(l));
-}
+#include "buf.h"
 
 struct TestCase {
     std::vector<Buffer> send;

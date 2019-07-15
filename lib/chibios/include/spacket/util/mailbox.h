@@ -15,8 +15,12 @@ Error toError(msg_t msg) {
     return toError(ErrorCode::MiserableFailure1);
 }
 
-template <typename Message, size_t SIZE>
+template <typename Message_, size_t SIZE_>
 class MailboxT {
+public:
+    using Message = Message_;
+    static constexpr std::size_t SIZE = SIZE_;
+    
 public:
     MailboxT();
 
@@ -214,4 +218,16 @@ template <typename Message, size_t SIZE>
 size_t MailboxT<Message, SIZE>::freeCountI() {
     chDbgCheckClassI();
     return SIZE - usedCountI();
+}
+
+template <typename Mailbox>
+Result<boost::blank> replace(Mailbox& mb, typename Mailbox::Message& message) {
+    static_assert(Mailbox::SIZE == 1, "this function is for single element mailboxes only");
+    return
+    mb.fetch(immediateTimeout()) >=
+    [&] (typename Mailbox::Message&& m) {
+        typename Mailbox::Message tmp = std::move(m);
+        return ok(boost::blank());
+    } >
+    post(message, immediateTimeout());
 }

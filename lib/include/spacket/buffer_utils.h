@@ -1,15 +1,9 @@
 #pragma once
 
+#include <spacket/format_utils.h>
+
 #include <iomanip>
 #include <cstring>
-
-template<typename Wrapped>
-struct Hr {
-    const Wrapped& w;
-};
-
-template<typename Wrapped>
-Hr<Wrapped> hr(const Wrapped& w) { return Hr<Wrapped>{w}; }
 
 template<typename Buffer>
 typename std::enable_if_t<

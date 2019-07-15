@@ -21,6 +21,7 @@
 using Buffer = BufferT<NewAllocator>;
 using Buffers = std::vector<Buffer>;
 using SerialDevice = SerialDeviceT<Buffer>;
+
 namespace c = std::chrono;
 
 namespace Catch {
@@ -36,22 +37,7 @@ constexpr size_t REP = 10;
 constexpr auto defaultHoldOff = c::milliseconds(2);
 constexpr auto readPacketTimeout = c::milliseconds(50);
 
-Buffer buf(size_t size) { return std::move(throwOnFail(Buffer::create(size))); }
-Buffer buf(size_t size, uint8_t fill) {
-    Buffer b = throwOnFail(Buffer::create(size));
-    for (auto& c: b) {
-        c = fill;
-    }
-    return b;
-}
-
-Buffer buf(std::initializer_list<uint8_t> l) {
-    return throwOnFail(Buffer::create(l));
-}
-
-Buffer cob(Buffer b) {
-    return throwOnFail(cobs::stuffAndDelim(std::move(b)));
-}
+#include "buf.h"
 
 struct TestCase {
     std::vector<Buffer> send;

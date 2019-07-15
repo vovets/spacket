@@ -12,7 +12,7 @@ size_t stuff(const uint8_t * restrict readPtr, size_t size, uint8_t * restrict o
     uint8_t* codePtr = output;
     const uint8_t* end = readPtr + size;
     for (; readPtr < end; ++readPtr) {
-        if (!chunkRead) {
+        if (chunkRead == 0) {
             if (*readPtr == 0) {
                 *writePtr++ = 1;
             } else {
@@ -25,20 +25,22 @@ size_t stuff(const uint8_t * restrict readPtr, size_t size, uint8_t * restrict o
                 *codePtr = chunkRead + 1;
                 chunkRead = 0;
             } else {
+                *writePtr++ = *readPtr;
+                ++chunkRead;
                 if (chunkRead == 254) {
                     *codePtr = 255;
                     chunkRead = 0;
-                    codePtr = writePtr++;
+                    codePtr = writePtr;
                 }
-                *writePtr++ = *readPtr;
-                ++chunkRead;
             }
         }
     }
-    if (chunkRead) {
+    if (chunkRead != 0) { // means that input data doesn't end with 0, i.e. end occurred in the middle of reading a chunk
         *codePtr = chunkRead + 1;
     } else {
-        *writePtr++ = 1;
+        if (*(readPtr - 1) == 0) { // do not append 0 if packet ends with 255-code block
+            *writePtr++ = 1;
+        }
     }
     return writePtr - output;
 }

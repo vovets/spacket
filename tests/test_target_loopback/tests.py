@@ -5,8 +5,10 @@ from test_utils import reset_delay
 @pytest.fixture(scope="module")
 def conn(request):
     import test_utils
-    c = test_utils.Connection(port=19021, connect_timeout=1, response_timeout=1)
+    c = test_utils.Connection(port=19021, connect_timeout=1, response_timeout=2)
     request.addfinalizer(c.close)
+    c.expect_line(b"RTT ready")
+    c.expect(b"ch> ")
     return c
 
 

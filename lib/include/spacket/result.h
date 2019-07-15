@@ -7,10 +7,16 @@
 #include <boost/mpl/at.hpp>
 #include <boost/preprocessor/cat.hpp>
 
+namespace result_impl {
+
+struct TypeId {};
+
+} // result_impl
 
 template <typename Success>
 struct Result {
     using ValueType = boost::variant<Error, Success>;
+    using TypeId = result_impl::TypeId;
     ValueType value;
 };
 

@@ -10,6 +10,8 @@
 using Buffer = BufferT<NewAllocator>;
 constexpr size_t maxPayload = cobs::maxPayloadSize(2048);
 
+#include "buf.h"
+
 namespace Catch {
 template<> struct StringMaker<Buffer>: public StringMakerBufferBase<Buffer> {}; 
 }
@@ -20,18 +22,17 @@ Buffer fill(uint8_t byte, size_t size) {
     return std::move(result);
 }
 
-Buffer fill1(uint8_t byte, size_t chunkSize, size_t size) {
-    Buffer result = throwOnFail(Buffer::create(size));
-    std::memset(result.begin(), byte, size);
-    for (size_t n = chunkSize; n <= size; n += chunkSize) {
-        result.begin()[n - 1] = 0;
+Buffer fill1(size_t chunkSize, size_t size) {
+    Buffer result = buf(size);
+    for (std::size_t n = 0; n < size; ++n) {
+        std::uint8_t byte = (n + 1) % chunkSize;
+        result.begin()[n] = byte;
     }
     return std::move(result);
 }
 
 void test(Buffer b) {
-    CAPTURE(b);
-    Buffer stuffed = throwOnFail(cobs::stuff(throwOnFail(b.copy())));
+    Buffer stuffed = stuff(throwOnFail(b.copy()));
     CAPTURE(stuffed);
     for (auto byte: stuffed) {
         REQUIRE(byte != 0);
@@ -53,9 +54,21 @@ TEST_CASE("2") {
 }
 
 TEST_CASE("3") {
-    constexpr size_t size = 4;
-    for (size_t chunkSize = 2; chunkSize <= size; ++chunkSize) {
+    constexpr size_t size = 513;
+    for (size_t chunkSize = 1; chunkSize <= size; ++chunkSize) {
         CAPTURE(chunkSize);
-        test(fill1(42, chunkSize, size));
+        test(fill1(chunkSize, size));
     }
+}
+
+TEST_CASE("4") {
+    REQUIRE(stuff(buf({ 0 })) == buf({ 1, 1 }));
+}
+
+TEST_CASE("5") {
+    REQUIRE(cobs::unstuff(buf({ 1 })) == fail<Buffer>(toError(ErrorCode::CobsBadEncoding)));
+}
+
+TEST_CASE("6") {
+    test(fill1(255, 254));
 }

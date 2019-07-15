@@ -13,6 +13,11 @@ target_link_libraries(test_packetizer spacket utils)
 add_executable(test_cobs cobs.cpp)
 target_link_libraries(test_cobs spacket utils)
 
+add_executable(test_packet_decode_fsm packet_decode_fsm.cpp)
+target_link_libraries(test_packet_decode_fsm spacket utils)
+
 add_test(host_packetizer test_packetizer)
 
 add_test(host_cobs test_cobs)
+
+add_test(host_packet_decode_fsm test_packet_decode_fsm)
