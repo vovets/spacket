@@ -27,6 +27,18 @@ constexpr tprio_t SD_THREAD_PRIORITY = NORMALPRIO + 2;
 
 BufferMailbox receivedMb;
 
+#ifdef ENABLE_DEBUG_PRINT
+
+IMPLEMENT_DPX_FUNCTIONS
+IMPLEMENT_DPB_FUNCTION
+
+#else
+
+IMPLEMENT_DPX_FUNCTIONS_NOP
+IMPLEMENT_DPB_FUNCTION_NOP
+
+#endif
+
 class Globals {
 public:
     static Result<Globals> init() {
@@ -61,11 +73,11 @@ Result<boost::blank> writeBuffer(SerialDevice& sd, const Buffer& b) {
 }
 
 Result<boost::blank> encodeAndSend(SerialDevice& sd, Buffer&& b) {
-    DEBUG_PRINT_BUFFER(b);
+    DPB(b);
     return
     cobs::stuffAndDelim(std::move(b)) >=
     [&](Buffer&& stuffedAndDelimited) {
-        DEBUG_PRINT_BUFFER(stuffedAndDelimited);
+        DPB(stuffedAndDelimited);
         return
         writeBuffer(sd, stuffedAndDelimited);
     };
@@ -78,7 +90,7 @@ static __attribute__((noreturn)) THD_FUNCTION(rxThreadFunction, arg) {
         debugPrintLine("tick");
         g.sd().read(INFINITE_TIMEOUT) >=
         [&](Buffer&& read) {
-            DEBUG_PRINT_BUFFER(read);
+            DPB(read);
             return receivedMb.post(read, IMMEDIATE_TIMEOUT);
         } <=
         threadErrorReport;
@@ -97,7 +109,7 @@ static __attribute__((noreturn)) THD_FUNCTION(txThreadFunction, arg) {
             debugPrintLine("tick");
             receivedMb.fetch(INFINITE_TIMEOUT) >=
             [&](Buffer&& received) {
-                DEBUG_PRINT_BUFFER(received);
+                DPB(received);
                 // this loop fully processes incoming buffer reporting errors as needed
                 for (;;) {
                     result = processIncoming(received, result.inputOffset, packetizer);
@@ -107,11 +119,11 @@ static __attribute__((noreturn)) THD_FUNCTION(txThreadFunction, arg) {
                     }
                     std::move(*result.packet) >=
                     [&](Buffer&& packet) {
-                        DEBUG_PRINT_BUFFER(packet);
+                        DPB(packet);
                         return
                         cobs::unstuff(std::move(packet)) >=
                         [&](Buffer&& unstuffed) {
-                            DEBUG_PRINT_BUFFER(unstuffed);
+                            DPB(unstuffed);
                             return encodeAndSend(g.sd(), std::move(unstuffed));
                         };
                     } <=

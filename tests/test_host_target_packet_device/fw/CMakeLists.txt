@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(test_host_target_packetizer_echo_fw C CXX ASM)
+project(test_host_target_packet_device_fw C CXX ASM)
 
 get_filename_component(SPACKET_ROOT ../../.. ABSOLUTE)
 list(APPEND CMAKE_MODULE_PATH "${SPACKET_ROOT}/cmake")
@@ -12,12 +12,16 @@ include(fw_vars)
 set(CH_CPU cortex-m3)
 set(CH_MCU_NAME STM32F103x8)
 set(CH_ROOT_DIR [[${SPACKET_EXT}/chibios]])
+set(debug_optimization_flags -Os)
 
 fw_vars_set()
 fw_add_executable(fw)
 
 fw_compile_definitions(fw
   -DBOOST_STRICT_CONFIG
+  # -DDEBUG_PRINT_BUFFER_FULL
+  -DDEBUG_PRINT_BUFFER_FIRST_ONLY
+  # -DENABLE_DEBUG_PRINT
   )
 
 ch_include(fw

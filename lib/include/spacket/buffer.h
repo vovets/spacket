@@ -30,14 +30,14 @@ constexpr size_t allocSize(size_t dataSize) {
     return dataSize + headerSize();
 }
 
-#ifdef BUFFER_ENABLE_DEBUG_TRACE
-template <typename... U>
-void debugPrintLine(const char* fmt, U&&... u) {
-    ::debugPrintLine(fmt, std::forward<U>(u)...);
-}
+#ifdef BUFFER_ENABLE_DEBUG_PRINT
+
+IMPLEMENT_DPX_FUNCTIONS
+
 #else
-template <typename... U>
-void debugPrintLine(const char*, U&&...) {}
+
+IMPLEMENT_DPX_FUNCTIONS_NOP
+
 #endif
 
 }
@@ -118,7 +118,7 @@ template<typename Allocator>
 inline
 BufferT<Allocator>::BufferT(StoragePtr&& storage)
     : storage(std::move(storage)) {
-    buffer_impl::debugPrintLine("buffer created: %x", this->storage.get());
+    buffer_impl::dpl("buffer created: %x", this->storage.get());
 }
 
 template<typename Allocator>
@@ -165,14 +165,14 @@ template<typename Allocator>
 inline
 BufferT<Allocator>::BufferT(BufferT&& toMove) noexcept
     : storage(std::move(toMove.storage)) {
-    buffer_impl::debugPrintLine("buffer: moved %x", storage.get());
+    buffer_impl::dpl("buffer: moved %x", storage.get());
 }
 
 template<typename Allocator>
 inline
 BufferT<Allocator>& BufferT<Allocator>::operator=(BufferT&& toMove) noexcept {
     storage = std::move(toMove.storage);
-    buffer_impl::debugPrintLine("buffer: moved %x", storage.get());
+    buffer_impl::dpl("buffer: moved %x", storage.get());
     return *this;
 }
 

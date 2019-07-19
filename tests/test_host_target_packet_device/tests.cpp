@@ -21,7 +21,6 @@
 using Buffer = BufferT<NewAllocator>;
 using Buffers = std::vector<Buffer>;
 using SerialDevice = SerialDeviceT<Buffer>;
-
 namespace c = std::chrono;
 
 namespace Catch {

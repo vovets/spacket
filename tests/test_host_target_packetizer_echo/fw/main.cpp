@@ -24,6 +24,18 @@ StaticThreadT<512> packetizerThread;
 BufferMailbox packetizerIn;
 BufferMailbox packetizerOut;
 
+#ifdef ENABLE_DEBUG_PRINT
+
+IMPLEMENT_DPX_FUNCTIONS
+IMPLEMENT_DPB_FUNCTION
+
+#else
+
+IMPLEMENT_DPX_FUNCTIONS_NOP
+IMPLEMENT_DPB_FUNCTION_NOP
+
+#endif
+
 class Globals {
 public:
     static Result<Globals> init() {
@@ -59,10 +71,10 @@ static __attribute__((noreturn)) THD_FUNCTION(rxThreadFunction, arg) {
     chRegSetThreadName("rx");
     Globals& g = *static_cast<Globals*>(arg);
     for (;;) {
-        // debugPrintLine("tick");
+        dpl("tick");
         g.sd().read(INFINITE_TIMEOUT) >=
         [&](Buffer&& read) {
-            DEBUG_PRINT_BUFFER(read);
+            DPB(read);
             return packetizerIn.post(read, IMMEDIATE_TIMEOUT);
         } <=
         threadErrorReport;
@@ -75,7 +87,7 @@ static __attribute__((noreturn)) THD_FUNCTION(txThreadFunction, arg) {
     for (;;) {
         packetizerOut.fetch(INFINITE_TIMEOUT) >=
         [&](Buffer&& fetched) {
-            DEBUG_PRINT_BUFFER(fetched);
+            DPB(fetched);
             return g.sd().write(fetched, INFINITE_TIMEOUT);
         } <=
         threadErrorReport;

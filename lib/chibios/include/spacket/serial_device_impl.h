@@ -21,24 +21,6 @@
 #error SerialDevice needs '#define UART_USE_WAIT' in halconf.h
 #endif
 
-namespace {
-
-#ifndef SERIAL_DEVICE_ENABLE_DEBUG_PRINT
-
-template <typename ...Args>
-void dpl(Args...) {}
-
-#else
-
-template <typename ...Args>
-void dpl(Args... args) {
-    debugPrintLine(std::forward<Args>(args)...);
-}
-
-#endif
-
-} // namespace
-
 inline
 void intrusive_ptr_add_ref(UARTDriver* d) {
     if (d->refCnt < std::numeric_limits<decltype(d->refCnt)>::max()) {
@@ -53,6 +35,20 @@ void intrusive_ptr_release(UARTDriver* d) {
         uartStop(d);
     }
 }
+
+namespace serial_device_impl {
+
+#ifdef SERIAL_DEVICE_ENABLE_DEBUG_PRINT
+
+IMPLEMENT_DPX_FUNCTIONS
+
+#else
+
+IMPLEMENT_DPX_FUNCTIONS_NOP
+
+#endif
+
+} // serial_device_impl
 
 template <typename Buffer>
 class SerialDeviceImpl {
@@ -148,7 +144,7 @@ template <typename Buffer>
 template <typename SerialDevice>
 Result<SerialDevice> SerialDeviceImpl<Buffer>::open(UARTDriver* driver, tprio_t threadPriority) {
     if (driver->refCnt > 0) {
-        return fail<SerialDevice>(toError(ErrorCode::DevAlreadyOpened));
+        return fail<SerialDevice>(toError(ErrorCode::SerialDeviceAlreadyOpened));
     }
     return
     Buffer::create(Buffer::maxSize()) >=
@@ -222,32 +218,32 @@ Result<Buffer> SerialDeviceImpl<Buffer>::read(Timeout t) {
 template <typename Buffer>
 Result<boost::blank> SerialDeviceImpl<Buffer>::write(const uint8_t* buffer, size_t size, Timeout t) {
     auto msg = uartSendFullTimeout(driver.get(), &size, buffer, toSystime(t));
-    return msg == MSG_OK ? ok(boost::blank()) : fail<boost::blank>(toError(ErrorCode::DevWriteTimeout));
+    return msg == MSG_OK ? ok(boost::blank()) : fail<boost::blank>(toError(ErrorCode::SerialDeviceWriteTimeout));
 }
 
 template <typename Buffer>
 void SerialDeviceImpl<Buffer>::txend2_(UARTDriver*) {
-    dpl("txend2_");
+    serial_device_impl::dpl("txend2_");
 }
 
 template <typename Buffer>
 void SerialDeviceImpl<Buffer>::rxCompleted_(UARTDriver*) {
-    dpl("rxCompleted_");
+    serial_device_impl::dpl("rxCompleted_");
 }
 
 template <typename Buffer>
 void SerialDeviceImpl<Buffer>::rxError_(UARTDriver*, uartflags_t) {
-    dpl("rxError_");
+    serial_device_impl::dpl("rxError_");
 }
 
 template <typename Buffer>
 void SerialDeviceImpl<Buffer>::rxIdle_(UARTDriver*) {
-    dpl("rxIdle_");
+    serial_device_impl::dpl("rxIdle_");
 }
 
 template <typename Buffer>
 void SerialDeviceImpl<Buffer>::readTimeout_(void*) {
-   dpl("readTimeout_ instance=%x", instance);
+    serial_device_impl::dpl("readTimeout_ instance=%x", instance);
     if (instance != nullptr) {
         instance->readTimeout();
     }
@@ -286,16 +282,16 @@ void SerialDeviceImpl<Buffer>::handleTimeout_() {
     readMailbox.fetch(immediateTimeout()) >=
     [] (Result<Buffer>&& r) {
         auto tmp = std::move(r);
-        dpl("handleTimeout_ readMailbox was full");
+        serial_device_impl::dpl("handleTimeout_ readMailbox was full");
         return ok(boost::blank());
     } <=
     [] (Error e){
-        dpl("handleTiemout_ %s", toString(e));
+        serial_device_impl::dpl("handleTiemout_ %s", toString(e));
         (void)e;
         return ok(boost::blank());
     } >
     [&] () {
-        auto message = fail<Buffer>(toError(ErrorCode::DevReadTimeout));
+        auto message = fail<Buffer>(toError(ErrorCode::SerialDeviceReadTimeout));
         return
         readMailbox.post(message, immediateTimeout());
     } <=
@@ -307,7 +303,7 @@ void SerialDeviceImpl<Buffer>::readThreadFunction_(void*) {
     for (;;) {
         std::size_t received = Buffer::maxSize();
         auto result = uartReceiveTimeout(instance->driver.get(), &received, instance->readBuffer.begin(), TIME_INFINITE);
-        dpl("readThreadFunction result=%d received=%d", result, received);
+        serial_device_impl::dpl("readThreadFunction result=%d received=%d", result, received);
         chVTReset(&readTimeoutTimer);
         if (stopRequested) break;
         switch (result) {

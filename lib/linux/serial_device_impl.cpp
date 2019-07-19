@@ -43,7 +43,7 @@ NativeDevice::NativeDevice(ImplPtr p) noexcept: impl(std::move(p)) {}
 Result<NativeDevice> NativeDevice::doOpen(PortConfig portConfig) {
     using TvMsec = decltype(timeval().tv_usec);
     
-    auto f = [] { return fail<NativeDevice>(toError(ErrorCode::DevInitFailed)); };
+    auto f = [] { return fail<NativeDevice>(toError(ErrorCode::SerialDeviceInitFailed)); };
     
     if (portConfig.baud == Baud::NonStandard) {
         return fail<NativeDevice>(toError(ErrorCode::ConfigBadBaud));
@@ -88,7 +88,7 @@ NativeDevice::Impl::~Impl() {
 
 Result<size_t> NativeDevice::Impl::read(uint8_t* buffer, size_t maxRead, Timeout t) {
     TRACE("===>");
-    auto f = [] { return fail<size_t>(toError(ErrorCode::DevReadError)); };
+    auto f = [] { return fail<size_t>(toError(ErrorCode::SerialDeviceReadError)); };
     auto now = Clock::now();
     auto deadline = now + t;
     uint8_t* cur = buffer;
@@ -120,13 +120,13 @@ Result<size_t> NativeDevice::Impl::read(uint8_t* buffer, size_t maxRead, Timeout
     }
     TRACE("<2== " << cur - buffer);
     if (cur == buffer) {
-        return fail<size_t>(toError(ErrorCode::DevReadTimeout));
+        return fail<size_t>(toError(ErrorCode::SerialDeviceReadTimeout));
     }
     return ok(static_cast<size_t>(cur - buffer));
 }
 
 Result<boost::blank> NativeDevice::Impl::write(const uint8_t* buffer, size_t size) {
-    auto f = []{ return fail<b::blank>(toError(ErrorCode::DevWriteError)); };
+    auto f = []{ return fail<b::blank>(toError(ErrorCode::SerialDeviceWriteError)); };
     const uint8_t* cur = buffer;
     const uint8_t* end = buffer + size;
     while (cur < end) {

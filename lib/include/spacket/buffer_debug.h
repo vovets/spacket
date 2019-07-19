@@ -2,18 +2,16 @@
 
 #include <spacket/debug_print.h>
 
-#ifdef BUFFER_ENABLE_DEBUG_PRINT_BUFFER
-
-void debugPrintBuffer(const char* message, const Buffer& b) {
-    debugPrintStart();
-    debugPrint("%s: %x %d:[", message, b.id(), b.size());
-#ifdef BUFFER_ENABLE_DEBUG_PRINT_BUFFER_FULL
+inline
+void debugPrintBuffer(const Buffer& b) {
+    debugPrint("%x %d:[", b.id(), b.size());
+#ifdef DEBUG_PRINT_BUFFER_FULL
     bool first = true;
     for (auto c: b) {
         if (!first) { debugPrint(", "); } else { first = false; }
         debugPrint("%x", c);
     }
-#elif defined BUFFER_ENABLE_DEBUG_PRINT_BUFFER_FIRST_ONLY
+#elif defined DEBUG_PRINT_BUFFER_FIRST_ONLY
     std::size_t i = 0;
     for (;
          i < std::min(b.size(), 3u); ++i) {
@@ -23,13 +21,24 @@ void debugPrintBuffer(const char* message, const Buffer& b) {
     if (b.size() > i) { debugPrint(", ..."); }
 #endif
     debugPrint("]");
+}
+
+inline
+void debugPrintBuffer(const char* message, const Buffer& b) {
+    debugPrintStart();
+    debugPrint("%s: ", message);
+    debugPrintBuffer(b);
     debugPrintFinish();
 }
 
-#else
+#define IMPLEMENT_DPB_FUNCTION                          \
+    inline                                              \
+    void dpb(const char* message, const Buffer& b) {    \
+        debugPrintBuffer(message, b);                   \
+    }
 
-void debugPrintBuffer(const char*, const Buffer&) {}
+#define IMPLEMENT_DPB_FUNCTION_NOP                      \
+    inline                                              \
+    void dpb(const char*, const Buffer&) {}
 
-#endif
-
-#define DEBUG_PRINT_BUFFER(VAR_NAME) debugPrintBuffer(#VAR_NAME, VAR_NAME)
+#define DPB(VAR_NAME) dpb(#VAR_NAME, VAR_NAME)

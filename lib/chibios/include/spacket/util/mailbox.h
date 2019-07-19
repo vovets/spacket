@@ -228,6 +228,12 @@ Result<boost::blank> replace(Mailbox& mb, typename Mailbox::Message& message) {
     [&] (typename Mailbox::Message&& m) {
         typename Mailbox::Message tmp = std::move(m);
         return ok(boost::blank());
+    } <=
+    [&] (Error e) {
+        if ( e == toError(ErrorCode::ChMsgTimeout)) {
+            return ok(boost::blank());
+        }
+        return fail<boost::blank>(e);
     } >
-    post(message, immediateTimeout());
+    [&] { return mb.post(message, immediateTimeout()); };
 }

@@ -50,7 +50,7 @@ Result<Buffer> readFull(SerialDevice& sd, Timeout timeout) {
         } <=
         [&](Error e) {
             finished = true;
-            if (e == toError(ErrorCode::DevReadTimeout)) {
+            if (e == toError(ErrorCode::SerialDeviceReadTimeout)) {
                 return ok(boost::blank{});
             }
             result = fail<SuccessT<decltype(result)>>(e);

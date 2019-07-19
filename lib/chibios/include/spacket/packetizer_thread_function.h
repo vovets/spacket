@@ -15,7 +15,7 @@ void packetizerThreadFunctionT(Mailbox& in, Mailbox& out, ErrorReportF reportErr
             debugPrintLine("tick");
             in.fetch(INFINITE_TIMEOUT) >=
             [&](Buffer&& fetched) {
-                DEBUG_PRINT_BUFFER(fetched);
+                DPB(fetched);
                 for (uint8_t c: fetched) {
                     auto r = pktz.consume(c);
                     switch (r) {
