@@ -22,6 +22,10 @@ public:
         return thread;
     }
 
+    void terminate() {
+        chThdTerminate(thread);
+    }
+
     msg_t wait() {
         if (thread != nullptr) {
             auto result = chThdWait(thread);
