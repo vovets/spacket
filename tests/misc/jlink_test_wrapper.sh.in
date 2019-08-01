@@ -2,6 +2,9 @@
 
 tmp_dir=$(mktemp -d jlink_connect.XXXX)
 jlink_pid=$tmp_dir/jlink_pid
+jlink_log=$tmp_dir/jlink_log
+jlink_out=$tmp_dir/jlink_out
+jlink_commands=$tmp_dir/jlink_commands
 
 do_cleanup() {
     (
@@ -21,10 +24,6 @@ handler() {
     do_cleanup $1
 }
 
-for reason in INT TERM EXIT; do
-    trap "handler $reason" $reason
-done
-
 run_test() {
     echo "Running test..."
     code=0
@@ -40,20 +39,35 @@ run_test() {
     return $code
 }
 
+for reason in INT TERM EXIT; do
+    trap "handler $reason" $reason
+done
+
+# For whatever reason jlinkexe V648a may exit after processing sript.
+# V614b does not exit. Good hour of sleep may solve the problem.
+cat >$jlink_commands <<EOF
+r
+g
+sleep 3600000
+EOF
+
 echo "Flashing fw..."
 ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${fw_project}-flash
 
 echo "Starting RTT server..."
-${JLINK_RTT_COMMAND} >jlink_rtt.out & echo -n $! >$jlink_pid
+${JLINK_EXE} ${JLINK_CONNECT_OPTIONS_STR} -log $jlink_log -commandfile $jlink_commands >$jlink_out & echo -n $! >$jlink_pid
 
-echo -n "Waiting for RTT server to connect to target"
-for attempt in 1 2 3 4 5 6 7 8 9 last; do
-    echo -n .
+echo -n "Waiting for RTT server to connect to target..."
+for attempt in $(seq 20) last; do
     sleep 0.1
-    egrep -q -e "identified.$" jlink_rtt.out && break
+    kill -0 $(cat $jlink_pid) 2>/dev/null || (echo -n p && continue)
+    [ -r $jlink_out ] || (echo -n f && continue)
+    egrep -q -e "Sleep\([[:digit:]]+\)" $jlink_out && break
+    echo -n s
 done
 echo
 
+[ $attempt != last ] && echo "Connected to target"
 [ $attempt = last ] && echo "Failed to connect to target" && false
 
 run_test

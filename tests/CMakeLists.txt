@@ -23,25 +23,12 @@ set(JLINK_DEVICE_NAME
   )
 
 set(JLINK_CONNECT_OPTIONS
-  -autoconnect 1
   -device ${JLINK_DEVICE_NAME}
   -if SWD
   -speed 9000
   )
 
-set(JLINK_FLASH_OPTIONS
-  -exitonerror 1
-  )
-
-set(JLINK_RTT_OPTIONS
-  -exitonerror 0
-  )
-
-util_join_cl(JLINK_RTT_COMMAND
-  ${JLINK_EXE}
-  ${JLINK_CONNECT_OPTIONS}
-  ${JLINK_RTT_OPTIONS}
-  )
+util_join_cl(JLINK_CONNECT_OPTIONS_STR "" ${JLINK_CONNECT_OPTIONS})
 
 set(SPACKET_FW_TOOLCHAIN_FILE
   "${SPACKET_ROOT}/cmake/toolchain_gcc_arm-none-eabi.cmake"
