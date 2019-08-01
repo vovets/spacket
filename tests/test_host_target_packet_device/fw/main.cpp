@@ -27,7 +27,19 @@ constexpr tprio_t PD_THREAD_PRIORITY = NORMALPRIO + 1;
 
 PacketDevice::Storage packetDeviceStorage;
 
-IMPLEMENT_DPX_FUNCTIONS
+namespace {
+
+#ifdef ENABLE_DEBUG_PRINT
+
+IMPLEMENT_DPL_FUNCTION
+
+#else
+
+IMPLEMENT_DPL_FUNCTION_NOP
+
+#endif
+
+} // namespace
 
 class Globals {
 public:

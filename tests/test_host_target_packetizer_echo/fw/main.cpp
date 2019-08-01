@@ -26,11 +26,13 @@ BufferMailbox packetizerOut;
 
 #ifdef ENABLE_DEBUG_PRINT
 
+IMPLEMENT_DPL_FUNCTION
 IMPLEMENT_DPX_FUNCTIONS
 IMPLEMENT_DPB_FUNCTION
 
 #else
 
+IMPLEMENT_DPL_FUNCTION_NOP
 IMPLEMENT_DPX_FUNCTIONS_NOP
 IMPLEMENT_DPB_FUNCTION_NOP
 
@@ -59,6 +61,7 @@ private:
 
 Result<boost::blank> writeBuffer(SerialDevice& sd, Buffer&& b) {
     palClearPad(GPIOC, GPIOC_LED);
+    dpb("write: ", b);
     return
     sd.write(b) >
     [&]() {
@@ -74,7 +77,7 @@ static __attribute__((noreturn)) THD_FUNCTION(rxThreadFunction, arg) {
         dpl("tick");
         g.sd().read(INFINITE_TIMEOUT) >=
         [&](Buffer&& read) {
-            DPB(read);
+            dpb("read: ", read);
             return packetizerIn.post(read, IMMEDIATE_TIMEOUT);
         } <=
         threadErrorReport;

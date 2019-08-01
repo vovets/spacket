@@ -6,13 +6,30 @@
 #include <spacket/util/mailbox.h>
 #include <spacket/buffer_debug.h>
 
+namespace packetizer_thread_function {
+
+#ifdef PACKETIZER_THREAD_FUNCTION_ENABLE_DEBUG_PRINT
+
+IMPLEMENT_DPL_FUNCTION
+IMPLEMENT_DPX_FUNCTIONS
+
+#else
+
+IMPLEMENT_DPL_FUNCTION_NOP
+IMPLEMENT_DPX_FUNCTIONS_NOP
+
+#endif
+
+} // packetizer_thread_function
+
 template <typename Buffer, typename Mailbox, typename ErrorReportF>
 void packetizerThreadFunctionT(Mailbox& in, Mailbox& out, ErrorReportF reportError) {
+    using namespace packetizer_thread_function;
     using Packetizer = PacketizerT<Buffer>;
     Packetizer::create(PacketizerNeedSync::Yes) >=
     [&](Packetizer pktz) {
         for (;;) {
-            debugPrintLine("tick");
+            dpl("tick");
             in.fetch(INFINITE_TIMEOUT) >=
             [&](Buffer&& fetched) {
                 DPB(fetched);

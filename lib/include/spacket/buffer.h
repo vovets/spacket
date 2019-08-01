@@ -31,20 +31,26 @@ constexpr size_t allocSize(size_t dataSize) {
     return dataSize + headerSize();
 }
 
+struct BufferDebug {
+
 #ifdef BUFFER_ENABLE_DEBUG_PRINT
 
+IMPLEMENT_DPL_FUNCTION
 IMPLEMENT_DPX_FUNCTIONS
 
 #else
 
+IMPLEMENT_DPL_FUNCTION_NOP
 IMPLEMENT_DPX_FUNCTIONS_NOP
 
 #endif
 
-}
+};
+
+} // buffer_impl
 
 template<typename Allocator>
-class BufferT {
+class BufferT: private buffer_impl::BufferDebug {
 private:
     struct Storage { 
        buffer_impl::Header header;
@@ -119,7 +125,7 @@ template<typename Allocator>
 inline
 BufferT<Allocator>::BufferT(StoragePtr&& storage)
     : storage(std::move(storage)) {
-    buffer_impl::dpl("buffer created: %x", this->storage.get());
+    dpl("buffer created: %x", this->storage.get());
 }
 
 template<typename Allocator>
@@ -166,14 +172,14 @@ template<typename Allocator>
 inline
 BufferT<Allocator>::BufferT(BufferT&& toMove) noexcept
     : storage(std::move(toMove.storage)) {
-    buffer_impl::dpl("buffer: moved %x", storage.get());
+    dpl("buffer: moved %x", storage.get());
 }
 
 template<typename Allocator>
 inline
 BufferT<Allocator>& BufferT<Allocator>::operator=(BufferT&& toMove) noexcept {
     storage = std::move(toMove.storage);
-    buffer_impl::dpl("buffer: moved %x", storage.get());
+    dpl("buffer: moved %x", storage.get());
     return *this;
 }
 
