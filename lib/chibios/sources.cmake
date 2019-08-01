@@ -2,7 +2,6 @@ gt_add_sources(
   fatal_error.cpp
   assert_func.cpp
   aeabi_atexit.cpp
-  thread_error_report.cpp
   debug_print.cpp
   )
 

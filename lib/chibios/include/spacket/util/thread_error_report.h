@@ -5,8 +5,18 @@
 
 #include "ch.h"
 #include "hal_streams.h"
+#include "chprintf.h"
 
-// this should be defined by app
+
+// this should be defined by the app
 extern BaseSequentialStream* errorReportStream;
 
-Result<boost::blank> threadErrorReport(Error e);
+template <typename Success = boost::blank>
+Result<Success> threadErrorReportT(Error e) {
+    chprintf(errorReportStream, "E:%s: %s\r\n", chRegGetThreadNameX(chThdGetSelfX()), toString(e));
+    return fail<Success>(e);
+}
+
+Result<boost::blank> threadErrorReport(Error e) {
+    return threadErrorReportT<boost::blank>(e);
+}
