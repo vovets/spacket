@@ -17,3 +17,8 @@ To ceil(const std::chrono::duration<Rep, Period>& d)
         return t + To{1};
     return t;
 }
+
+template <typename Duration>
+std::chrono::milliseconds toMs(Duration duration) {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(duration);
+}

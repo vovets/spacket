@@ -17,3 +17,10 @@ constexpr systime_t minTimeout() {
     constexpr systime_t timedelta = CH_CFG_ST_TIMEDELTA;
     return timedelta > 0 ? timedelta : 1;
 }
+
+template <typename ToDuration, std::uint32_t CPU_FREQ>
+std::uint32_t to(rtcnt_t counter) {
+    return std::chrono::duration_cast<ToDuration>(
+    std::chrono::duration<rtcnt_t, std::ratio<1, CPU_FREQ>>(counter)
+    ).count();
+}
