@@ -18,6 +18,8 @@ Buffer cob(Buffer b) {
     return throwOnFail(cobs::stuffAndDelim(std::move(b)));
 }
 
+Buffer wz(std::size_t size) { return createTestBuffer<Buffer>(size); }
+
 Buffer nz(std::size_t size) { return createTestBufferNoZero<Buffer>(size); }
 
 Result<Buffer> cat_(const Buffer& l, const Buffer& r) {

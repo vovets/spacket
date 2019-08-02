@@ -13,6 +13,7 @@
 #include <spacket/result_utils.h>
 #include <spacket/cobs.h>
 #include <spacket/read_packet.h>
+#include <spacket/packet_device.h>
 
 #include <chrono>
 #include <thread>
@@ -21,6 +22,7 @@
 using Buffer = BufferT<NewAllocator>;
 using Buffers = std::vector<Buffer>;
 using SerialDevice = SerialDeviceT<Buffer>;
+using PacketDevice = PacketDeviceT<Buffer>;
 namespace c = std::chrono;
 
 namespace Catch {
@@ -34,13 +36,19 @@ constexpr size_t BYTE_TIMEOUT_US = 0;
 constexpr Baud BAUD = Baud::B_921600;
 constexpr size_t REP = 10;
 constexpr auto defaultHoldOff = c::milliseconds(2);
-constexpr auto readPacketTimeout = c::milliseconds(50);
+constexpr auto readPacketTimeout = c::milliseconds(100);
 
 #include "buf.h"
 
 struct TestCase {
     std::vector<Buffer> send;
     Result<std::vector<Buffer>> expected;
+    Timeout holdOffTime;
+};
+
+struct TestCase2 {
+    boost::optional<Buffer> send;
+    Result<Buffer> expected;
     Timeout holdOffTime;
 };
 
@@ -126,7 +134,37 @@ void runCaseOnce(const PortConfig& pc, TestCase c) {
     };
 }
 
-void runCase(TestCase c, size_t repetitions) {
+void runCaseOnce(const PortConfig& pc, TestCase2 c) {
+    SerialDevice::open(pc) >=
+    [&](SerialDevice&& sd) {
+        return
+        PacketDevice::open(std::move(sd)) >=
+        [&](PacketDevice&& pd) {
+            std::promise<void> launched;
+            auto receive = [&]() {
+                launched.set_value();
+                return
+                pd.read(readPacketTimeout) >=
+                [&](Buffer&& received) {
+                    WARN("received: " << hr(received));
+                    return ok(std::move(received));
+                };
+            };
+            auto future = std::async(std::launch::async, receive);
+            launched.get_future().wait();
+            if (c.send) {
+                pd.write(*c.send);
+                std::this_thread::sleep_for(c.holdOffTime);
+            }
+            auto r = future.get();
+            REQUIRE(r == c.expected);
+            return ok(boost::blank{});
+        };
+    };
+}
+
+template <typename TestCase>
+void runCaseT(TestCase c, size_t repetitions) {
     PortConfig pc = fromJson(DEVICE_CONFIG_PATH);
     pc.baud = BAUD;
     pc.byteTimeout_us = BYTE_TIMEOUT_US;
@@ -138,7 +176,15 @@ void runCase(TestCase c, size_t repetitions) {
     }
 }
 
-TEST_CASE("1") {
+void runCase(TestCase c, size_t repetitions) {
+    runCaseT(c, repetitions);
+}
+
+void runCase2(TestCase2 c, size_t repetitions) {
+    runCaseT(c, repetitions);
+}
+
+TEST_CASE("01") {
     auto b = buf({ 1, 2, 3, 4, 5 });
     runCase(
     {
@@ -149,7 +195,7 @@ TEST_CASE("1") {
     REP);
 }
 
-TEST_CASE("2") {
+TEST_CASE("02") {
     auto b = buf({ 1, 2, 3, 4, 0 });
     runCase(
     {
@@ -160,7 +206,7 @@ TEST_CASE("2") {
     REP);
 }
 
-TEST_CASE("3") {
+TEST_CASE("03") {
     auto b = buf({ 0, 2, 3, 4, 0 });
     runCase(
     {
@@ -171,7 +217,7 @@ TEST_CASE("3") {
     REP);
 }
 
-TEST_CASE("4") {
+TEST_CASE("04") {
     auto b = buf({ 0, 0, 0, 0, 0 });
     runCase(
     {
@@ -182,7 +228,7 @@ TEST_CASE("4") {
     REP);
 }
 
-TEST_CASE("5") {
+TEST_CASE("05") {
     runCase(
     {
         { buf({ 0, 5, 1, 2 }), buf({ 3, 4, 0, 0 }), buf({ 1, 1 }), buf({ 0, 0, 3, 1, 2 }), buf({ 0 }) },
@@ -211,4 +257,66 @@ TEST_CASE("10") {
         c::milliseconds(3)
     },
     REP);
+}
+
+TEST_CASE("20") {
+    runCase2(
+    {
+        {},
+        fail<Buffer>(toError(ErrorCode::PacketDeviceReadTimeout)),
+        defaultHoldOff
+    },
+    REP);
+}
+
+TEST_CASE("21") {
+    runCase2(
+    {
+        buf(0),
+        fail<Buffer>(toError(ErrorCode::PacketDeviceReadTimeout)),
+        defaultHoldOff
+    },
+    REP);
+}
+
+TEST_CASE("22.1") {
+    for (std::size_t s = 1; s < 128; ++s) {
+        auto b = wz(s);
+        CAPTURE(s);
+        runCase2(
+        {
+            b,
+            ok(b),
+            c::milliseconds(2)
+        },
+        REP);
+    }
+}
+
+TEST_CASE("22.2") {
+    for (std::size_t s = 200; s < 256; s += 2) {
+        auto b = wz(s);
+        CAPTURE(s);
+        runCase2(
+        {
+            b,
+            ok(b),
+            c::milliseconds(10)
+        },
+        REP);
+    }
+}
+
+TEST_CASE("22.3") {
+    for (std::size_t s = 256; s < 515; s += 3) {
+        auto b = wz(s);
+        CAPTURE(s);
+        runCase2(
+        {
+            b,
+            ok(b),
+            c::milliseconds(6)
+        },
+        REP);
+    }
 }

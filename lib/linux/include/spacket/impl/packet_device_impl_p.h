@@ -5,20 +5,35 @@
 #include <spacket/impl/packet_device_impl_base.h>
 
 #include <boost/smart_ptr/intrusive_ref_counter.hpp>
+#include <boost/optional.hpp>
+
+#include <condition_variable>
+#include <mutex>
+#include <thread>
 
 namespace packet_device_impl {
 
-#ifdef PACKET_DEVICE_ENABLE_DEBUG_PRINT
+template <typename Message>
+struct Mailbox {
+    Result<boost::blank> post(Message& message_) {
+        std::lock_guard<std::mutex> lock(mutex);
+        message = std::move(message_);
+        full.notify_one();
+        return ok(boost::blank());
+    }
+    
+    Result<Message> fetch(Timeout timeout) {
+        std::unique_lock<std::mutex> lock(mutex);
+        if (full.wait_for(lock, timeout, [&] { return !!message; })) {
+            return ok(std::move(message.value()));
+        }
+        return fail<Message>(toError(ErrorCode::Timeout));
+    }
 
-IMPLEMENT_DPL_FUNCTION
-IMPLEMENT_DPB_FUNCTION
-
-#else
-
-IMPLEMENT_DPL_FUNCTION_NOP
-IMPLEMENT_DPB_FUNCTION_NOP
-
-#endif
+    boost::optional<Message> message;
+    std::mutex mutex;
+    std::condition_variable full;
+};
 
 } // packet_device_impl
 
@@ -30,17 +45,15 @@ struct PacketDeviceImpl: PacketDeviceImplBase<Buffer>,
     using Base = PacketDeviceImplBase<Buffer>;
     using ThisPtr = boost::intrusive_ptr<This>;
     using SerialDevice = SerialDeviceT<Buffer>;
-    using Mailbox = MailboxT<Result<Buffer>, 1>;
-    using Thread = StaticThreadT<512>;
+    using Mailbox = packet_device_impl::Mailbox<Result<Buffer>>;
     
-    static Result<ThisPtr> open(SerialDevice&& serialDevice, void* storage, tprio_t threadPriority);
+    static Result<ThisPtr> open(SerialDevice&& serialDevice);
 
     static void readThreadFunction_(void* instance) {
-        chRegSetThreadName("pd");
         static_cast<This*>(instance)->readThreadFunction();
     }
 
-    PacketDeviceImpl(Buffer&& buffer, SerialDevice&& serialDevice, tprio_t threadPriority);
+    PacketDeviceImpl(Buffer&& buffer, SerialDevice&& serialDevice);
     virtual ~PacketDeviceImpl();
 
     Result<boost::blank> mailboxReplace(Result<Buffer>& message) override;
@@ -48,59 +61,51 @@ struct PacketDeviceImpl: PacketDeviceImplBase<Buffer>,
     Result<boost::blank> reportError(Error e) override;
 
     Mailbox readMailbox;
-    Thread readThread;
+    std::thread readThread;
 };
 
 template <typename Buffer>
-Result<boost::intrusive_ptr<PacketDeviceImpl<Buffer>>> PacketDeviceImpl<Buffer>::open(SerialDevice&& serialDevice, void* storage, tprio_t threadPriority) {
+Result<boost::intrusive_ptr<PacketDeviceImpl<Buffer>>> PacketDeviceImpl<Buffer>::open(SerialDevice&& serialDevice) {
     return
     Buffer::create(Buffer::maxSize()) >=
     [&] (Buffer&& buffer) {
         return ok(
             ThisPtr(
-                new (storage) This(
+                new This(
                     std::move(buffer),
-                    std::move(serialDevice),
-                    threadPriority)));
+                    std::move(serialDevice))));
     };
 }
 
 template <typename Buffer>
 PacketDeviceImpl<Buffer>::PacketDeviceImpl(
     Buffer&& buffer,
-    SerialDevice&& serialDevice,
-    tprio_t threadPriority)
+    SerialDevice&& serialDevice)
     : Base(
         std::move(buffer),
         std::move(serialDevice))
 {
-    readThread.create(threadPriority, readThreadFunction_, this);
+    readThread = std::thread(readThreadFunction_, this);
 }
 
 template <typename Buffer>
 PacketDeviceImpl<Buffer>::~PacketDeviceImpl() {
     Base::requestStop();
-    readThread.wait();
+    readThread.join();
 }
 
 template <typename Buffer>
 Result<boost::blank> PacketDeviceImpl<Buffer>::mailboxReplace(Result<Buffer>& message) {
-    return replace(readMailbox, message);
+    return readMailbox.post(message);
 }
 
 template <typename Buffer>
 Result<Result<Buffer>> PacketDeviceImpl<Buffer>::mailboxFetch(Timeout t) {
     return
-    readMailbox.fetch(t) <=
-    [&] (Error e) {
-        if (e == toError(ErrorCode::ChMsgTimeout)) {
-            return fail<Result<Buffer>>(toError(ErrorCode::Timeout));
-        }
-        return fail<Result<Buffer>>(e);
-    };
+    readMailbox.fetch(t);
 }
 
 template <typename Buffer>
-Result<boost::blank> PacketDeviceImpl<Buffer>::reportError(Error e) {
-    return threadErrorReport(e);
+ Result<boost::blank> PacketDeviceImpl<Buffer>::reportError(Error e) {
+    return fail<boost::blank>(e);
 }
