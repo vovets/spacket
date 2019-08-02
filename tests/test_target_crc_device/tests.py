@@ -36,7 +36,7 @@ The test plan is:
 
 
 import pytest
-from test_utils import reset_delay
+from test_utils import reset_delay, conn, reset
 from binascii import hexlify, unhexlify
 
 
@@ -195,23 +195,6 @@ def crc_bytes_hw_le(prev_crc, data):
     return crc_bytes_hw(prev_crc, data, to_u32_le)
 
 
-@pytest.fixture(scope="module")
-def conn(request):
-    import test_utils
-    c = test_utils.Connection(port=19021, connect_timeout=1, response_timeout=1)
-    request.addfinalizer(c.close)
-    return c
-
-
-@pytest.fixture
-def dev_reset(conn):
-    conn.send_line(b"reset")
-    reset_delay()
-    conn.expect_line(b"RTT ready")
-    conn.expect(b"ch> ")
-    print("reset OK")
-
-
 def check_open(conn):
     conn.send_line(b"open")
 
@@ -227,7 +210,7 @@ def check_close(conn):
 
 
 @pytest.fixture
-def dev_open(conn, dev_reset):
+def dev_open(conn, reset):
     check_open(conn)
 
     
@@ -253,7 +236,7 @@ def test_open_close(conn, dev_open):
     check_close(conn)
 
 
-def test_not_opened(conn, dev_reset):
+def test_not_opened(conn, reset):
     conn.send_line(b"add_uint32 0")
     conn.expect_line(b"device is not opened")
     conn.expect(b"ch> ")
@@ -326,7 +309,7 @@ def test_crc_bytes_hw_le_same_as_mpeg_alt():
         assert crc_bytes_hw_le(mpeg_init, c) == mpeg_crc_bytes(mpeg_init, iter_le(c))
 
 
-def test_crc_bytes_hw_le_same_as_hw_add(conn, dev_reset):
+def test_crc_bytes_hw_le_same_as_hw_add(conn, reset):
     for c in checks:
         check_open(conn)
         
