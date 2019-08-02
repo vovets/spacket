@@ -18,8 +18,10 @@ fw_vars_set()
 fw_add_executable(fw)
 
 fw_compile_definitions(fw
+  -DUART_USE_WAIT=FALSE
   -DSHELL_CONFIG_FILE
   -DBOOST_STRICT_CONFIG
+  # -DSERIAL_DEVICE_ENABLE_DEBUG_PRINT
   )
 
 ch_include(fw

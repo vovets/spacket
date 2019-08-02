@@ -17,10 +17,6 @@
     and '#define XXX_UART_USE_XXXX TRUE' in mcuconf.h
 #endif
 
-#if !defined(UART_USE_WAIT) || UART_USE_WAIT != TRUE
-#error SerialDevice needs '#define UART_USE_WAIT' in halconf.h
-#endif
-
 inline
 void intrusive_ptr_add_ref(UARTDriver* d) {
     if (d->refCnt < std::numeric_limits<decltype(d->refCnt)>::max()) {
@@ -84,24 +80,25 @@ public:
 
 private:
     SerialDeviceImpl(UARTDriver* driver, Buffer&& dmaBuffer, tprio_t threadPriority);
+
     static void txend2_(UARTDriver*);
+    static void rxIdle_(UARTDriver* driver);
     static void rxCompleted_(UARTDriver* driver);
     static void rxError_(UARTDriver *uartp, uartflags_t e);
-    static void rxIdle_(UARTDriver* driver);
-    static void readTimeout_(void*);
+    
     static void readThreadFunction_(void*);
     static void handleReceivedData_(std::size_t received);
-    static void handleTimeout_();
 
-    void readTimeout();
+    void rxCompleted();
+    void txCompleted();
 
 private:
     static UARTConfig config;
     static SerialDeviceImpl* instance;
     static Mailbox readMailbox;
     static Thread readThread;
-    static bool stopRequested;
-    static virtual_timer_t readTimeoutTimer;
+    static thread_reference_t readThreadRef;
+    static thread_reference_t writeThreadRef;
 
 private:
     using Driver = boost::intrusive_ptr<UARTDriver>;
@@ -134,13 +131,13 @@ template <typename Buffer>
 typename SerialDeviceImpl<Buffer>::Mailbox SerialDeviceImpl<Buffer>::readMailbox;
 
 template <typename Buffer>
-virtual_timer_t SerialDeviceImpl<Buffer>::readTimeoutTimer;
+thread_reference_t SerialDeviceImpl<Buffer>::readThreadRef;
+
+template <typename Buffer>
+thread_reference_t SerialDeviceImpl<Buffer>::writeThreadRef;
 
 template <typename Buffer>
 typename SerialDeviceImpl<Buffer>::Thread SerialDeviceImpl<Buffer>::readThread;
-
-template <typename Buffer>
-bool SerialDeviceImpl<Buffer>::stopRequested = false;
 
 template <typename Buffer>
 template <typename SerialDevice>
@@ -193,44 +190,70 @@ SerialDeviceImpl<Buffer>& SerialDeviceImpl<Buffer>::operator=(SerialDeviceImpl&&
 template <typename Buffer>
 void SerialDeviceImpl<Buffer>::start(tprio_t threadPriority) {
     uartStart(driver.get(), &config);
-    stopRequested = false;
     auto thread = readThread.create(threadPriority, This::readThreadFunction_, nullptr);
     chRegSetThreadNameX(thread, "sd");
 }
 
 template <typename Buffer>
 void SerialDeviceImpl<Buffer>::stop() {
-    stopRequested = true;
     uartStopReceive(driver.get());
-    chThdResume(&driver->threadrx, MSG_RESET);
+    readThread.terminate();
+    chThdResume(&readThreadRef, MSG_RESET);
     readThread.wait();
     uartStop(driver.get());
 }
 
 template <typename Buffer>
 Result<Buffer> SerialDeviceImpl<Buffer>::read(Timeout t) {
-    chVTSet(&readTimeoutTimer, t.count(), This::readTimeout_, nullptr);
     return
-    readMailbox.fetch(infiniteTimeout()) >=
+    readMailbox.fetch(t) >=
     [] (Result<Buffer>&& result) {
         return std::move(result);
+    } <=
+    [] (Error e) {
+        if (e == toError(ErrorCode::ChMsgTimeout)) {
+            return fail<Buffer>(toError(ErrorCode::SerialDeviceReadTimeout));
+        }
+        return fail<Buffer>(e);
     };
 }
 
 template <typename Buffer>
 Result<boost::blank> SerialDeviceImpl<Buffer>::write(const uint8_t* buffer, size_t size, Timeout t) {
-    auto msg = uartSendFullTimeout(driver.get(), &size, buffer, toSystime(t));
+    osalSysLock();
+    uartStartSendI(driver.get(), size, buffer);
+    auto msg = osalThreadSuspendTimeoutS(&writeThreadRef, toSystime(t));
+    if (msg == MSG_TIMEOUT) {
+        uartStopSendI(driver.get());
+    }
+    osalSysUnlock();
+    serial_device_impl::dpl("write: msg=%d", msg);
     return msg == MSG_OK ? ok(boost::blank()) : fail<boost::blank>(toError(ErrorCode::SerialDeviceWriteTimeout));
 }
 
 template <typename Buffer>
 void SerialDeviceImpl<Buffer>::txend2_(UARTDriver*) {
-    serial_device_impl::dpl("txend2_");
+    serial_device_impl::dpl("txend2_: instance=%x", instance);
+    if (instance != nullptr) {
+        instance->txCompleted();
+    }
+}
+
+template <typename Buffer>
+void SerialDeviceImpl<Buffer>::rxIdle_(UARTDriver*) {
+    serial_device_impl::dpl("rxIdle_: instance=%x", instance);
+    if (instance != nullptr) {
+        // note that we call rxCompleted here
+        instance->rxCompleted();
+    }
 }
 
 template <typename Buffer>
 void SerialDeviceImpl<Buffer>::rxCompleted_(UARTDriver*) {
-    serial_device_impl::dpl("rxCompleted_");
+    serial_device_impl::dpl("rxCompleted_: instance=%x", instance);
+    if (instance != nullptr) {
+        instance->rxCompleted();
+    }
 }
 
 template <typename Buffer>
@@ -239,27 +262,23 @@ void SerialDeviceImpl<Buffer>::rxError_(UARTDriver*, uartflags_t) {
 }
 
 template <typename Buffer>
-void SerialDeviceImpl<Buffer>::rxIdle_(UARTDriver*) {
-    serial_device_impl::dpl("rxIdle_");
-}
-
-template <typename Buffer>
-void SerialDeviceImpl<Buffer>::readTimeout_(void*) {
-    serial_device_impl::dpl("readTimeout_ instance=%x", instance);
-    if (instance != nullptr) {
-        instance->readTimeout();
-    }
-}
-
-template <typename Buffer>
-void SerialDeviceImpl<Buffer>::readTimeout() {
+void SerialDeviceImpl<Buffer>::rxCompleted() {
     osalSysLockFromISR();
-    osalThreadResumeI(&driver->threadrx, MSG_TIMEOUT);
+    auto notReceived = uartStopReceiveI(driver.get());
+    osalThreadResumeI(&readThreadRef, notReceived);
     osalSysUnlockFromISR();
 }
 
 template <typename Buffer>
-void SerialDeviceImpl<Buffer>::handleReceivedData_(std::size_t received) {
+void SerialDeviceImpl<Buffer>::txCompleted() {
+    osalSysLockFromISR();
+    auto notSent = uartStopSendI(driver.get());
+    osalThreadResumeI(&writeThreadRef, notSent);
+    osalSysUnlockFromISR();
+}
+
+template <typename Buffer>
+void SerialDeviceImpl<Buffer>::handleReceivedData_(std::size_t notReceived) {
     Buffer::create(Buffer::maxSize()) >=
     [&] (Buffer&& newBuffer) {
         return
@@ -267,7 +286,7 @@ void SerialDeviceImpl<Buffer>::handleReceivedData_(std::size_t received) {
         [] (Result<Buffer>&& result) { auto tmp = std::move(result); return ok(boost::blank()); } <=
         [] (Error){ return ok(boost::blank()); } >
         [&] () {
-            instance->readBuffer.resize(received);
+            instance->readBuffer.resize(Buffer::maxSize() - notReceived);
             auto message = ok(std::move(instance->readBuffer));
             return
             readMailbox.post(message, immediateTimeout()) >
@@ -280,50 +299,15 @@ void SerialDeviceImpl<Buffer>::handleReceivedData_(std::size_t received) {
 }
 
 template <typename Buffer>
-void SerialDeviceImpl<Buffer>::handleTimeout_() {
-    readMailbox.fetch(immediateTimeout()) >=
-    [] (Result<Buffer>&& r) {
-        auto tmp = std::move(r);
-        serial_device_impl::dpl("handleTimeout_ readMailbox was full");
-        return ok(boost::blank());
-    } <=
-    [] (Error e){
-        serial_device_impl::dpl("handleTiemout_ %s", toString(e));
-        (void)e;
-        return ok(boost::blank());
-    } >
-    [&] () {
-        auto message = fail<Buffer>(toError(ErrorCode::SerialDeviceReadTimeout));
-        return
-        readMailbox.post(message, immediateTimeout());
-    } <=
-    threadErrorReport;
-}
-
-template <typename Buffer>
 void SerialDeviceImpl<Buffer>::readThreadFunction_(void*) {
-    for (;;) {
-        std::size_t received = Buffer::maxSize();
-        auto result = uartReceiveTimeout(instance->driver.get(), &received, instance->readBuffer.begin(), TIME_INFINITE);
-        serial_device_impl::dpl("readThreadFunction result=%d received=%d", result, received);
-        chVTReset(&readTimeoutTimer);
-        if (stopRequested) break;
-        switch (result) {
-            case MSG_OK:
-                handleReceivedData_(received);
-                break;
-            case MSG_RESET:
-                // TODO: log receive errror(s)
-                break;
-            case MSG_TIMEOUT:
-                if (received > 0) {
-                    handleReceivedData_(received);
-                } else {
-                    handleTimeout_();
-                }
-                break;
-            default:
-                FATAL_ERROR("uartReceiveTimeout returned unsupported result");
+    while (!chThdShouldTerminateX()) {
+        osalSysLock();
+        uartStartReceiveI(instance->driver.get(), Buffer::maxSize(), instance->readBuffer.begin());
+        auto result = osalThreadSuspendS(&readThreadRef);
+        serial_device_impl::dpl("readThreadFunction_: result=%d", result);
+        osalSysUnlock();
+        if (result >= 0) {
+            handleReceivedData_(result);
         }
     }
 }

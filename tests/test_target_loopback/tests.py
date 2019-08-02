@@ -1,25 +1,7 @@
 import pytest
-from test_utils import reset_delay
+from test_utils import reset_delay, conn, reset
+import time
 
-
-@pytest.fixture(scope="module")
-def conn(request):
-    import test_utils
-    c = test_utils.Connection(port=19021, connect_timeout=1, response_timeout=2)
-    request.addfinalizer(c.close)
-    c.expect_line(b"RTT ready")
-    c.expect(b"ch> ")
-    return c
-
-
-@pytest.fixture
-def reset(conn):
-    conn.send_line(b"reset")
-    reset_delay()
-    conn.expect_line(b"RTT ready")
-    conn.expect(b"ch> ")
-    print("reset OK\n")
-    
 
 def test_ctor_dtor(conn, reset):
     """test SerialDevice creation (driver start) and destruction (driver stop)"""
@@ -51,20 +33,23 @@ def test_idle_line(conn, reset):
     rep = 20
     for size in range(1, 249):
         for i in range(0, 2):
-            conn.send_line(b"test_loopback %d %d 0" % (size, rep))
+            start = time.time()
+            conn.send_line(b"test_loopback %d %d" % (size, rep))
             
-            conn.expect_line(b"test_loopback %d %d 0" % (size, rep))
-            conn.expect_line(b"SUCCESS \d+ \d+")
+            conn.expect_line(b"test_loopback %d %d" % (size, rep))
+            elapsed = time.time() - start
+            conn.expect_line(b"SUCCESS \d+ \d+ ns")
             conn.expect(b"ch> ")
+            print("elapsed %.3f\n" % elapsed)
 
     # test more thoroughly range where bug was found
     rep = 80
     for size in range(69, 120):
         for i in range(0, 10):
-            conn.send_line(b"test_loopback %d %d 0" % (size, rep))
+            conn.send_line(b"test_loopback %d %d" % (size, rep))
             
-            conn.expect_line(b"test_loopback %d %d 0" % (size, rep))
-            conn.expect_line(b"SUCCESS \d+ \d+")
+            conn.expect_line(b"test_loopback %d %d" % (size, rep))
+            conn.expect_line(b"SUCCESS \d+ \d+ ns")
             conn.expect(b"ch> ")
 
 
@@ -97,16 +82,18 @@ def test_rx_timeout_no_data(conn, reset):
 def test_rx_timeout(conn, reset):
     """ test that timeout works
 
-    1 ms should be not enough to receive 100 bytes at 921600
+    1 ms should be not enough to receive 100 bytes at 921600, but
+    due to the test implementation actual write can happen before
+    the read starts counting its timeout. That can lead to the test on target
+    actually succeeding and hence failing this test. So we use 200 bytes to
+    be sure that read timeout occurs.
     """
     
-    conn.send_line(b"test_loopback 100 10 1")
+    conn.send_line(b"test_loopback 200 10 1")
 
-    conn.expect_line(b"test_loopback 100 10 1")
+    conn.expect_line(b"test_loopback 200 10 1")
     for i in range(0, 10):
-        conn.expect_line(b"created : \[100\]\d+")
-        conn.expect_line(b"received: \[\d{1,3}\]\d+")
-        conn.expect_line(b"FAILURE\[Packets differ\].*")
+        conn.expect_line(b"FAILURE\[404:SerialDeviceReadTimeout\]")
     conn.expect(b"ch> ")
 
 

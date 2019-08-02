@@ -23,6 +23,22 @@ namespace {
 auto uartDriver = &UARTD1;
 tprio_t serialDeviceThreadPriority = NORMALPRIO + 2;
 
+#if 0
+IMPLEMENT_DPL_FUNCTION
+#else
+IMPLEMENT_DPL_FUNCTION_NOP
+#endif
+
+inline
+std::uint32_t toNs(rtcnt_t counter) {
+    return to<std::chrono::nanoseconds, STM32_SYSCLK>(counter);
+}
+
+inline
+std::uint32_t toMs(rtcnt_t counter) {
+    return to<std::chrono::milliseconds, STM32_SYSCLK>(counter);
+}
+
 }
 
 template <typename Buffer>
@@ -59,6 +75,7 @@ static void cmd_test_rx_timeout(BaseSequentialStream *stream, int, char*[]) {
     };
     CHECK(isFail(result));
     auto e = getFail(result);
+    dpl("cmd_test_rx_timeout: %s", toString(e));
     CHECK(e == toError(ErrorCode::SerialDeviceReadTimeout));
 }
 
@@ -89,7 +106,18 @@ THD_FUNCTION(rxThreadFunction, arg) {
     while (true) {
         rxInMailbox.fetch(INFINITE_TIMEOUT) >=
         [&](RxContext&& c) {
-            auto r = c.sd.read(c.timeout);
+            auto r = c.sd.read(c.timeout) <=
+            [&](Error e) {
+                // to clear the sd read buffer when the packet finally arrives
+                // so consequent read wouldn't return stale packet
+                c.sd.read(std::chrono::milliseconds(50)) >
+                [&] {
+                    dpl("second read ok");
+                    return ok(boost::blank());
+                };
+                return fail<Buffer>(e);
+            };
+            dpl("isOk(r)=%d", isOk(r));
             return
             rxOutMailbox.post(r, INFINITE_TIMEOUT);
         };
@@ -139,23 +167,25 @@ static void test_loopback_loop(BaseSequentialStream *stream, size_t packetSize, 
                     return ok(false);
                 }
                 return ok(true);
+            } <=
+            [&](Error e) {
+                chprintf(stream, "FAILURE[%s]\r\n", toString(e));
+                return ok(false);
             };
             returnOnFail(passed_, result);
             tm.stop();
             passed = passed_;
-        };
+        }
         if (passed) {
-            chprintf(stream, "SUCCESS %d %d\r\n", tm.tm.best, tm.tm.worst);
+            chprintf(stream, "SUCCESS %d %d ns\r\n", toNs(tm.tm.best), toNs(tm.tm.worst));
         }
         return ok(false);
-    } <=
-    [&](Error e) {
-        chprintf(stream, "FAILURE[%s]\r\n", toString(e));
-        return ok(false);
-    };
+    } <= threadErrorReportT<bool>;
 }
 
 static void cmd_test_loopback(BaseSequentialStream *stream, int argc, char* argv[]) {
+    // TimeMeasurement tm;
+    // tm.start();
     if (argc < 2) {
         chprintf(stream, "FAILURE[Bad args]\r\n");
         return;
@@ -168,6 +198,8 @@ static void cmd_test_loopback(BaseSequentialStream *stream, int argc, char* argv
     : INFINITE_TIMEOUT;
 
     test_loopback_loop(stream, packetSize, repetitions, timeout);
+    // tm.stop();
+    // chprintf(stream, "elapsed %d ms\r\n", toMs(tm.tm.last));
 }
 
 static void cmd_test_info(BaseSequentialStream *stream, int, char*[]) {
