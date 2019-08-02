@@ -91,7 +91,7 @@ static __attribute__((noreturn)) THD_FUNCTION(txThreadFunction, arg) {
         packetizerOut.fetch(INFINITE_TIMEOUT) >=
         [&](Buffer&& fetched) {
             DPB(fetched);
-            return g.sd().write(fetched, INFINITE_TIMEOUT);
+            return writeBuffer(g.sd(), std::move(fetched));
         } <=
         threadErrorReport;
     }

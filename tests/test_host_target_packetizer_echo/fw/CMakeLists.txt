@@ -18,6 +18,10 @@ fw_add_executable(fw)
 
 fw_compile_definitions(fw
   -DBOOST_STRICT_CONFIG
+  # -DENABLE_DEBUG_PRINT
+  # -DDEBUG_PRINT_BUFFER_FULL
+  # -DSERIAL_DEVICE_ENABLE_DEBUG_PRINT
+  # -DPACKETIZER_THREAD_FUNCTION_ENABLE_DEBUG_PRINT
   )
 
 ch_include(fw

@@ -35,12 +35,14 @@ struct TestCase {
     Result<Buffer> expected;
 };
 
-Result<Buffer> readFull(SerialDevice& sd, Timeout timeout) {
+Result<Buffer> readFull(SerialDevice& sd, Timeout timeout, std::promise<void>& launched) {
     bool finished = false;
     Result<Buffer> result = ok(buf(0));
+    launched.set_value();
     while (!finished) {
         sd.read(timeout) >=
         [&](Buffer&& read) {
+            WARN("read: " << hr(read));
             return
             std::move(result) >=
             [&](Buffer&& result_) {
@@ -63,9 +65,12 @@ Result<Buffer> readFull(SerialDevice& sd, Timeout timeout) {
 void runCaseOnce(const PortConfig& pc, TestCase c) {
     SerialDevice::open(pc) >=
     [&](SerialDevice&& sd) {
+        std::promise<void> launched;
         auto future = std::async(
-            std::launch::async, readFull, std::ref(sd), Timeout(std::chrono::milliseconds(100)));
+            std::launch::async, readFull, std::ref(sd), Timeout(std::chrono::milliseconds(100)), std::ref(launched));
+        launched.get_future().wait();
         for (const auto& bufferToSend: c.send) {
+            WARN("write: " << hr(bufferToSend));
             sd.write(bufferToSend) <=
             [&](Error e) {
                 throw std::runtime_error(toString(e));
@@ -123,7 +128,10 @@ TEST_CASE("overflow") {
             buf({0}),
             createTestBufferNoZero<Buffer>(BUFFER_MAX_SIZE),
             createTestBufferNoZero<Buffer>(1),
-            buf({0})
+            buf({0}),
+            // this is to bring the target to known state
+            createTestBufferNoZero<Buffer>(BUFFER_MAX_SIZE),
+            createTestBufferNoZero<Buffer>(1)
         },
         ok(buf(0))
     },
