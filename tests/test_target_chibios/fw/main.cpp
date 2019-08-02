@@ -128,7 +128,7 @@ int __attribute__((noreturn)) main(void) {
   halInit();
   chSysInit();
 
-  chprintf(&rttStream, "RTT ready\n");
+  chprintf(&rttStream, "RTT ready\r\n");
   
   sdStart(&SD1, NULL);
 
