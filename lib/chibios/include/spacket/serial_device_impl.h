@@ -173,7 +173,7 @@ SerialDeviceImpl<Buffer>::~SerialDeviceImpl() {
 template <typename Buffer>
 SerialDeviceImpl<Buffer>::SerialDeviceImpl(SerialDeviceImpl&& src) noexcept
     : driver(src.driver)
-    , readBuffer(src.readBuffer)
+    , readBuffer(std::move(src.readBuffer))
 {
     instance = this;
     src.driver.reset();
@@ -182,7 +182,7 @@ SerialDeviceImpl<Buffer>::SerialDeviceImpl(SerialDeviceImpl&& src) noexcept
 template <typename Buffer>
 SerialDeviceImpl<Buffer>& SerialDeviceImpl<Buffer>::operator=(SerialDeviceImpl&& src) noexcept {
     driver = src.driver;
-    readBuffer = src.readBuffer;
+    readBuffer = std::move(src.readBuffer);
     instance = this;
     return *this;
 }

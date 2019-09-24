@@ -44,12 +44,45 @@ struct TestCase {
     std::vector<Buffer> send;
     Result<std::vector<Buffer>> expected;
     Timeout holdOffTime;
+
+    TestCase(
+        std::vector<Buffer> send,
+        Result<std::vector<Buffer>> expected,
+        Timeout holdOffTime)
+        : send(copy(send))
+        , expected(copy(expected))
+        , holdOffTime(holdOffTime)
+    {
+    }
+    
+    TestCase(const TestCase& src)
+        : send(copy(src.send))
+        , expected(copy(src.expected))
+        , holdOffTime(src.holdOffTime)
+    {
+    }
 };
 
 struct TestCase2 {
     boost::optional<Buffer> send;
     Result<Buffer> expected;
     Timeout holdOffTime;
+
+    TestCase2(const TestCase2& src)
+        : send(copy(src.send))
+        , expected(copy(src.expected))
+        , holdOffTime(src.holdOffTime)
+    {
+    }
+
+    TestCase2(TestCase2&&) = default;
+
+    TestCase2(boost::optional<Buffer> send, Result<Buffer> expected, Timeout holdOffTime)
+        : send(std::move(send))
+        , expected(std::move(expected))
+        , holdOffTime(holdOffTime)
+    {
+    }
 };
 
 Result<boost::blank> send(SerialDevice& sd, Timeout holdOffTime, Buffer b) {
@@ -95,18 +128,18 @@ Result<std::vector<Buffer>> receive(SerialDevice& sd, std::promise<void>& launch
     Buffer prefix = buf(0);
     launched.set_value();
     while (!finished) {
-        readPacket(source, prefix, BUFFER_MAX_SIZE, readPacketTimeout) >=
+        readPacket(source, std::move(prefix), BUFFER_MAX_SIZE, readPacketTimeout) >=
         [&](ReadResult<Buffer>&& readResult) {
             prefix = std::move(readResult.suffix);
             return
-            std::move(result) >=
-            [&](Buffers&& r) {
-                return
-                cobs::unstuff(std::move(readResult.packet)) >=
-                [&](Buffer&& unstuffed) {
-                    r.emplace_back(std::move(unstuffed));
-                    return ok(boost::blank{});
+            cobs::unstuff(std::move(readResult.packet)) >=
+            [&](Buffer&& unstuffed) {
+                result = std::move(result) >=
+                [&] (Buffers buffers) {
+                    buffers.emplace_back(std::move(unstuffed));
+                    return ok(std::move(buffers));
                 };
+                return ok(boost::blank{});
             };
         } <=
         [&](Error e) {
@@ -127,7 +160,7 @@ void runCaseOnce(const PortConfig& pc, TestCase c) {
         std::promise<void> launched;
         auto future = std::async(std::launch::async, receive, std::ref(sd), std::ref(launched));
         launched.get_future().wait();
-        send(sd, c.holdOffTime, c.send);
+        send(sd, c.holdOffTime, std::move(c.send));
         auto result = future.get();
         REQUIRE(result == c.expected);
         return ok(boost::blank{});
@@ -153,7 +186,7 @@ void runCaseOnce(const PortConfig& pc, TestCase2 c) {
             auto future = std::async(std::launch::async, receive);
             launched.get_future().wait();
             if (c.send) {
-                pd.write(*c.send);
+                pd.write(std::move(*c.send));
                 std::this_thread::sleep_for(c.holdOffTime);
             }
             auto r = future.get();
@@ -188,8 +221,8 @@ TEST_CASE("01") {
     auto b = buf({ 1, 2, 3, 4, 5 });
     runCase(
     {
-        {cob(b)},
-        ok(Buffers{b}),
+        vec({cob(copy(b))}),
+        ok(vec(copy(b))),
         defaultHoldOff
     },
     REP);
@@ -199,8 +232,8 @@ TEST_CASE("02") {
     auto b = buf({ 1, 2, 3, 4, 0 });
     runCase(
     {
-        {cob(b)},
-        ok(Buffers{b}),
+        vec({cob(copy(b))}),
+        ok(vec(copy(b))),
         defaultHoldOff
     },
     REP);
@@ -210,8 +243,8 @@ TEST_CASE("03") {
     auto b = buf({ 0, 2, 3, 4, 0 });
     runCase(
     {
-        {cob(b)},
-        ok(Buffers{b}),
+        vec({cob(copy(b))}),
+        ok(vec(copy(b))),
         defaultHoldOff
     },
     REP);
@@ -221,8 +254,8 @@ TEST_CASE("04") {
     auto b = buf({ 0, 0, 0, 0, 0 });
     runCase(
     {
-        {cob(b)},
-        ok(Buffers{b}),
+        vec({cob(copy(b))}),
+        ok(vec(copy(b))),
         defaultHoldOff
     },
     REP);
@@ -231,8 +264,8 @@ TEST_CASE("04") {
 TEST_CASE("05") {
     runCase(
     {
-        { buf({ 0, 5, 1, 2 }), buf({ 3, 4, 0, 0 }), buf({ 1, 1 }), buf({ 0, 0, 3, 1, 2 }), buf({ 0 }) },
-        ok(Buffers{ buf({ 1, 2, 3, 4 }), buf({ 0 }), buf({ 1, 2 }) }),
+        vec({ buf({ 0, 5, 1, 2 }), buf({ 3, 4, 0, 0 }), buf({ 1, 1 }), buf({ 0, 0, 3, 1, 2 }), buf({ 0 }) }),
+        ok(vec({ buf({ 1, 2, 3, 4 }), buf({ 0 }), buf({ 1, 2 }) })),
         defaultHoldOff
     },
     REP);
@@ -246,14 +279,14 @@ TEST_CASE("10") {
     std::vector<Buffer> bufs, stuffed;
     for (uint8_t fill = 0; fill < NUM_PACKETS; ++fill) {
         bufs.emplace_back(buf(PAYLOAD_SIZE, fill));
-        stuffed.emplace_back(cob(bufs.back()));
+        stuffed.emplace_back(cob(copy(bufs.back())));
         REQUIRE(stuffed.back().size() <= BUFFER_MAX_SIZE);
     }
     
     runCase(
     {
-        stuffed,
-        ok(bufs),
+        std::move(stuffed),
+        ok(std::move(bufs)),
         c::milliseconds(3)
     },
     REP);
@@ -285,8 +318,8 @@ TEST_CASE("22.1") {
         CAPTURE(s);
         runCase2(
         {
-            b,
-            ok(b),
+            copy(b),
+            ok(copy(b)),
             c::milliseconds(2)
         },
         REP);
@@ -299,8 +332,8 @@ TEST_CASE("22.2") {
         CAPTURE(s);
         runCase2(
         {
-            b,
-            ok(b),
+            copy(b),
+            ok(copy(b)),
             c::milliseconds(10)
         },
         REP);
@@ -313,8 +346,8 @@ TEST_CASE("22.3") {
         CAPTURE(s);
         runCase2(
         {
-            b,
-            ok(b),
+            copy(b),
+            ok(copy(b)),
             c::milliseconds(6)
         },
         REP);

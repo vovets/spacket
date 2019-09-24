@@ -9,7 +9,7 @@
 
 StaticThreadT<1024> shellThread_;
 
-int __attribute__((noreturn)) main(void) {
+int main(void) {
     halInit();
     chSysInit();
 

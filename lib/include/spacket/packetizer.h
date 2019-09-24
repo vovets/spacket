@@ -21,7 +21,9 @@ public:
             return ok(PacketizerT<Buffer>(std::move(b), needSync));
         };
     }
-    
+
+    PacketizerT(const PacketizerT&) = delete;
+
     PacketizerT(PacketizerT&& src)
         : state(src.state)
         , out(std::move(src.out))

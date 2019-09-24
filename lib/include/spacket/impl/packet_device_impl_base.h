@@ -9,7 +9,7 @@
 namespace packet_device_impl_base {
 
 template <typename Buffer>
-struct PacketDeviceDebug {
+struct Debug {
 
 #ifdef PACKET_DEVICE_ENABLE_DEBUG_PRINT
 
@@ -30,15 +30,13 @@ IMPLEMENT_DPB_FUNCTION_NOP
 } // packet_device_impl_base
 
 template <typename Buffer>
-class PacketDeviceImplBase: public packet_device_impl_base::PacketDeviceDebug<Buffer>
+class PacketDeviceImplBase: public packet_device_impl_base::Debug<Buffer>
 {
     using This = PacketDeviceImplBase<Buffer>;
-    using Dbg = packet_device_impl_base::PacketDeviceDebug<Buffer>;
+    using Dbg = packet_device_impl_base::Debug<Buffer>;
     using SerialDevice = SerialDeviceT<Buffer>;
     using PacketDecodeFSM = PacketDecodeFSMT<Buffer>;
-    using Dbg::dpl;
-    using Dbg::dpb;
-    
+
     static constexpr Timeout stopCheckPeriod = std::chrono::milliseconds(10);
 
 public:
@@ -47,6 +45,9 @@ public:
     Result<boost::blank> write(Buffer b);
 
 protected:
+    using Dbg::dpl;
+    using Dbg::dpb;
+
     PacketDeviceImplBase(Buffer&& buffer, SerialDevice&& serialDevice);
 
     void readThreadFunction();
@@ -118,7 +119,7 @@ Result<boost::blank> PacketDeviceImplBase<Buffer>::packetFinished(Buffer& buffer
     return
     Buffer::create(Buffer::maxSize()) >=
     [&] (Buffer&& newBuffer) {
-        auto message = ok(buffer);
+        auto message = ok(std::move(buffer));
         return
         mailboxReplace(message) >
         [&] {
@@ -149,7 +150,7 @@ Result<Buffer> PacketDeviceImplBase<Buffer>::read(Timeout t) {
 template <typename Buffer>
 Result<boost::blank> PacketDeviceImplBase<Buffer>::write(Buffer b) {
     return
-    cobs::stuffAndDelim(b) >=
+    cobs::stuffAndDelim(std::move(b)) >=
     [&](Buffer&& stuffed) {
         dpb("write: ", stuffed);
         return serialDevice.write(stuffed);

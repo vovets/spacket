@@ -104,7 +104,7 @@ static __attribute__((noreturn)) THD_FUNCTION(packetizerThreadFunction, arg) {
     for (;;);
 }
 
-int __attribute__((noreturn)) main(void) {
+int main(void) {
     halInit();
     chSysInit();
 

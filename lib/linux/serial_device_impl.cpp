@@ -43,7 +43,7 @@ NativeDevice::NativeDevice(ImplPtr p) noexcept: impl(std::move(p)) {}
 Result<NativeDevice> NativeDevice::doOpen(PortConfig portConfig) {
     using TvMsec = decltype(timeval().tv_usec);
     
-    auto f = [] { return fail<NativeDevice>(toError(ErrorCode::SerialDeviceInitFailed)); };
+    auto f = [] () -> Result<NativeDevice> { return std::move(fail<NativeDevice>(toError(ErrorCode::SerialDeviceInitFailed))); };
     
     if (portConfig.baud == Baud::NonStandard) {
         return fail<NativeDevice>(toError(ErrorCode::ConfigBadBaud));

@@ -8,3 +8,6 @@
 	path = external/chibios
 	url = git@github.com:vovets/ChibiOS.git
 	branch = stable_17.6.x
+[submodule "external/pycrc"]
+	path = external/pycrc
+	url = https://github.com/tpircher/pycrc.git

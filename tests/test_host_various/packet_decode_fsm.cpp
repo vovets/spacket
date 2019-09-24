@@ -9,7 +9,6 @@
 
 using Buffer = BufferT<NewAllocator>;
 using PacketDecodeFSM = PacketDecodeFSMT<Buffer>;
-using vec = std::vector<Buffer>;
 
 #include "buf.h"
 
@@ -56,17 +55,17 @@ DecodeResult decode(Buffer b) {
 }
 
 void runCase(Case c) {
-    auto result = decode(c.input);
+    auto result = decode(std::move(c.input));
     REQUIRE(result.result == c.expectedResult);
     REQUIRE(result.consumed == c.expectedInputConsumed);
     REQUIRE(result.decoded == c.expectedOutput);
 }
 
 void runCase(Buffer b) {
-    auto encoded = stuffDelim(throwOnFail(b.copy()));
-    auto result = decode(encoded);
+    auto encoded = stuffDelim(copy(b));
+    auto result = decode(std::move(encoded));
     REQUIRE(result.result == ok(boost::blank()));
-    REQUIRE(result.decoded == vec({b}));
+    REQUIRE(result.decoded == vec({std::move(b)}));
 }
 
 TEST_CASE("01") {
@@ -83,7 +82,7 @@ TEST_CASE("02") {
     runCase(
     {
     buf({ 0, 1, 1, 0 }),
-    { buf({0}) },
+    vec({ buf({0}) }),
     ok(boost::blank()),
     4
     });
@@ -92,19 +91,19 @@ TEST_CASE("02") {
 TEST_CASE("03") {
     Case c = {
     buf({ 0, 1, 1, 0, 0, 2, 1, 0, 3, 1, 2, 1, 2, 1, 0 }),
-    { buf({ 0 }), buf({ 1 }), buf({ 1, 2, 0, 0, 1 }) },
+    vec({ buf({ 0 }), buf({ 1 }), buf({ 1, 2, 0, 0, 1 }) }),
     ok(boost::blank()),
     15
     };
     CAPTURE(c.input);
-    runCase(c);
+    runCase(std::move(c));
 }
 
 TEST_CASE("04") {
     runCase(
     {
     buf({ 5, 4, 3, 2, 1, 0, 2, 1, 0 }),
-    { buf({ 1 }) },
+    vec({ buf({ 1 }) }),
     ok(boost::blank()),
     9
     });
@@ -134,7 +133,7 @@ TEST_CASE("07") {
     runCase(
     {
     cat(buf({ 0 }), buf({ 255 }), nz(254), buf({ 0 })),
-    { nz(254) },
+    vec({ nz(254) }),
     ok(boost::blank()),
     257
     }
@@ -145,7 +144,7 @@ TEST_CASE("08") {
     runCase(
     {
     cat(buf({ 0, 255 }), nz(254), buf({ 255 }), nz(254), buf({ 1, 1, 0 })),
-    { cat(nz(254), nz(254), buf({ 0 })) },
+    vec({ cat(nz(254), nz(254), buf({ 0 })) }),
     ok(boost::blank()),
     2 + 254 + 1 + 254 + 3
     }

@@ -27,6 +27,10 @@
     X(ID(PacketDropped),             CODE(1000),  SEP())  \
     X(ID(PacketTooBig),              CODE(1001),  SEP())  \
     X(ID(PacketDeviceReadTimeout),   CODE(1100),  SEP())  \
+    X(ID(CrcBad),                    CODE(1200),  SEP())  \
+    X(ID(CrcAppendBufferTooBig),     CODE(1201),  SEP())  \
+    X(ID(CrcAppendZeroSizeBuffer),   CODE(1202),  SEP())  \
+    X(ID(CrcCheckBufferTooSmall),    CODE(1203),  SEP())  \
     X(ID(MiserableFailure0),         CODE(10000), SEP())  \
     X(ID(MiserableFailure1),         CODE(10001), SEP())  \
     X(ID(MiserableFailure9),         CODE(10010), )

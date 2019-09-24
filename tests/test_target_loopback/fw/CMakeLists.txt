@@ -40,6 +40,7 @@ gt_include(fw
   "${SPACKET_ROOT}/lib/sources.cmake"
   "${SPACKET_ROOT}/lib/chibios/sources.cmake"
   "${SPACKET_ROOT}/tests/target_utils/sources.cmake"
+  "${SPACKET_ROOT}/lib/stm32/crc_v1/sources.cmake"
   )
 
 fw_include_directories(fw

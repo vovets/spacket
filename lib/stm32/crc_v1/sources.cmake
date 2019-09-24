@@ -3,5 +3,5 @@ gt_add_include_directories(
   )
 
 gt_add_sources(
-  crc_impl.cpp
+  crc_device.cpp
   )

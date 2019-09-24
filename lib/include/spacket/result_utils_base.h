@@ -11,14 +11,14 @@
         using Type = SuccessT<decltype(expr)>;                          \
         return fail<Type>(getFailUnsafe(BOOST_PP_CAT(var, __tmp)));     \
     }                                                                   \
-    auto var = std::move(getOkUnsafe(BOOST_PP_CAT(var, __tmp)))
+    auto var = std::move(getOkUnsafe(std::move(BOOST_PP_CAT(var, __tmp))))
 
 #define returnOnFailT(var, type, expr)                                  \
     auto BOOST_PP_CAT(var, __tmp) = expr;                               \
     if (isFail(BOOST_PP_CAT(var, __tmp))) {                             \
         return fail<type>(getFailUnsafe(BOOST_PP_CAT(var, __tmp)));     \
     }                                                                   \
-    auto var = std::move(getOkUnsafe(BOOST_PP_CAT(var, __tmp)))
+    auto var = std::move(getOkUnsafe(std::move(BOOST_PP_CAT(var, __tmp))))
 
 #define returnOnFailE(expr)                                             \
     do {                                                                \

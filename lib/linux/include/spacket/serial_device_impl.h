@@ -13,6 +13,9 @@ public:
     NativeDevice(NativeDevice&&) = default;
     NativeDevice& operator=(NativeDevice&&) = default;
 
+    NativeDevice(const NativeDevice&) = delete;
+    NativeDevice& operator=(const NativeDevice&) = delete;
+
     Result<size_t> read(uint8_t* buffer, size_t maxRead, Timeout t);
     Result<boost::blank> write(const uint8_t* buffer, size_t size);
 
@@ -34,7 +37,7 @@ public:
     static Result<SerialDevice> open(PortConfig portConfig) {
         return
         NativeDevice::doOpen(portConfig) >=
-        [&](NativeDevice&& nativeDevice) {
+        [&](NativeDevice nativeDevice) {
             return ok(SerialDevice(SerialDeviceImpl(std::move(nativeDevice))));
         };
     }
@@ -50,7 +53,7 @@ public:
     Result<Buffer> read(Timeout t) {
         return
         Buffer::create(Buffer::maxSize()) >=
-        [&] (Buffer&& buffer) {
+        [&] (Buffer buffer) {
             return
             nativeDevice.read(buffer.begin(), Buffer::maxSize(), t) >=
             [&] (std::size_t bytesRead) {

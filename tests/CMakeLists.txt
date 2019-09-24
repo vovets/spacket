@@ -2,6 +2,12 @@ cmake_minimum_required(VERSION 3.5)
 
 enable_testing()
 
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
+
+add_compile_options(-Wno-unused-comparison)
+
 get_filename_component(SPACKET_ROOT .. ABSOLUTE)
 
 list(APPEND CMAKE_MODULE_PATH "${SPACKET_ROOT}/cmake")
@@ -37,8 +43,9 @@ set(SPACKET_FW_TOOLCHAIN_FILE
   "Toolchain file for building firmware projects"
   )
 
-add_subdirectory(host_spacket)
-add_subdirectory(host_utils)
+add_subdirectory(libhost_spacket)
+add_subdirectory(libhost_utils)
+add_subdirectory(libhost_crc)
 add_subdirectory(test_host_various)
 add_subdirectory(test_host_serial_loopback)
 add_subdirectory(test_target_chibios)
@@ -48,3 +55,4 @@ add_subdirectory(test_host_target_packetizer_echo)
 add_subdirectory(test_host_target_cobs_echo)
 add_subdirectory(test_target_crc_device)
 add_subdirectory(test_host_target_packet_device)
+add_subdirectory(test_host_target_packet_crc)

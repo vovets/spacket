@@ -68,10 +68,10 @@ private:
     PacketDevice pd_;
 };
 
-Result<boost::blank> writeBuffer(PacketDevice& pd, const Buffer& b) {
+Result<boost::blank> writeBuffer(PacketDevice& pd, Buffer b) {
     palClearPad(GPIOC, GPIOC_LED);
     return
-    pd.write(b) >
+    pd.write(std::move(b)) >
     [&]() {
         palSetPad(GPIOC, GPIOC_LED);
         return ok(boost::blank{});
@@ -85,13 +85,13 @@ static __attribute__((noreturn)) THD_FUNCTION(echoThreadFunction, arg) {
         dpl("tick");
         g.pd().read(INFINITE_TIMEOUT) >=
         [&](Buffer&& read) {
-            return writeBuffer(g.pd(), (read));
+            return writeBuffer(g.pd(), std::move(read));
         } <=
         threadErrorReport;
     }
 }
 
-int __attribute__((noreturn)) main(void) {
+int main(void) {
     halInit();
     chSysInit();
 

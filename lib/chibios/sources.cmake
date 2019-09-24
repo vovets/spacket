@@ -3,6 +3,7 @@ gt_add_sources(
   assert_func.cpp
   aeabi_atexit.cpp
   debug_print.cpp
+  crc_p.cpp
   )
 
 # if(NOT serial_device IN_LIST SPACKET_EXCLUDED_FEATURES)

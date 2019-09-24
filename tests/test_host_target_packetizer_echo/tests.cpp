@@ -33,6 +33,18 @@ constexpr size_t REP = 10;
 struct TestCase {
     std::vector<Buffer> send;
     Result<Buffer> expected;
+
+    TestCase(const TestCase& src)
+        : send(copy(src.send))
+        , expected(copy(src.expected))
+    {
+    }
+
+    TestCase(std::vector<Buffer> send, Result<Buffer> expected)
+        : send(std::move(send))
+        , expected(std::move(expected))
+    {
+    }
 };
 
 Result<Buffer> readFull(SerialDevice& sd, Timeout timeout, std::promise<void>& launched) {
@@ -100,63 +112,68 @@ void runCase(TestCase c, size_t repetitions) {
 
 TEST_CASE("sync") {
     runCase(
-    {
         {
-            buf({ 1, 2, 3, 4, 5 }),
-            buf({ 0, 1, 0 })
+            vec({
+                    buf({ 1, 2, 3, 4, 5 }),
+                    buf({ 0, 1, 0 })
+                })
+            ,
+            ok(buf({ 1 }))
         },
-        ok(buf({ 1 }))
-    },
-    REP);
+        REP);
 }
 
 TEST_CASE("overflow") {
     Buffer expected = createTestBufferNoZero<Buffer>(BUFFER_MAX_SIZE);
     runCase(
-    {
         {
-            buf({0}),
-            expected,
-            buf({0}),
+            vec({
+                    buf({0}),
+                    copy(expected),
+                    buf({0}),
+                }),
+            ok(std::move(expected))
         },
-        ok(expected)
-    },
-    REP);
+        REP
+    );
     runCase(
-    {
         {
-            buf({0}),
-            createTestBufferNoZero<Buffer>(BUFFER_MAX_SIZE),
-            createTestBufferNoZero<Buffer>(1),
-            buf({0}),
-            // this is to bring the target to known state
-            createTestBufferNoZero<Buffer>(BUFFER_MAX_SIZE),
-            createTestBufferNoZero<Buffer>(1)
+            vec({
+                    buf({0}),
+                    createTestBufferNoZero<Buffer>(BUFFER_MAX_SIZE),
+                    createTestBufferNoZero<Buffer>(1),
+                    buf({0}),
+                    // this is to bring the target to known state
+                    createTestBufferNoZero<Buffer>(BUFFER_MAX_SIZE),
+                    createTestBufferNoZero<Buffer>(1)
+                }),
+            ok(buf(0))
         },
-        ok(buf(0))
-    },
-    REP);
+        REP
+    );
 }
 
 TEST_CASE("misc") {
     runCase(
-    {
         {
-            buf({0, 1, 2, 3, 4}),
-            buf({0})
+            vec({
+                    buf({0, 1, 2, 3, 4}),
+                    buf({0})
+                }),
+            ok(buf({1, 2, 3, 4}))
         },
-        ok(buf({1, 2, 3, 4}))
-    },
-    REP);
+        REP
+    );
 
     runCase(
-    {
         {
-            buf({0, 1, 2, 3, 4}),
-            buf({5, 6, 7, 8 }),
-            buf({9, 0})
+            vec({
+                    buf({0, 1, 2, 3, 4}),
+                    buf({5, 6, 7, 8 }),
+                    buf({9, 0})
+                }),
+            ok(buf({1, 2, 3, 4, 5, 6, 7, 8, 9}))
         },
-        ok(buf({1, 2, 3, 4, 5, 6, 7, 8, 9}))
-    },
-    REP);
+        REP
+    );
 }

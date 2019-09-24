@@ -17,7 +17,11 @@ template <typename Success>
 struct Result {
     using ValueType = boost::variant<Error, Success>;
     using TypeId = result_impl::TypeId;
+
     ValueType value;
+
+    // Result(const Result&) = default;
+    // Result(Result&&) = default;
 };
 
 template <typename Success>
@@ -44,13 +48,8 @@ template <typename Result>
 using ErrorT = typename boost::mpl::at<typename Result::ValueType::types, boost::mpl::int_<0>>::type;
 
 template <typename Result>
-SuccessT<Result>& getOkUnsafe(Result& r) {
-    return *boost::get<SuccessT<Result>>(&r.value);
-}
-
-template <typename Result>
-SuccessT<Result>& getOkUnsafe(Result&& r) {
-    return *boost::get<SuccessT<Result>>(&r.value);
+SuccessT<Result> getOkUnsafe(Result&& r) {
+    return std::move(*boost::get<SuccessT<Result>>(&r.value));
 }
 
 template <typename Result>

@@ -4,7 +4,7 @@
 #include "shell.h"
 #include "chprintf.h"
 
-#include <spacket/stm32/crc.h>
+#include <spacket/stm32/crc_device.h>
 
 #include <boost/optional.hpp>
 
@@ -12,7 +12,7 @@
 #include <cinttypes>
 
 
-boost::optional<stm32::Crc> gCrc;
+boost::optional<stm32::CrcDevice> gCrc;
 
 std::array<uint8_t, 16> gFromHexBuffer;
 
@@ -54,7 +54,7 @@ static void cmdOpen(BaseSequentialStream* stream, int, char*[]) {
     if (gCrc) {
         ERROR("device is already opened");
     }
-    gCrc = stm32::Crc::open(CRC);
+    gCrc = stm32::CrcDevice::open(CRC);
 }
 
 static void cmdClose(BaseSequentialStream *, int, char*[]) {
@@ -79,7 +79,7 @@ static void cmdAddUint32(BaseSequentialStream *stream, int numArgs, char* args[]
     chprintf(stream, "new: %x\r\n", v);
 }
 
-static void cmdAdd(BaseSequentialStream *stream, int numArgs, char* args[]) {
+static void cmdCrc(BaseSequentialStream *stream, int numArgs, char* args[]) {
     if (numArgs != 1) {
         ERROR("too few args, command needs a hex byte sequence arg");
     }
@@ -87,13 +87,22 @@ static void cmdAdd(BaseSequentialStream *stream, int numArgs, char* args[]) {
     if (!readBytes) return;
     uint32_t l = gCrc->last();
     chprintf(stream, "last: %x\r\n", l);
-    chprintf(stream, "buffer: ");
+    chprintf(stream, "buffer: [%d] ", readBytes);
     for (auto b: gFromHexBuffer) {
-        chprintf(stream, "%x", b);
+        chprintf(stream, "%02x", b);
     }
     chprintf(stream, "\r\n");
-    uint32_t v = gCrc->add(&gFromHexBuffer[0], readBytes);
-    chprintf(stream, "new: %x\r\n", v);
+    uint32_t v = stm32::crc(*gCrc, &gFromHexBuffer[0], readBytes);
+    chprintf(stream, "crc: %x\r\n", v);
+}
+
+static void cmdCrcReset(BaseSequentialStream *stream, int, char* []) {
+    if (!gCrc) {
+        ERROR("device is not opened");
+    }
+    gCrc->reset();
+    uint32_t l = gCrc->last();
+    chprintf(stream, "last: %x\r\n", l);
 }
 
 static void cmdLast(BaseSequentialStream *stream, int , char*[]) {
@@ -111,7 +120,8 @@ static const ShellCommand commands[] = {
     {"open", cmdOpen},
     {"close", cmdClose},
     {"add_uint32", cmdAddUint32},
-    {"add", cmdAdd},
+    {"crc", cmdCrc},
+    {"crc_reset", cmdCrcReset},
     {"last", cmdLast},
     {NULL, NULL}
 };

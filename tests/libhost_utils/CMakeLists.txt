@@ -15,3 +15,4 @@ target_include_directories(utils
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${SPACKET_EXT}/catch/include
   )
+#target_compile_options(utils PUBLIC -fsanitize=address)

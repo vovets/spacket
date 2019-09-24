@@ -20,7 +20,7 @@ public:
         return b == reference;
     }
 
-    std::string describe() const {
+    std::string describe() const override {
         std::ostringstream ss;
         ss << "is equal to " << hr(reference);
         return ss.str();

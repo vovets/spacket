@@ -2,6 +2,7 @@
 
 #include <spacket/result.h>
 #include <spacket/serial_device.h>
+#include <spacket/packet_device.h>
 #include <spacket/impl/packet_device_impl_base.h>
 
 #include <boost/smart_ptr/intrusive_ref_counter.hpp>
@@ -46,12 +47,9 @@ struct PacketDeviceImpl: PacketDeviceImplBase<Buffer>,
     using ThisPtr = boost::intrusive_ptr<This>;
     using SerialDevice = SerialDeviceT<Buffer>;
     using Mailbox = packet_device_impl::Mailbox<Result<Buffer>>;
-    
-    static Result<ThisPtr> open(SerialDevice&& serialDevice);
+    using Base::dpl;
 
-    static void readThreadFunction_(void* instance) {
-        static_cast<This*>(instance)->readThreadFunction();
-    }
+    static Result<ThisPtr> open(SerialDevice&& serialDevice);
 
     PacketDeviceImpl(Buffer&& buffer, SerialDevice&& serialDevice);
     virtual ~PacketDeviceImpl();
@@ -85,7 +83,7 @@ PacketDeviceImpl<Buffer>::PacketDeviceImpl(
         std::move(buffer),
         std::move(serialDevice))
 {
-    readThread = std::thread(readThreadFunction_, this);
+    readThread = std::thread([&] { this->readThreadFunction(); });
 }
 
 template <typename Buffer>
@@ -96,7 +94,7 @@ PacketDeviceImpl<Buffer>::~PacketDeviceImpl() {
 
 template <typename Buffer>
 Result<boost::blank> PacketDeviceImpl<Buffer>::mailboxReplace(Result<Buffer>& message) {
-    return readMailbox.post(message);
+    return std::move(readMailbox.post(message));
 }
 
 template <typename Buffer>

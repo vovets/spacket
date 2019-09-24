@@ -1,7 +1,10 @@
 #include <spacket/debug_print.h>
 
+#include <thread>
+
 #include <cstdio>
 #include <cstdarg>
+#include <sstream>
 
 namespace {
 
@@ -10,7 +13,9 @@ const auto debugPrintStream = stderr;
 } // namespace
 
 void debugPrintStart() {
-    fprintf(debugPrintStream, "D: ");
+    std::ostringstream ss;
+    ss << std::this_thread::get_id();
+    fprintf(debugPrintStream, "D: %s:", ss.str().c_str());
 }
 
 void debugPrint(const char *fmt, ...) {

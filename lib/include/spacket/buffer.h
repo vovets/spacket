@@ -89,9 +89,6 @@ public:
     BufferT(BufferT&& toMove) noexcept;
     BufferT& operator=(BufferT&& toMove) noexcept;
     
-    BufferT(const BufferT& src) noexcept;
-    BufferT& operator=(const BufferT& src) noexcept;
-
     uint8_t* begin();
     uint8_t* end();
 
@@ -134,7 +131,7 @@ Result<BufferT<Allocator>> BufferT<Allocator>::create(size_t size) {
     if (size > maxSize()) {
         return fail<BufferT>(toError(ErrorCode::BufferCreateTooBig));
     }
-    returnOnFailT(p, BufferT, Allocator().allocate(buffer_impl::allocSize(size)));
+    returnOnFailT(p, BufferT, Allocator().allocate(buffer_impl::allocSize(maxSize())));
     Storage* s = static_cast<Storage*>(p);
     s->header = { toHeaderSize(size) };
     return ok(BufferT(StoragePtr(s)));
@@ -146,7 +143,7 @@ Result<BufferT<Allocator>> BufferT<Allocator>::create(std::initializer_list<uint
     if (l.size() > maxSize()) {
         return fail<BufferT>(toError(ErrorCode::BufferCreateTooBig));
     }
-    returnOnFailT(p, BufferT, Allocator().allocate(buffer_impl::allocSize(l.size())));
+    returnOnFailT(p, BufferT, Allocator().allocate(buffer_impl::allocSize(maxSize())));
     Storage* s = static_cast<Storage*>(p);
     s->header = { toHeaderSize(l.size()) };
     BufferT<Allocator> r{StoragePtr(s)};
@@ -160,7 +157,7 @@ Result<BufferT<Allocator>> BufferT<Allocator>::create(std::vector<uint8_t> v) {
     if (v.size() > maxSize()) {
         return fail<BufferT>(toError(ErrorCode::BufferCreateTooBig));
     }
-    returnOnFailT(p, BufferT, Allocator().allocate(buffer_impl::allocSize(v.size())));
+    returnOnFailT(p, BufferT, Allocator().allocate(buffer_impl::allocSize(maxSize())));
     Storage* s = static_cast<Storage*>(p);
     s->header = { toHeaderSize(v.size()) };
     BufferT<Allocator> r{StoragePtr(s)};
@@ -180,19 +177,6 @@ inline
 BufferT<Allocator>& BufferT<Allocator>::operator=(BufferT&& toMove) noexcept {
     storage = std::move(toMove.storage);
     dpl("buffer: moved %x", storage.get());
-    return *this;
-}
-
-template<typename Allocator>
-inline
-BufferT<Allocator>::BufferT(const BufferT& src) noexcept
-    : storage(src.storage) {
-}
-
-template<typename Allocator>
-inline
-BufferT<Allocator>& BufferT<Allocator>::operator=(const BufferT& src) noexcept {
-    storage = src.storage;
     return *this;
 }
 

@@ -32,7 +32,7 @@ Buffer fill1(size_t chunkSize, size_t size) {
 }
 
 void test(Buffer b) {
-    Buffer stuffed = stuff(throwOnFail(b.copy()));
+    Buffer stuffed = stuff(copy(b));
     CAPTURE(stuffed);
     for (auto byte: stuffed) {
         REQUIRE(byte != 0);

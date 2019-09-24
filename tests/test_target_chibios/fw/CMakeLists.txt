@@ -39,6 +39,7 @@ gt_include(fw
   "${SPACKET_ROOT}/tests/target_boards/STM32F103C8_MINIMAL/sources.cmake"
   "${SPACKET_ROOT}/lib/sources.cmake"
   "${SPACKET_ROOT}/lib/chibios/sources.cmake"
+  "${SPACKET_ROOT}/lib/stm32/crc_v1/sources.cmake"
   )
 
 fw_include_directories(fw

@@ -6,7 +6,7 @@ template <typename SuccessType, typename F>
 auto operator>=(Result<SuccessType>&& r, F f) {
     using FResult = std::result_of_t<F(SuccessType)>;
     if (isOk(r)) {
-        return f(std::move(getOkUnsafe(r)));
+        return f(std::move(getOkUnsafe(std::move(r))));
     }
     return fail<SuccessT<FResult>>(getFailUnsafe(r));
 }

@@ -117,7 +117,7 @@ static THD_FUNCTION(writerThreadFunction, arg) {
     }
 }
 
-int __attribute__((noreturn)) main(void) {
+int main(void) {
   /*
    * System initializations.
    * - HAL initialization, this also initializes the configured device drivers

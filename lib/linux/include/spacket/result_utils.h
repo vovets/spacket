@@ -10,5 +10,5 @@ SuccessT<Result> throwOnFail(Result r) {
         auto e = getFailUnsafe(r);
         throw std::runtime_error(toString(e));
     }
-    return getOkUnsafe(std::move(r));
+    return std::move(getOkUnsafe(std::move(r)));
 }

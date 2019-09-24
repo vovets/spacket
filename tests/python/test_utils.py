@@ -47,7 +47,8 @@ class Connection:
 def conn(request):
     c = Connection(port=19021, connect_timeout=1, response_timeout=2, debuglevel=1)
     request.addfinalizer(c.close)
-    c.expect_line(b"RTT ready")
+    c.expect_line(b"Process: JLinkExe")
+    c.send_line(b"\r\n")
     c.expect(b"ch> ")
     return c
 
