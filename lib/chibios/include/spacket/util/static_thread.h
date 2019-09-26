@@ -3,8 +3,8 @@
 #include "ch.h"
 
 
-#if CH_CFG_USE_WAITEXIT != TRUE
-#error CH_CFG_USE_WAITEXIT needs to be defined as TRUE
+#ifndef CH_CFG_USE_WAITEXIT
+#define CH_CFG_USE_WAITEXIT FALSE
 #endif
 
 template <size_t STACK_SIZE>
@@ -22,6 +22,7 @@ public:
         return thread;
     }
 
+#if CH_CFG_USE_WAITEXIT == TRUE
     void terminate() {
         chThdTerminate(thread);
     }
@@ -34,6 +35,8 @@ public:
         }
         return MSG_OK;
     }
+#endif
+
 private:
     THD_WORKING_AREA(workingArea, STACK_SIZE);
     thread_t* thread;
