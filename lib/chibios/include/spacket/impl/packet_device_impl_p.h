@@ -30,7 +30,7 @@ struct PacketDeviceImpl: PacketDeviceImplBase<Buffer>,
     using Base = PacketDeviceImplBase<Buffer>;
     using ThisPtr = boost::intrusive_ptr<This>;
     using SerialDevice = SerialDeviceT<Buffer>;
-    using Mailbox = MailboxT<Result<Buffer>, 1>;
+    using Mailbox = MailboxT<Result<Buffer>>;
     using Thread = StaticThreadT<512>;
     
     static Result<ThisPtr> open(SerialDevice&& serialDevice, void* storage, tprio_t threadPriority);
@@ -43,11 +43,8 @@ struct PacketDeviceImpl: PacketDeviceImplBase<Buffer>,
     PacketDeviceImpl(Buffer&& buffer, SerialDevice&& serialDevice, tprio_t threadPriority);
     virtual ~PacketDeviceImpl();
 
-    Result<boost::blank> mailboxReplace(Result<Buffer>& message) override;
-    Result<Result<Buffer>> mailboxFetch(Timeout t) override;
     Result<boost::blank> reportError(Error e) override;
 
-    Mailbox readMailbox;
     Thread readThread;
 };
 
@@ -81,23 +78,6 @@ template <typename Buffer>
 PacketDeviceImpl<Buffer>::~PacketDeviceImpl() {
     Base::requestStop();
     readThread.wait();
-}
-
-template <typename Buffer>
-Result<boost::blank> PacketDeviceImpl<Buffer>::mailboxReplace(Result<Buffer>& message) {
-    return replace(readMailbox, message);
-}
-
-template <typename Buffer>
-Result<Result<Buffer>> PacketDeviceImpl<Buffer>::mailboxFetch(Timeout t) {
-    return
-    readMailbox.fetch(t) <=
-    [&] (Error e) {
-        if (e == toError(ErrorCode::ChMsgTimeout)) {
-            return fail<Result<Buffer>>(toError(ErrorCode::Timeout));
-        }
-        return fail<Result<Buffer>>(e);
-    };
 }
 
 template <typename Buffer>

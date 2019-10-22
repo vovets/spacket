@@ -6,13 +6,13 @@
 #include "buffer.h"
 
 #include <spacket/serial_device.h>
-#include <spacket/util/mailbox.h>
+#include <spacket/mailbox.h>
 #include <spacket/util/static_thread.h>
 #include <spacket/util/thread_error_report.h>
 #include <spacket/result_fatal.h>
 #include <spacket/packetizer_thread_function.h>
 
-using BufferMailbox = MailboxT<Buffer, 1>;
+using BufferMailbox = MailboxT<Buffer>;
 using SerialDevice = SerialDeviceT<Buffer>;
 
 constexpr tprio_t SD_THREAD_PRIORITY = NORMALPRIO + 3;

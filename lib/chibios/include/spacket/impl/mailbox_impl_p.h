@@ -2,27 +2,26 @@
 
 #include "ch.h"
 
-//#include <spacket/guard.h>
 #include <spacket/time_utils.h>
 #include <spacket/result.h>
 
 inline
 Error toError(msg_t msg) {
     switch (msg) {
-        case MSG_TIMEOUT: return toError(ErrorCode::ChMsgTimeout);
+        case MSG_TIMEOUT: return toError(ErrorCode::Timeout);
         case MSG_RESET:   return toError(ErrorCode::ChMsgReset);
     }
     return toError(ErrorCode::MiserableFailure1);
 }
 
 template <typename Message_, size_t SIZE_>
-class MailboxT {
+class QueueT {
 public:
     using Message = Message_;
     static constexpr std::size_t SIZE = SIZE_;
     
 public:
-    MailboxT();
+    QueueT();
 
     Result<boost::blank> post(Message& msg, Timeout timeout);
     Result<boost::blank> postS(Message& msg, Timeout timeout);
@@ -49,7 +48,7 @@ private:
 };
 
 template <typename Message, size_t SIZE>
-MailboxT<Message, SIZE>::MailboxT()
+QueueT<Message, SIZE>::QueueT()
     : wrptr(buffer())
     , rdptr(buffer())
     , cnt(0)
@@ -60,8 +59,7 @@ MailboxT<Message, SIZE>::MailboxT()
 }
 
 template <typename Message, size_t SIZE>
-Result<boost::blank> MailboxT<Message, SIZE>::post(Message& msg, Timeout timeout) {
-    // auto g = guard(chSysLock, chSysUnlock);
+Result<boost::blank> QueueT<Message, SIZE>::post(Message& msg, Timeout timeout) {
     chSysLock();
     auto result = postS(msg, timeout);
     chSysUnlock();
@@ -69,7 +67,7 @@ Result<boost::blank> MailboxT<Message, SIZE>::post(Message& msg, Timeout timeout
 }
 
 template <typename Message, size_t SIZE>
-Result<boost::blank> MailboxT<Message, SIZE>::postS(Message& msg, Timeout timeout) {
+Result<boost::blank> QueueT<Message, SIZE>::postS(Message& msg, Timeout timeout) {
 
     chDbgCheckClassS();
 
@@ -104,7 +102,7 @@ Result<boost::blank> MailboxT<Message, SIZE>::postS(Message& msg, Timeout timeou
 }
 
 template <typename Message, size_t SIZE>
-Result<boost::blank> MailboxT<Message, SIZE>::postI(Message& msg) {
+Result<boost::blank> QueueT<Message, SIZE>::postI(Message& msg) {
 
     chDbgCheckClassI();
 
@@ -133,7 +131,7 @@ Result<boost::blank> MailboxT<Message, SIZE>::postI(Message& msg) {
 }
 
 template <typename Message, size_t SIZE>
-Result<Message> MailboxT<Message, SIZE>::fetch(Timeout timeout) {
+Result<Message> QueueT<Message, SIZE>::fetch(Timeout timeout) {
     chSysLock();
     auto result = fetchS(timeout);
     chSysUnlock();
@@ -141,7 +139,7 @@ Result<Message> MailboxT<Message, SIZE>::fetch(Timeout timeout) {
 }
 
 template <typename Message, size_t SIZE>
-Result<Message> MailboxT<Message, SIZE>::fetchS(Timeout timeout) {
+Result<Message> QueueT<Message, SIZE>::fetchS(Timeout timeout) {
 
     chDbgCheckClassS();
 
@@ -178,7 +176,7 @@ Result<Message> MailboxT<Message, SIZE>::fetchS(Timeout timeout) {
 }
 
 template <typename Message, size_t SIZE>
-Result<Message> MailboxT<Message, SIZE>::fetchI() {
+Result<Message> QueueT<Message, SIZE>::fetchI() {
 
     chDbgCheckClassI();
 
@@ -209,31 +207,34 @@ Result<Message> MailboxT<Message, SIZE>::fetchI() {
 }
 
 template <typename Message, size_t SIZE>
-size_t MailboxT<Message, SIZE>::usedCountI() {
+size_t QueueT<Message, SIZE>::usedCountI() {
     chDbgCheckClassI();
     return cnt;
 }
 
 template <typename Message, size_t SIZE>
-size_t MailboxT<Message, SIZE>::freeCountI() {
+size_t QueueT<Message, SIZE>::freeCountI() {
     chDbgCheckClassI();
     return SIZE - usedCountI();
 }
 
-template <typename Mailbox>
-Result<boost::blank> replace(Mailbox& mb, typename Mailbox::Message& message) {
-    static_assert(Mailbox::SIZE == 1, "this function is for single element mailboxes only");
-    return
-    mb.fetch(immediateTimeout()) >=
-    [&] (typename Mailbox::Message&& m) {
-        typename Mailbox::Message tmp = std::move(m);
-        return ok(boost::blank());
-    } <=
-    [&] (Error e) {
-        if ( e == toError(ErrorCode::ChMsgTimeout)) {
+template <typename Message>
+struct MailboxImplT: QueueT<Message, 1> {
+    using Base = QueueT<Message, 1>;
+    
+    Result<boost::blank> replace(Message& message) {
+        return
+        Base::fetch(immediateTimeout()) >=
+        [&] (Message&& m) {
+            Message tmp = std::move(m);
             return ok(boost::blank());
-        }
-        return fail<boost::blank>(e);
-    } >
-    [&] { return mb.post(message, immediateTimeout()); };
-}
+        } <=
+        [&] (Error e) {
+            if (e == toError(ErrorCode::Timeout)) {
+                return ok(boost::blank());
+            }
+            return fail<boost::blank>(e);
+        } >
+        [&] { return Base::post(message, immediateTimeout()); };
+    }
+};

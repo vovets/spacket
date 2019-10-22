@@ -7,7 +7,7 @@
 #include "constants.h"
 
 #include <spacket/serial_device.h>
-#include <spacket/util/mailbox.h>
+#include <spacket/mailbox.h>
 #include <spacket/util/static_thread.h>
 #include <spacket/util/thread_error_report.h>
 #include <spacket/result_fatal.h>

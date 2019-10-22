@@ -1,9 +1,9 @@
 #pragma once
 
 #include <spacket/result.h>
-#include <spacket/serial_device.h>
 #include <spacket/debug_print.h>
 #include <spacket/buffer_debug.h>
+#include <spacket/mailbox.h>
 #include <spacket/impl/packet_decode_fsm.h>
 
 namespace packet_device_impl_base {
@@ -36,6 +36,7 @@ class PacketDeviceImplBase: public packet_device_impl_base::Debug<Buffer>
     using Dbg = packet_device_impl_base::Debug<Buffer>;
     using SerialDevice = SerialDeviceT<Buffer>;
     using PacketDecodeFSM = PacketDecodeFSMT<Buffer>;
+    using Mailbox = MailboxImplT<Result<Buffer>>;
 
     static constexpr Timeout stopCheckPeriod = std::chrono::milliseconds(10);
 
@@ -56,16 +57,12 @@ protected:
 
 private:
     Result<boost::blank> packetFinished(Buffer& buffer);
-
-    virtual Result<boost::blank> mailboxReplace(Result<Buffer>& message) = 0;
-
-    virtual Result<Result<Buffer>> mailboxFetch(Timeout t) = 0;
-
     virtual Result<boost::blank> reportError(Error e) = 0;
     
 private:
     PacketDecodeFSM decodeFSM;
     SerialDevice serialDevice;
+    Mailbox readMailbox;
     bool stopRequested;
 };
 
@@ -107,7 +104,7 @@ void PacketDeviceImplBase<Buffer>::readThreadFunction() {
                 return ok(boost::blank());
             }
             auto message = fail<Buffer>(e);
-            return mailboxReplace(message);
+            return readMailbox.replace(message);
         };
     }
     dpl("readThreadFunction: finished");
@@ -121,7 +118,7 @@ Result<boost::blank> PacketDeviceImplBase<Buffer>::packetFinished(Buffer& buffer
     [&] (Buffer&& newBuffer) {
         auto message = ok(std::move(buffer));
         return
-        mailboxReplace(message) >
+        readMailbox.replace(message) >
         [&] {
             buffer = std::move(newBuffer);
             Dbg::dpl("packetFinished: replaced");
@@ -134,7 +131,7 @@ template <typename Buffer>
 Result<Buffer> PacketDeviceImplBase<Buffer>::read(Timeout t) {
     dpl("read: started, timeout %d ms", toMs(t).count());
     return
-    mailboxFetch(t) >=
+    readMailbox.fetch(t) >=
     [&] (Result<Buffer>&& r) {
         dpl("read: fetched");
         return std::move(r);

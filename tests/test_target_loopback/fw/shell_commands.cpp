@@ -9,7 +9,7 @@
 #include <spacket/serial_device.h>
 #include <spacket/buffer_utils.h>
 #include <spacket/serial_utils.h>
-#include <spacket/util/mailbox.h>
+#include <spacket/mailbox.h>
 #include <spacket/util/static_thread.h>
 #include <spacket/util/time_measurement.h>
 #include <spacket/util/thread_error_report.h>
@@ -84,8 +84,8 @@ struct RxContext {
     Timeout timeout;
 };
 
-static MailboxT<RxContext, 1> rxInMailbox;
-static MailboxT<Result<Buffer>, 1> rxOutMailbox;
+static MailboxT<RxContext> rxInMailbox;
+static MailboxT<Result<Buffer>> rxOutMailbox;
 
 static Result<Buffer> testBuffer(size_t size) {
     return

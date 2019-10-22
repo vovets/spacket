@@ -3,7 +3,7 @@
 #include <spacket/result.h>
 #include <spacket/result_fatal.h>
 #include <spacket/packetizer.h>
-#include <spacket/util/mailbox.h>
+#include <spacket/mailbox.h>
 #include <spacket/buffer_debug.h>
 
 namespace packetizer_thread_function {

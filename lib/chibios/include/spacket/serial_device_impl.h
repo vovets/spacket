@@ -2,7 +2,7 @@
 
 #include <spacket/result.h>
 #include <spacket/time_utils.h>
-#include <spacket/util/mailbox.h>
+#include <spacket/mailbox.h>
 #include <spacket/result_fatal.h>
 #include <spacket/util/static_thread.h>
 #include <spacket/util/thread_error_report.h>
@@ -52,7 +52,7 @@ template <typename Buffer>
 class SerialDeviceImpl {
 private:
     using This = SerialDeviceImpl<Buffer>;
-    using Mailbox = MailboxT<Result<Buffer>, 1>;
+    using Mailbox = MailboxT<Result<Buffer>>;
     using Thread = StaticThreadT<256>;
 
 public:
@@ -211,7 +211,7 @@ Result<Buffer> SerialDeviceImpl<Buffer>::read(Timeout t) {
         return std::move(result);
     } <=
     [] (Error e) {
-        if (e == toError(ErrorCode::ChMsgTimeout)) {
+        if (e == toError(ErrorCode::Timeout)) {
             return fail<Buffer>(toError(ErrorCode::SerialDeviceReadTimeout));
         }
         return fail<Buffer>(e);

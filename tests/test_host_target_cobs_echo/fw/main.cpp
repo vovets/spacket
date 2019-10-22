@@ -8,7 +8,7 @@
 #include "process_incoming.h"
 
 #include <spacket/serial_device.h>
-#include <spacket/util/mailbox.h>
+#include <spacket/mailbox.h>
 #include <spacket/util/static_thread.h>
 #include <spacket/util/thread_error_report.h>
 #include <spacket/result_fatal.h>
@@ -20,7 +20,7 @@
 StaticThreadT<256> rxThread;
 StaticThreadT<512> txThread;
 
-using BufferMailbox = MailboxT<Buffer, MAILBOX_SIZE>;
+using BufferMailbox = MailboxT<Buffer>;
 using SerialDevice = SerialDeviceT<Buffer>;
 
 constexpr tprio_t SD_THREAD_PRIORITY = NORMALPRIO + 2;

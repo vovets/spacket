@@ -8,35 +8,8 @@
 #include <boost/smart_ptr/intrusive_ref_counter.hpp>
 #include <boost/optional.hpp>
 
-#include <condition_variable>
-#include <mutex>
 #include <thread>
 
-namespace packet_device_impl {
-
-template <typename Message>
-struct Mailbox {
-    Result<boost::blank> post(Message& message_) {
-        std::lock_guard<std::mutex> lock(mutex);
-        message = std::move(message_);
-        full.notify_one();
-        return ok(boost::blank());
-    }
-    
-    Result<Message> fetch(Timeout timeout) {
-        std::unique_lock<std::mutex> lock(mutex);
-        if (full.wait_for(lock, timeout, [&] { return !!message; })) {
-            return ok(std::move(message.value()));
-        }
-        return fail<Message>(toError(ErrorCode::Timeout));
-    }
-
-    boost::optional<Message> message;
-    std::mutex mutex;
-    std::condition_variable full;
-};
-
-} // packet_device_impl
 
 template <typename Buffer>
 struct PacketDeviceImpl: PacketDeviceImplBase<Buffer>,
@@ -46,7 +19,6 @@ struct PacketDeviceImpl: PacketDeviceImplBase<Buffer>,
     using Base = PacketDeviceImplBase<Buffer>;
     using ThisPtr = boost::intrusive_ptr<This>;
     using SerialDevice = SerialDeviceT<Buffer>;
-    using Mailbox = packet_device_impl::Mailbox<Result<Buffer>>;
     using Base::dpl;
 
     static Result<ThisPtr> open(SerialDevice&& serialDevice);
@@ -54,11 +26,8 @@ struct PacketDeviceImpl: PacketDeviceImplBase<Buffer>,
     PacketDeviceImpl(Buffer&& buffer, SerialDevice&& serialDevice);
     virtual ~PacketDeviceImpl();
 
-    Result<boost::blank> mailboxReplace(Result<Buffer>& message) override;
-    Result<Result<Buffer>> mailboxFetch(Timeout t) override;
     Result<boost::blank> reportError(Error e) override;
 
-    Mailbox readMailbox;
     std::thread readThread;
 };
 
@@ -90,17 +59,6 @@ template <typename Buffer>
 PacketDeviceImpl<Buffer>::~PacketDeviceImpl() {
     Base::requestStop();
     readThread.join();
-}
-
-template <typename Buffer>
-Result<boost::blank> PacketDeviceImpl<Buffer>::mailboxReplace(Result<Buffer>& message) {
-    return std::move(readMailbox.post(message));
-}
-
-template <typename Buffer>
-Result<Result<Buffer>> PacketDeviceImpl<Buffer>::mailboxFetch(Timeout t) {
-    return
-    readMailbox.fetch(t);
 }
 
 template <typename Buffer>
