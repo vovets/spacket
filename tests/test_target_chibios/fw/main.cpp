@@ -21,17 +21,17 @@
 #include "chprintf.h"
 
 #include <spacket/util/rtt_stream.h>
-#include <spacket/util/static_thread.h>
+#include <spacket/thread.h>
 
 using RTTStream = RTTStreamT<0, 10>;
 
 RTTStream rttStream{};
-StaticThreadT<176> blinkerThread{};
-StaticThreadT<128> writerThread{};
-thread_t* writerThreadPtr = nullptr;
-StaticThreadT<2048> shellThread_{};
+ThreadStorageT<176> blinkerThreadStorage;
+ThreadStorageT<128> writerThreadStorage;
+ThreadStorageT<2048> shellThreadStorage;
+Thread writerThread;
 
-static void writerThreadFunction(void*);
+static void writerThreadFunction();
 
 static void cmd_start_write(BaseSequentialStream *chp, int argc, char *argv[]) {
     (void)argv;
@@ -39,11 +39,11 @@ static void cmd_start_write(BaseSequentialStream *chp, int argc, char *argv[]) {
         chprintf(chp, "Usage: start_write\n");
         return;
     }
-    if(writerThreadPtr) {
+    if(writerThread.joinable()) {
         chprintf(chp, "already running\n");
         return;
     }
-    writerThreadPtr = writerThread.create(NORMALPRIO, writerThreadFunction, 0);
+    Thread::create(writerThreadStorage, NORMALPRIO, writerThreadFunction);
     chprintf(chp, "started\r\n");
 }
 
@@ -53,13 +53,12 @@ static void cmd_stop_write(BaseSequentialStream *chp, int argc, char *argv[]) {
         chprintf(chp, "Usage: stop_write\n");
         return;
     }
-    if (!writerThreadPtr) {
+    if (!writerThread.joinable()) {
         chprintf(chp, "not running\n");
         return;
     }
-    chThdTerminate(writerThreadPtr);
-    chThdWait(writerThreadPtr);
-    writerThreadPtr = nullptr;
+    writerThread.requestStop();
+    writerThread.wait();
     chprintf(chp, "stopped\n");
 }
 
@@ -76,8 +75,7 @@ static const ShellConfig shellCfg = {
 
 
 
-static __attribute__((noreturn)) THD_FUNCTION(blinkerThreadFunction, arg) {
-    (void)arg;
+static __attribute__((noreturn)) void blinkerThreadFunction() {
     chRegSetThreadName("blinker");
     while(true) {
         const systime_t time = 250;
@@ -88,7 +86,7 @@ static __attribute__((noreturn)) THD_FUNCTION(blinkerThreadFunction, arg) {
     }
 }
 
-static THD_FUNCTION(writerThreadFunction, arg) {
+static void writerThreadFunction() {
     static uint8_t buf[] =
         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
@@ -106,8 +104,6 @@ static THD_FUNCTION(writerThreadFunction, arg) {
         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-
-    (void)arg;
 
     chRegSetThreadName("writer");
 
@@ -134,8 +130,8 @@ int main(void) {
 
   shellInit();
 
-  blinkerThread.create(NORMALPRIO, blinkerThreadFunction, 0);
-  shellThread_.create(NORMALPRIO, shellThread, const_cast<ShellConfig*>(&shellCfg));
+  Thread::create(blinkerThreadStorage, NORMALPRIO, blinkerThreadFunction);
+  Thread::create(shellThreadStorage, NORMALPRIO, [] { shellThread(const_cast<ShellConfig *>(&shellCfg)); });
 
   while (true) {
     port_wait_for_interrupt();
