@@ -4,7 +4,7 @@
 #include <spacket/time_utils.h>
 #include <spacket/mailbox.h>
 #include <spacket/result_fatal.h>
-#include <spacket/util/static_thread.h>
+#include <spacket/thread.h>
 #include <spacket/util/thread_error_report.h>
 
 #include "hal.h"
@@ -53,7 +53,7 @@ class SerialDeviceImpl {
 private:
     using This = SerialDeviceImpl<Buffer>;
     using Mailbox = MailboxT<Result<Buffer>>;
-    using Thread = StaticThreadT<256>;
+    using ThreadStorage = ThreadStorageT<256>;
 
 public:
     template <typename SerialDevice>
@@ -86,7 +86,7 @@ private:
     static void rxCompleted_(UARTDriver* driver);
     static void rxError_(UARTDriver *uartp, uartflags_t e);
     
-    static void readThreadFunction_(void*);
+    static void readThreadFunction_();
     static void handleReceivedData_(std::size_t received);
 
     void rxCompleted();
@@ -96,6 +96,7 @@ private:
     static UARTConfig config;
     static SerialDeviceImpl* instance;
     static Mailbox readMailbox;
+    static ThreadStorage readThreadStorage;
     static Thread readThread;
     static thread_reference_t readThreadRef;
     static thread_reference_t writeThreadRef;
@@ -137,7 +138,10 @@ template <typename Buffer>
 thread_reference_t SerialDeviceImpl<Buffer>::writeThreadRef;
 
 template <typename Buffer>
-typename SerialDeviceImpl<Buffer>::Thread SerialDeviceImpl<Buffer>::readThread;
+Thread SerialDeviceImpl<Buffer>::readThread;
+
+template <typename Buffer>
+typename SerialDeviceImpl<Buffer>::ThreadStorage SerialDeviceImpl<Buffer>::readThreadStorage;
 
 template <typename Buffer>
 template <typename SerialDevice>
@@ -190,14 +194,14 @@ SerialDeviceImpl<Buffer>& SerialDeviceImpl<Buffer>::operator=(SerialDeviceImpl&&
 template <typename Buffer>
 void SerialDeviceImpl<Buffer>::start(tprio_t threadPriority) {
     uartStart(driver.get(), &config);
-    auto thread = readThread.create(threadPriority, This::readThreadFunction_, nullptr);
-    chRegSetThreadNameX(thread, "sd");
+    readThread = Thread::create(readThreadStorage, threadPriority, This::readThreadFunction_);
+    chRegSetThreadNameX(readThread.nativeHandle(), "sd");
 }
 
 template <typename Buffer>
 void SerialDeviceImpl<Buffer>::stop() {
     uartStopReceive(driver.get());
-    readThread.terminate();
+    readThread.requestStop();
     chThdResume(&readThreadRef, MSG_RESET);
     readThread.wait();
     uartStop(driver.get());
@@ -299,7 +303,7 @@ void SerialDeviceImpl<Buffer>::handleReceivedData_(std::size_t notReceived) {
 }
 
 template <typename Buffer>
-void SerialDeviceImpl<Buffer>::readThreadFunction_(void*) {
+void SerialDeviceImpl<Buffer>::readThreadFunction_() {
     while (!chThdShouldTerminateX()) {
         osalSysLock();
         uartStartReceiveI(instance->driver.get(), Buffer::maxSize(), instance->readBuffer.begin());

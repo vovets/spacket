@@ -8,7 +8,7 @@
 
 #include <spacket/serial_device.h>
 #include <spacket/mailbox.h>
-#include <spacket/util/static_thread.h>
+#include <spacket/thread.h>
 #include <spacket/util/thread_error_report.h>
 #include <spacket/result_fatal.h>
 #include <spacket/cobs.h>
@@ -17,7 +17,7 @@
 #include <spacket/packet_device.h>
 
 
-StaticThreadT<256> echoThread;
+ThreadStorageT<256> echoThreadStorage;
 
 using SerialDevice = SerialDeviceT<Buffer>;
 using PacketDevice = PacketDeviceT<Buffer>;
@@ -100,7 +100,7 @@ int main(void) {
 
     auto globals = std::move(getOkUnsafe(Globals::init() <= fatal<Globals>));
 
-    echoThread.create(NORMALPRIO, echoThreadFunction, &globals);
+    Thread::create(echoThreadStorage, NORMALPRIO, [&] { echoThreadFunction(&globals); });
 
     for (;;) {
         port_wait_for_interrupt();

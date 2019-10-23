@@ -6,16 +6,15 @@
 
 #include "rtt_stream.h"
 
-#include <spacket/util/static_thread.h>
+#include <spacket/thread.h>
 #include <spacket/fatal_error.h>
 
-StaticThreadT<176> blinkerThread;
-StaticThreadT<256> echoThread;
-StaticThreadT<1024> shellThread_;
-StaticThreadT<256> rxThread;
+ThreadStorageT<176> blinkerThreadStorage;
+ThreadStorageT<256> echoThreadStorage;
+ThreadStorageT<1024> shellThreadStorage;
+ThreadStorageT<256> rxThreadStorage;
 
-static __attribute__((noreturn)) THD_FUNCTION(blinkerThreadFunction, arg) {
-    (void)arg;
+static __attribute__((noreturn)) void blinkerThreadFunction() {
     chRegSetThreadName("blinker");
     while(true) {
         const systime_t time = 250;
@@ -29,25 +28,24 @@ static __attribute__((noreturn)) THD_FUNCTION(blinkerThreadFunction, arg) {
     }
 }
 
-static __attribute__((noreturn)) THD_FUNCTION(echoThreadFunction, arg) {
-    (void)arg;
+static __attribute__((noreturn)) void echoThreadFunction() {
     chRegSetThreadName("echo");
     for (;;) {
         chThdSleepMilliseconds(1);
     }
 }
 
-int __attribute__((noreturn)) main(void) {
+int main(void) {
     halInit();
     chSysInit();
 
     chprintf(&rttStream, "RTT ready\r\n");
   
-    blinkerThread.create(NORMALPRIO - 2, blinkerThreadFunction, 0);
-    echoThread.create(NORMALPRIO - 1, echoThreadFunction, 0);
-    auto shellThreadHandle = shellThread_.create(NORMALPRIO, shellThread, const_cast<ShellConfig*>(&shellConfig));
-    chRegSetThreadNameX(shellThreadHandle, "shell");
-    rxThread.create(NORMALPRIO + 1, rxThreadFunction, 0);
+    Thread::create(blinkerThreadStorage, NORMALPRIO - 2, blinkerThreadFunction);
+    Thread::create(echoThreadStorage, NORMALPRIO - 1, echoThreadFunction);
+    auto shellThread_ = Thread::create(shellThreadStorage, NORMALPRIO, [] { shellThread(const_cast<ShellConfig*>(&shellConfig)); });
+    chRegSetThreadNameX(shellThread_.nativeHandle(), "shell");
+    Thread::create(rxThreadStorage, NORMALPRIO + 1, rxThreadFunction);
 
     while (true) {
         port_wait_for_interrupt();

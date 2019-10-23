@@ -9,7 +9,7 @@
 
 #include <spacket/serial_device.h>
 #include <spacket/mailbox.h>
-#include <spacket/util/static_thread.h>
+#include <spacket/thread.h>
 #include <spacket/util/thread_error_report.h>
 #include <spacket/result_fatal.h>
 #include <spacket/cobs.h>
@@ -17,8 +17,8 @@
 #include <spacket/packetizer.h>
 
 
-StaticThreadT<256> rxThread;
-StaticThreadT<512> txThread;
+ThreadStorageT<256> rxThreadStorage;
+ThreadStorageT<512> txThreadStorage;
 
 using BufferMailbox = MailboxT<Buffer>;
 using SerialDevice = SerialDeviceT<Buffer>;
@@ -156,8 +156,8 @@ int main(void) {
 
     auto globals = std::move(getOkUnsafe(Globals::init() <= fatal<Globals>));
 
-    txThread.create(NORMALPRIO, txThreadFunction, &globals);
-    rxThread.create(NORMALPRIO + 1, rxThreadFunction, &globals);
+    Thread::create(txThreadStorage, NORMALPRIO, [&] { txThreadFunction(&globals); });
+    Thread::create(rxThreadStorage, NORMALPRIO + 1, [&] { rxThreadFunction(&globals); });
 
     for (;;) {
         port_wait_for_interrupt();

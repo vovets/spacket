@@ -5,9 +5,9 @@
 
 #include "rtt_stream.h"
 
-#include <spacket/util/static_thread.h>
+#include <spacket/thread.h>
 
-StaticThreadT<1024> shellThread_;
+ThreadStorageT<1024> shellThreadStorage;
 
 int main(void) {
     halInit();
@@ -15,7 +15,7 @@ int main(void) {
 
     chprintf(&rttStream, "RTT ready\r\n");
 
-    shellThread_.create(NORMALPRIO, shellThread, const_cast<ShellConfig*>(&shellConfig));
+    Thread::create(shellThreadStorage, NORMALPRIO, [] { shellThread(const_cast<ShellConfig*>(&shellConfig)); });
 
     for (;;) {
         port_wait_for_interrupt();

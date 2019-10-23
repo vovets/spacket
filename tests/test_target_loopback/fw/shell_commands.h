@@ -4,4 +4,4 @@
 
 extern "C" const ShellConfig shellConfig;
 
-void rxThreadFunction(void* arg);
+void rxThreadFunction();

@@ -6,7 +6,7 @@
 #include "buffer.h"
 
 #include <spacket/serial_device.h>
-#include <spacket/util/static_thread.h>
+#include <spacket/thread.h>
 #include <spacket/fatal_error.h>
 
 
@@ -14,10 +14,9 @@ constexpr tprio_t SD_THREAD_PRIORITY = NORMALPRIO + 1;
 
 using SerialDevice = SerialDeviceT<Buffer>;
 
-StaticThreadT<256> echoThread;
+ThreadStorageT<256> echoThreadStorage;
 
-static __attribute__((noreturn)) THD_FUNCTION(echoThreadFunction, arg) {
-    (void)arg;
+static __attribute__((noreturn)) void echoThreadFunction() {
     chRegSetThreadName("echo");
     SerialDevice::open(&UARTD1, SD_THREAD_PRIORITY) >=
     [&](SerialDevice&& sd) {
@@ -57,7 +56,7 @@ int main(void) {
 
     chprintf(&rttStream, "RTT ready\r\n");
   
-    echoThread.create(NORMALPRIO, echoThreadFunction, 0);
+    Thread::create(echoThreadStorage, NORMALPRIO, echoThreadFunction);
 
     while (true) {
         port_wait_for_interrupt();

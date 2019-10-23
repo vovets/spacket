@@ -7,7 +7,7 @@
 
 #include <spacket/serial_device.h>
 #include <spacket/mailbox.h>
-#include <spacket/util/static_thread.h>
+#include <spacket/thread.h>
 #include <spacket/util/thread_error_report.h>
 #include <spacket/result_fatal.h>
 #include <spacket/packetizer_thread_function.h>
@@ -17,9 +17,9 @@ using SerialDevice = SerialDeviceT<Buffer>;
 
 constexpr tprio_t SD_THREAD_PRIORITY = NORMALPRIO + 3;
 
-StaticThreadT<256> rxThread;
-StaticThreadT<256> txThread;
-StaticThreadT<512> packetizerThread;
+ThreadStorageT<256> rxThreadStorage;
+ThreadStorageT<256> txThreadStorage;
+ThreadStorageT<512> packetizerThreadStorage;
 
 BufferMailbox packetizerIn;
 BufferMailbox packetizerOut;
@@ -113,9 +113,9 @@ int main(void) {
 
     auto globals = std::move(getOkUnsafe(Globals::init() <= fatal<Globals>));
 
-    txThread.create(NORMALPRIO + 2, txThreadFunction, &globals);
-    packetizerThread.create(NORMALPRIO + 1, packetizerThreadFunction, &globals);
-    rxThread.create(NORMALPRIO, rxThreadFunction, &globals);
+    Thread::create(txThreadStorage, NORMALPRIO + 2, [&] { txThreadFunction(&globals); });
+    Thread::create(packetizerThreadStorage, NORMALPRIO + 1, [&] { packetizerThreadFunction(&globals); });
+    Thread::create(rxThreadStorage, NORMALPRIO, [&] { rxThreadFunction(&globals); });
 
     while (true) {
         port_wait_for_interrupt();

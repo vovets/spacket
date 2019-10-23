@@ -10,7 +10,7 @@
 #include <spacket/buffer_utils.h>
 #include <spacket/serial_utils.h>
 #include <spacket/mailbox.h>
-#include <spacket/util/static_thread.h>
+#include <spacket/thread.h>
 #include <spacket/util/time_measurement.h>
 #include <spacket/util/thread_error_report.h>
 
@@ -100,8 +100,7 @@ static Result<Buffer> testBuffer(size_t size) {
     };
 }
 
-THD_FUNCTION(rxThreadFunction, arg) {
-    static_cast<void>(arg);
+void rxThreadFunction() {
     chRegSetThreadName("rx");
     while (true) {
         rxInMailbox.fetch(INFINITE_TIMEOUT) >=

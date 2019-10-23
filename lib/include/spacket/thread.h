@@ -18,17 +18,13 @@ public:
     Thread(const Thread&) = delete;
     Thread& operator=(const Thread&) = delete;
 
-    bool joinable() const {
-        return Impl::joinable();
-    }
+    Impl::NativeHandle nativeHandle() { return Impl::nativeHandle(); }
 
-    void requestStop() {
-        Impl::requestStop();
-    }
+    bool joinable() const { return Impl::joinable(); }
 
-    void wait() {
-        Impl::wait();
-    }
+    void requestStop() { Impl::requestStop(); }
+
+    void wait() { Impl::wait(); }
 
 private:
     Thread(ThreadImpl&& impl): Impl(impl) {}

@@ -20,6 +20,9 @@ struct ThreadStorageT: ThreadStorageBase {
     
 class ThreadImpl {
 public:
+    using NativeHandle = thread_t*;
+
+public:
     template <typename ThreadStorage>
     static ThreadImpl create(ThreadStorage& storage, tprio_t prio, std::function<void()> function) {
         storage.function = function;
@@ -37,6 +40,8 @@ public:
     static void threadFunction(void* arg) {
         static_cast<ThreadStorageBase *>(arg)->function();
     }
+
+    NativeHandle nativeHandle() { return storage != nullptr ? storage->thread : nullptr; }
 
     bool joinable() const { return storage != nullptr; }
 
