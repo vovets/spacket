@@ -17,6 +17,7 @@ Result<Success> threadErrorReportT(Error e) {
     return fail<Success>(e);
 }
 
+inline
 Result<boost::blank> threadErrorReport(Error e) {
     return threadErrorReportT<boost::blank>(e);
 }
