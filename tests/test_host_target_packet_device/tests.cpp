@@ -22,7 +22,7 @@
 using Buffer = BufferT<NewAllocator>;
 using Buffers = std::vector<Buffer>;
 using SerialDevice = SerialDeviceT<Buffer>;
-using PacketDevice = PacketDeviceT<Buffer>;
+using PacketDevice = PacketDeviceT<Buffer, SerialDevice>;
 namespace c = std::chrono;
 
 namespace Catch {

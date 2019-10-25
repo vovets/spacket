@@ -5,20 +5,19 @@
 #include <boost/intrusive_ptr.hpp>
 
 
-template <typename Buffer>
+template <typename Buffer, typename LowerLevel>
 class PacketDeviceT: public packet_device_impl_base::Debug<Buffer> {
 public:
-    using Impl = PacketDeviceImpl<Buffer>;
+    using Impl = PacketDeviceImpl<Buffer, LowerLevel>;
     using Dbg = packet_device_impl_base::Debug<Buffer>;
     using Dbg::dpl;
     using Storage = std::aligned_storage_t<sizeof(Impl), alignof(Impl)>;
-    using SerialDevice = SerialDeviceT<Buffer>;
 
 public:
     template <typename ...U>
-    static Result<PacketDeviceT<Buffer>> open(SerialDevice serialDevice, U&&... u) {
+    static Result<PacketDeviceT<Buffer, LowerLevel>> open(LowerLevel lowerLevel, U&&... u) {
         return
-        Impl::open(std::move(serialDevice), std::forward<U>(u)...) >=
+        Impl::open(std::move(lowerLevel), std::forward<U>(u)...) >=
         [&] (ImplPtr&& impl) {
             return ok(PacketDeviceT(std::move(impl)));
         };

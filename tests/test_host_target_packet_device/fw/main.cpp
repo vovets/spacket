@@ -20,7 +20,7 @@
 ThreadStorageT<256> echoThreadStorage;
 
 using SerialDevice = SerialDeviceT<Buffer>;
-using PacketDevice = PacketDeviceT<Buffer>;
+using PacketDevice = PacketDeviceT<Buffer, SerialDevice>;
 
 constexpr tprio_t SD_THREAD_PRIORITY = NORMALPRIO + 2;
 constexpr tprio_t PD_THREAD_PRIORITY = NORMALPRIO + 1;
