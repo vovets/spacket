@@ -13,22 +13,18 @@
 
 template <typename Buffer>
 struct PacketDeviceImpl: PacketDeviceImplBase<Buffer>,
-    boost::intrusive_ref_counter<PacketDeviceImpl<Buffer>, boost::thread_unsafe_counter>
+    boost::intrusive_ref_counter<PacketDeviceImpl<Buffer>>
 {
     using This = PacketDeviceImpl<Buffer>;
     using Base = PacketDeviceImplBase<Buffer>;
     using ThisPtr = boost::intrusive_ptr<This>;
     using SerialDevice = SerialDeviceT<Buffer>;
-    using Base::dpl;
 
     static Result<ThisPtr> open(SerialDevice&& serialDevice);
 
     PacketDeviceImpl(Buffer&& buffer, SerialDevice&& serialDevice);
-    virtual ~PacketDeviceImpl();
 
     Result<boost::blank> reportError(Error e) override;
-
-    std::thread readThread;
 };
 
 template <typename Buffer>
@@ -50,15 +46,9 @@ PacketDeviceImpl<Buffer>::PacketDeviceImpl(
     SerialDevice&& serialDevice)
     : Base(
         std::move(buffer),
-        std::move(serialDevice))
+        std::move(serialDevice),
+        Thread::params())
 {
-    readThread = std::thread([&] { this->readThreadFunction(); });
-}
-
-template <typename Buffer>
-PacketDeviceImpl<Buffer>::~PacketDeviceImpl() {
-    Base::requestStop();
-    readThread.join();
 }
 
 template <typename Buffer>

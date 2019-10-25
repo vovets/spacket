@@ -43,7 +43,7 @@ static void cmd_start_write(BaseSequentialStream *chp, int argc, char *argv[]) {
         chprintf(chp, "already running\n");
         return;
     }
-    Thread::create(writerThreadStorage, NORMALPRIO, writerThreadFunction);
+    Thread::create(Thread::params(writerThreadStorage, NORMALPRIO), writerThreadFunction);
     chprintf(chp, "started\r\n");
 }
 
@@ -130,8 +130,8 @@ int main(void) {
 
   shellInit();
 
-  Thread::create(blinkerThreadStorage, NORMALPRIO, blinkerThreadFunction);
-  Thread::create(shellThreadStorage, NORMALPRIO, [] { shellThread(const_cast<ShellConfig *>(&shellCfg)); });
+  Thread::create(Thread::params(blinkerThreadStorage, NORMALPRIO), blinkerThreadFunction);
+  Thread::create(Thread::params(shellThreadStorage, NORMALPRIO), [] { shellThread(const_cast<ShellConfig *>(&shellCfg)); });
 
   while (true) {
     port_wait_for_interrupt();

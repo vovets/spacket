@@ -4,6 +4,7 @@
 #include <spacket/debug_print.h>
 #include <spacket/buffer_debug.h>
 #include <spacket/mailbox.h>
+#include <spacket/thread.h>
 #include <spacket/impl/packet_decode_fsm.h>
 
 namespace packet_device_impl_base {
@@ -49,11 +50,15 @@ protected:
     using Dbg::dpl;
     using Dbg::dpb;
 
-    PacketDeviceImplBase(Buffer&& buffer, SerialDevice&& serialDevice);
+    PacketDeviceImplBase(Buffer&& buffer, SerialDevice&& serialDevice, ThreadParams p);
+    virtual ~PacketDeviceImplBase();
+
+    PacketDeviceImplBase(PacketDeviceImplBase&&) = delete;
+    PacketDeviceImplBase(const PacketDeviceImplBase&) = delete;
 
     void readThreadFunction();
 
-    void requestStop() { stopRequested = true; }
+    void requestStop() { readThread.requestStop(); }
 
 private:
     Result<boost::blank> packetFinished(Buffer& buffer);
@@ -63,7 +68,7 @@ private:
     PacketDecodeFSM decodeFSM;
     SerialDevice serialDevice;
     Mailbox readMailbox;
-    bool stopRequested;
+    Thread readThread;
 };
 
 template <typename Buffer>
@@ -72,20 +77,29 @@ constexpr Timeout PacketDeviceImplBase<Buffer>::stopCheckPeriod;
 template <typename Buffer>
 PacketDeviceImplBase<Buffer>::PacketDeviceImplBase(
     Buffer&& buffer,
-    SerialDevice&& serialDevice)
+    SerialDevice&& serialDevice,
+    ThreadParams p)
     : decodeFSM(
         [&] (Buffer& b) { return this->packetFinished(b); },
         std::move(buffer)
         )
     , serialDevice(std::move(serialDevice))
-    , stopRequested(false)
+    , readThread(
+        Thread::create(p, [&] { this->readThreadFunction(); }))
 {
 }
 
 template <typename Buffer>
+PacketDeviceImplBase<Buffer>::~PacketDeviceImplBase() {
+    readThread.requestStop();
+    readThread.wait();
+}
+
+
+template <typename Buffer>
 void PacketDeviceImplBase<Buffer>::readThreadFunction() {
     dpl("readThreadFunction: started");
-    for (bool stop = false; !stop;) {
+    while (!Thread::shouldStop()) {
         serialDevice.read(stopCheckPeriod) >=
         [&] (Buffer&& b) {
             dpb("readThreadFunction: read: ", b);
@@ -100,7 +114,7 @@ void PacketDeviceImplBase<Buffer>::readThreadFunction() {
         } <=
         [&] (Error e) {
             if (e == toError(ErrorCode::SerialDeviceReadTimeout)) {
-                stop = stopRequested;
+                // do nothing, just chance to stop
                 return ok(boost::blank());
             }
             auto message = fail<Buffer>(e);

@@ -15,7 +15,7 @@ int main(void) {
 
     chprintf(&rttStream, "RTT ready\r\n");
 
-    Thread::create(shellThreadStorage, NORMALPRIO, [] { shellThread(const_cast<ShellConfig*>(&shellConfig)); });
+    Thread::create(Thread::params(shellThreadStorage, NORMALPRIO), [] { shellThread(const_cast<ShellConfig*>(&shellConfig)); });
 
     for (;;) {
         port_wait_for_interrupt();

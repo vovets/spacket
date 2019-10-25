@@ -21,7 +21,7 @@ target_link_libraries(test_host_target_packet_crc spacket utils pthread)
 #target_link_libraries(test_host_target_packet_crc asan spacket utils pthread)
 
 target_compile_definitions(test_host_target_packet_crc PUBLIC
-  # -DPACKET_DEVICE_ENABLE_DEBUG_PRINT
+#  -DPACKET_DEVICE_ENABLE_DEBUG_PRINT
   -DDEBUG_PRINT_BUFFER_FULL
   )
 #target_compile_options(test_host_target_packet_crc PUBLIC -fsanitize=address)

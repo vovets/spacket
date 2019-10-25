@@ -17,6 +17,13 @@ template <std::size_t STACK_SIZE>
 struct ThreadStorageT: ThreadStorageBase {
     THD_WORKING_AREA(workingArea, STACK_SIZE);
 };
+
+struct ThreadParams {
+    ThreadStorageBase* storage;
+    void* workingArea;
+    std::size_t workingAreaSize;
+    tprio_t prio;
+};
     
 class ThreadImpl {
 public:
@@ -24,15 +31,19 @@ public:
 
 public:
     template <typename ThreadStorage>
-    static ThreadImpl create(ThreadStorage& storage, tprio_t prio, std::function<void()> function) {
-        storage.function = function;
-        storage.thread = chThdCreateStatic(
-            storage.workingArea,
-            sizeof(storage.workingArea),
-            prio,
+    static ThreadParams params(ThreadStorage& storage, tprio_t prio) {
+        return { &storage, &storage.workingArea, sizeof(storage.workingArea), prio };
+    }
+
+    static ThreadImpl create(ThreadParams p, std::function<void()> function) {
+        p.storage->function = function;
+        p.storage->thread = chThdCreateStatic(
+            p.workingArea,
+            p.workingAreaSize,
+            p.prio,
             &threadFunction,
-            &storage);
-        return ThreadImpl(&storage);
+            p.storage);
+        return ThreadImpl(p.storage);
     }
 
     ThreadImpl(): storage(nullptr) {}
@@ -50,6 +61,8 @@ public:
             chThdTerminate(storage->thread);
         }
     }
+
+    static bool shouldStop() { return chThdShouldTerminateX(); }
 
     void wait() {
         if (storage != nullptr) {

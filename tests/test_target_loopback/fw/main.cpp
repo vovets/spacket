@@ -41,11 +41,11 @@ int main(void) {
 
     chprintf(&rttStream, "RTT ready\r\n");
   
-    Thread::create(blinkerThreadStorage, NORMALPRIO - 2, blinkerThreadFunction);
-    Thread::create(echoThreadStorage, NORMALPRIO - 1, echoThreadFunction);
-    auto shellThread_ = Thread::create(shellThreadStorage, NORMALPRIO, [] { shellThread(const_cast<ShellConfig*>(&shellConfig)); });
+    Thread::create(Thread::params(blinkerThreadStorage, NORMALPRIO - 2), blinkerThreadFunction);
+    Thread::create(Thread::params(echoThreadStorage, NORMALPRIO - 1), echoThreadFunction);
+    auto shellThread_ = Thread::create(Thread::params(shellThreadStorage, NORMALPRIO), [] { shellThread(const_cast<ShellConfig*>(&shellConfig)); });
     chRegSetThreadNameX(shellThread_.nativeHandle(), "shell");
-    Thread::create(rxThreadStorage, NORMALPRIO + 1, rxThreadFunction);
+    Thread::create(Thread::params(rxThreadStorage, NORMALPRIO + 1), rxThreadFunction);
 
     while (true) {
         port_wait_for_interrupt();

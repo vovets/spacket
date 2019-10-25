@@ -156,8 +156,8 @@ int main(void) {
 
     auto globals = std::move(getOkUnsafe(Globals::init() <= fatal<Globals>));
 
-    Thread::create(txThreadStorage, NORMALPRIO, [&] { txThreadFunction(&globals); });
-    Thread::create(rxThreadStorage, NORMALPRIO + 1, [&] { rxThreadFunction(&globals); });
+    Thread::create(Thread::params(txThreadStorage, NORMALPRIO), [&] { txThreadFunction(&globals); });
+    Thread::create(Thread::params(rxThreadStorage, NORMALPRIO + 1), [&] { rxThreadFunction(&globals); });
 
     for (;;) {
         port_wait_for_interrupt();

@@ -33,25 +33,19 @@ struct PacketDeviceImpl: PacketDeviceImplBase<Buffer>,
     using SerialDevice = SerialDeviceT<Buffer>;
     using Mailbox = MailboxT<Result<Buffer>>;
     using ThreadStorage = ThreadStorageT<512>;
-    
+
     static Result<ThisPtr> open(SerialDevice&& serialDevice, void* storage, tprio_t threadPriority);
 
-    static void readThreadFunction_(void* instance) {
-        chRegSetThreadName("pd");
-        static_cast<This*>(instance)->readThreadFunction();
-    }
-
     PacketDeviceImpl(Buffer&& buffer, SerialDevice&& serialDevice, tprio_t threadPriority);
-    virtual ~PacketDeviceImpl();
 
     Result<boost::blank> reportError(Error e) override;
 
-    ThreadStorage readThreadStorage;
-    Thread readThread;
+    ThreadStorage threadStorage;
 };
 
 template <typename Buffer>
-Result<boost::intrusive_ptr<PacketDeviceImpl<Buffer>>> PacketDeviceImpl<Buffer>::open(SerialDevice&& serialDevice, void* storage, tprio_t threadPriority) {
+Result<boost::intrusive_ptr<PacketDeviceImpl<Buffer>>>
+PacketDeviceImpl<Buffer>::open(SerialDevice&& serialDevice, void* storage, tprio_t threadPriority) {
     return
     Buffer::create(Buffer::maxSize()) >=
     [&] (Buffer&& buffer) {
@@ -71,15 +65,9 @@ PacketDeviceImpl<Buffer>::PacketDeviceImpl(
     tprio_t threadPriority)
     : Base(
         std::move(buffer),
-        std::move(serialDevice))
+        std::move(serialDevice),
+        Thread::params(threadStorage, threadPriority))
 {
-    Thread::create(readThreadStorage, threadPriority, [&] { this->readThreadFunction(); });
-}
-
-template <typename Buffer>
-PacketDeviceImpl<Buffer>::~PacketDeviceImpl() {
-    Base::requestStop();
-    readThread.wait();
 }
 
 template <typename Buffer>

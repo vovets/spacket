@@ -2,12 +2,18 @@
 
 #include <spacket/impl/thread_impl_p.h>
 
+
+struct ThreadParams;
+
 class Thread: public ThreadImpl {
     using Impl = ThreadImpl;
+    
 public:
     template <typename ...U>
-    static Thread create(U&&... u) {
-        return ThreadImpl::template create(std::forward<U>(u)...);
+    static ThreadParams params(U&&... u) { return Impl::params(std::forward<U>(u)...); }
+    
+    static Thread create(ThreadParams p, std::function<void()> f) {
+        return { ThreadImpl::create(p, f) };
     }
 
     Thread() {}
@@ -24,8 +30,10 @@ public:
 
     void requestStop() { Impl::requestStop(); }
 
+    static bool shouldStop() { return Impl::shouldStop(); }
+
     void wait() { Impl::wait(); }
 
 private:
-    Thread(ThreadImpl&& impl): Impl(impl) {}
+    Thread(ThreadImpl&& impl): Impl(std::move(impl)) {}
 };

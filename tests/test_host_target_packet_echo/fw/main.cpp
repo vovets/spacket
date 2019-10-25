@@ -56,7 +56,7 @@ int main(void) {
 
     chprintf(&rttStream, "RTT ready\r\n");
   
-    Thread::create(echoThreadStorage, NORMALPRIO, echoThreadFunction);
+    Thread::create(Thread::params(echoThreadStorage, NORMALPRIO), echoThreadFunction);
 
     while (true) {
         port_wait_for_interrupt();

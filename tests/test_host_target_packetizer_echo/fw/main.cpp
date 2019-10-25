@@ -113,9 +113,9 @@ int main(void) {
 
     auto globals = std::move(getOkUnsafe(Globals::init() <= fatal<Globals>));
 
-    Thread::create(txThreadStorage, NORMALPRIO + 2, [&] { txThreadFunction(&globals); });
-    Thread::create(packetizerThreadStorage, NORMALPRIO + 1, [&] { packetizerThreadFunction(&globals); });
-    Thread::create(rxThreadStorage, NORMALPRIO, [&] { rxThreadFunction(&globals); });
+    Thread::create(Thread::params(txThreadStorage, NORMALPRIO + 2), [&] { txThreadFunction(&globals); });
+    Thread::create(Thread::params(packetizerThreadStorage, NORMALPRIO + 1), [&] { packetizerThreadFunction(&globals); });
+    Thread::create(Thread::params(rxThreadStorage, NORMALPRIO), [&] { rxThreadFunction(&globals); });
 
     while (true) {
         port_wait_for_interrupt();

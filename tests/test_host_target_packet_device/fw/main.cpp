@@ -100,7 +100,7 @@ int main(void) {
 
     auto globals = std::move(getOkUnsafe(Globals::init() <= fatal<Globals>));
 
-    Thread::create(echoThreadStorage, NORMALPRIO, [&] { echoThreadFunction(&globals); });
+    Thread::create(Thread::params(echoThreadStorage, NORMALPRIO), [&] { echoThreadFunction(&globals); });
 
     for (;;) {
         port_wait_for_interrupt();
