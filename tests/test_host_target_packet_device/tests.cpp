@@ -116,7 +116,7 @@ Result<std::vector<Buffer>> receive(SerialDevice& sd, std::promise<void>& launch
             return ok(std::move(received));
         } <=
         [&](Error e) {
-            if (e == toError(ErrorCode::SerialDeviceReadTimeout)) {
+            if (e == toError(ErrorCode::ReadTimeout)) {
                 return fail<Buffer>(toError(ErrorCode::Timeout));
             }
             return fail<Buffer>(e);
@@ -296,7 +296,7 @@ TEST_CASE("20") {
     runCase2(
     {
         {},
-        fail<Buffer>(toError(ErrorCode::PacketDeviceReadTimeout)),
+        fail<Buffer>(toError(ErrorCode::ReadTimeout)),
         defaultHoldOff
     },
     REP);
@@ -306,7 +306,7 @@ TEST_CASE("21") {
     runCase2(
     {
         buf(0),
-        fail<Buffer>(toError(ErrorCode::PacketDeviceReadTimeout)),
+        fail<Buffer>(toError(ErrorCode::ReadTimeout)),
         defaultHoldOff
     },
     REP);

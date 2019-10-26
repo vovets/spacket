@@ -110,7 +110,7 @@ void PacketDeviceImplBase<Buffer, LowerLevel>::readThreadFunction() {
             return ok(boost::blank());
         } <=
         [&] (Error e) {
-            if (e == toError(ErrorCode::SerialDeviceReadTimeout)) {
+            if (e == toError(ErrorCode::ReadTimeout)) {
                 // do nothing, just chance to stop
                 return ok(boost::blank());
             }
@@ -149,7 +149,7 @@ Result<Buffer> PacketDeviceImplBase<Buffer, LowerLevel>::read(Timeout t) {
     } <=
     [&] (Error e) {
         if (e == toError(ErrorCode::Timeout)) {
-            return fail<Buffer>(toError(ErrorCode::PacketDeviceReadTimeout));
+            return fail<Buffer>(toError(ErrorCode::ReadTimeout));
         }
         return fail<Buffer>(e);
     };

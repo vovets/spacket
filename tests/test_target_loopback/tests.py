@@ -93,7 +93,7 @@ def test_rx_timeout(conn, reset):
 
     conn.expect_line(b"test_loopback 200 10 1")
     for i in range(0, 10):
-        conn.expect_line(b"FAILURE\[404:SerialDeviceReadTimeout\]")
+        conn.expect_line(b"FAILURE\[404:ReadTimeout\]")
     conn.expect(b"ch> ")
 
 

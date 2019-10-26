@@ -136,7 +136,7 @@ TEST_CASE("timeout", "[loopback]") {
                 REQUIRE_THAT(rb, isEqualTo(wb));
                 auto r = sd.read(ch::milliseconds(10));
                 REQUIRE(isFail(r));
-                REQUIRE(getFailUnsafe(r) == toError(ErrorCode::SerialDeviceReadTimeout));
+                REQUIRE(getFailUnsafe(r) == toError(ErrorCode::ReadTimeout));
                 return ok(boost::blank{});
             };
         };

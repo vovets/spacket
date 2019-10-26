@@ -120,7 +120,7 @@ Result<size_t> NativeDevice::Impl::read(uint8_t* buffer, size_t maxRead, Timeout
     }
     TRACE("<2== " << cur - buffer);
     if (cur == buffer) {
-        return fail<size_t>(toError(ErrorCode::SerialDeviceReadTimeout));
+        return fail<size_t>(toError(ErrorCode::ReadTimeout));
     }
     return ok(static_cast<size_t>(cur - buffer));
 }

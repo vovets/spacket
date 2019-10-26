@@ -120,7 +120,7 @@ TEST_CASE("20") {
     runCase2(
         {
             {},
-            fail<Buffer>(toError(ErrorCode::PacketDeviceReadTimeout)),
+            fail<Buffer>(toError(ErrorCode::ReadTimeout)),
             defaultHoldOff
         },
         REP

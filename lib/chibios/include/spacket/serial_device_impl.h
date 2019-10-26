@@ -216,7 +216,7 @@ Result<Buffer> SerialDeviceImpl<Buffer>::read(Timeout t) {
     } <=
     [] (Error e) {
         if (e == toError(ErrorCode::Timeout)) {
-            return fail<Buffer>(toError(ErrorCode::SerialDeviceReadTimeout));
+            return fail<Buffer>(toError(ErrorCode::ReadTimeout));
         }
         return fail<Buffer>(e);
     };
@@ -232,7 +232,7 @@ Result<boost::blank> SerialDeviceImpl<Buffer>::write(const uint8_t* buffer, size
     }
     osalSysUnlock();
     serial_device_impl::dpl("write: msg=%d", msg);
-    return msg == MSG_OK ? ok(boost::blank()) : fail<boost::blank>(toError(ErrorCode::SerialDeviceWriteTimeout));
+    return msg == MSG_OK ? ok(boost::blank()) : fail<boost::blank>(toError(ErrorCode::WriteTimeout));
 }
 
 template <typename Buffer>

@@ -93,7 +93,7 @@ Result<std::vector<Buffer>> receive(SerialDevice& sd, std::promise<void>& launch
             return ok(std::move(received));
         } <=
         [&](Error e) {
-            if (e == toError(ErrorCode::SerialDeviceReadTimeout)) {
+            if (e == toError(ErrorCode::ReadTimeout)) {
                 return fail<Buffer>(toError(ErrorCode::Timeout));
             }
             return fail<Buffer>(e);

@@ -15,8 +15,8 @@
     X(ID(SerialDeviceInitFailed),    CODE(400),   SEP())  \
     X(ID(SerialDeviceReadError),     CODE(401),   SEP())  \
     X(ID(SerialDeviceWriteError),    CODE(402),   SEP())  \
-    X(ID(SerialDeviceWriteTimeout),  CODE(403),   SEP())  \
-    X(ID(SerialDeviceReadTimeout),   CODE(404),   SEP())  \
+    X(ID(WriteTimeout),              CODE(403),   SEP())  \
+    X(ID(ReadTimeout),               CODE(404),   SEP())  \
     X(ID(SerialDeviceAlreadyOpened), CODE(405),   SEP())  \
     X(ID(BufferCreateTooBig),        CODE(500),   SEP())  \
     X(ID(CobsBadEncoding),           CODE(600),   SEP())  \
@@ -26,7 +26,6 @@
     X(ID(PacketizerOverflow),        CODE(900),   SEP())  \
     X(ID(PacketDropped),             CODE(1000),  SEP())  \
     X(ID(PacketTooBig),              CODE(1001),  SEP())  \
-    X(ID(PacketDeviceReadTimeout),   CODE(1100),  SEP())  \
     X(ID(CrcBad),                    CODE(1200),  SEP())  \
     X(ID(CrcAppendBufferTooBig),     CODE(1201),  SEP())  \
     X(ID(CrcAppendZeroSizeBuffer),   CODE(1202),  SEP())  \

@@ -4,6 +4,7 @@
 #include <spacket/thread.h>
 #include <spacket/impl/packet_device_impl_base.h>
 
+#include <boost/smart_ptr/intrusive_ptr.hpp>
 #include <boost/smart_ptr/intrusive_ref_counter.hpp>
 
 namespace packet_device_impl {

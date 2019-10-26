@@ -64,7 +64,7 @@ Result<Buffer> readFull(SerialDevice& sd, Timeout timeout, std::promise<void>& l
         } <=
         [&](Error e) {
             finished = true;
-            if (e == toError(ErrorCode::SerialDeviceReadTimeout)) {
+            if (e == toError(ErrorCode::ReadTimeout)) {
                 return ok(boost::blank{});
             }
             result = fail<SuccessT<decltype(result)>>(e);
