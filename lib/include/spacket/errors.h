@@ -30,6 +30,9 @@
     X(ID(CrcAppendBufferTooBig),     CODE(1201),  SEP())  \
     X(ID(CrcAppendZeroSizeBuffer),   CODE(1202),  SEP())  \
     X(ID(CrcCheckBufferTooSmall),    CODE(1203),  SEP())  \
+    X(ID(MultiplexerBadChannel),     CODE(1300),  SEP())  \
+    X(ID(MultiplexerBufferTooBig),   CODE(1301),  SEP())  \
+    X(ID(MultiplexerBufferTooSmall), CODE(1302),  SEP())  \
     X(ID(MiserableFailure0),         CODE(10000), SEP())  \
     X(ID(MiserableFailure1),         CODE(10001), SEP())  \
     X(ID(MiserableFailure9),         CODE(10010), )

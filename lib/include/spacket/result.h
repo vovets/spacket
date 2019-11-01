@@ -20,8 +20,9 @@ struct Result {
 
     ValueType value;
 
-    // Result(const Result&) = default;
-    // Result(Result&&) = default;
+     Result(const Result&) = delete;
+     Result(Result&&) = default;
+     Result& operator=(Result&&) = default;
 };
 
 template <typename Success>

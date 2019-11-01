@@ -4,7 +4,7 @@
 
 template <typename Buffer>
 void debugPrintBuffer(const Buffer& b) {
-    debugPrint("%x %d:[", b.id(), b.size());
+    debugPrint("%p %d:[", b.id(), b.size());
 #ifdef DEBUG_PRINT_BUFFER_FULL
     bool first = true;
     for (auto c: b) {

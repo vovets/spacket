@@ -6,7 +6,7 @@
 #include <boost/preprocessor/cat.hpp>
 
 #define returnOnFail(var, expr)                                         \
-    auto BOOST_PP_CAT(var, __tmp) = expr;                               \
+    auto BOOST_PP_CAT(var, __tmp) = std::move(expr);                    \
     if (isFail(BOOST_PP_CAT(var, __tmp))) {                             \
         using Type = SuccessT<decltype(expr)>;                          \
         return fail<Type>(getFailUnsafe(BOOST_PP_CAT(var, __tmp)));     \
@@ -46,4 +46,20 @@ operator<<(std::ostream& os, Hr<Result> hr_) {
         os << "fail[" << toString(getFailUnsafe(hr_.w)) << "]";
     }
     return os;
+}
+
+template<typename Result>
+typename std::enable_if_t<
+std::is_same<typename Result::TypeId, result_impl::TypeId>::value,
+bool>
+operator==(const Result& lhs, const Result& rhs) {
+        return lhs.value == rhs.value;
+}
+
+template<typename Result>
+typename std::enable_if_t<
+std::is_same<typename Result::TypeId, result_impl::TypeId>::value,
+bool>
+operator!=(const Result& lhs, const Result& rhs) {
+    return !operator==(lhs, rhs);
 }

@@ -17,8 +17,10 @@ struct MailboxImplT {
     
     Result<Message> fetch(Timeout timeout) {
         std::unique_lock<std::mutex> lock(mutex);
-        if (full.wait_for(lock, timeout, [&] { return !!message; })) {
-            return ok(std::move(message.value()));
+        if (full.wait_for(lock, timeout, [this] { return !!message; })) {
+            Message m = std::move(*message);
+            message = {};
+            return ok(std::move(m));
         }
         return fail<Message>(toError(ErrorCode::Timeout));
     }

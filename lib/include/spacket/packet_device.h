@@ -24,10 +24,8 @@ public:
     }
 
     PacketDeviceT(const PacketDeviceT&) = delete;
+    
     PacketDeviceT(PacketDeviceT&&) = default;
-
-    ~PacketDeviceT() {
-    }
 
     Result<Buffer> read(Timeout t) {
         return impl->read(t);

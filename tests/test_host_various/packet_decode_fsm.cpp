@@ -26,7 +26,7 @@ struct Case {
 
 struct DecodeResult {
     std::vector<Buffer> decoded;
-    Result<boost::blank> result;
+    Result<boost::blank> result = fail<boost::blank>(toError(ErrorCode::MiserableFailure0));
     std::size_t consumed = 0;
 };
 

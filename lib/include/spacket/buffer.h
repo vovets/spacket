@@ -88,6 +88,12 @@ public:
     
     BufferT(BufferT&& toMove) noexcept;
     BufferT& operator=(BufferT&& toMove) noexcept;
+
+    BufferT(const BufferT&) = delete;
+    BufferT& operator=(const BufferT&) = delete;
+
+    ~BufferT();
+
     
     uint8_t* begin();
     uint8_t* end();
@@ -122,7 +128,13 @@ template<typename Allocator>
 inline
 BufferT<Allocator>::BufferT(StoragePtr&& storage)
     : storage(std::move(storage)) {
-    dpl("buffer created: %x", this->storage.get());
+    dpl("buffer: ctor: %p", this->storage.get());
+}
+
+template<typename Allocator>
+inline
+BufferT<Allocator>::~BufferT() {
+    dpl("buffer: dtor: %p", this->storage.get());
 }
 
 template<typename Allocator>
@@ -169,14 +181,14 @@ template<typename Allocator>
 inline
 BufferT<Allocator>::BufferT(BufferT&& toMove) noexcept
     : storage(std::move(toMove.storage)) {
-    dpl("buffer: moved %x", storage.get());
+    dpl("buffer: move ctor: %p", storage.get());
 }
 
 template<typename Allocator>
 inline
 BufferT<Allocator>& BufferT<Allocator>::operator=(BufferT&& toMove) noexcept {
     storage = std::move(toMove.storage);
-    dpl("buffer: moved %x", storage.get());
+    dpl("buffer: move asgn: %p", storage.get());
     return *this;
 }
 

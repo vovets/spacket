@@ -64,7 +64,7 @@ TEST_CASE("read prefix", "[loopback]") {
                 };
             };
         };
-        throwOnFail(result);
+        throwOnFail(std::move(result));
     };
     runTest(test);
 }
@@ -100,7 +100,7 @@ TEST_CASE("read whole", "[loopback]") {
                 return ok(boost::blank{});
             };
         };
-        throwOnFail(result);
+        throwOnFail(std::move(result));
     };
 
     runTest(test);
@@ -140,7 +140,7 @@ TEST_CASE("timeout", "[loopback]") {
                 return ok(boost::blank{});
             };
         };
-        throwOnFail(result);
+        throwOnFail(std::move(result));
     };
 
     runTest(test);
