@@ -18,9 +18,13 @@ struct PacketDeviceImpl: PacketDeviceImplBase<Buffer, LowerLevel>,
     using Base = PacketDeviceImplBase<Buffer, LowerLevel>;
     using ThisPtr = boost::intrusive_ptr<This>;
 
+    using Base::start;
+    using Base::wait;
+
     static Result<ThisPtr> open(LowerLevel&& serialDevice);
 
     PacketDeviceImpl(Buffer&& buffer, LowerLevel&& serialDevice);
+    ~PacketDeviceImpl();
 
     Result<boost::blank> reportError(Error e) override;
 };
@@ -47,6 +51,12 @@ LowerLevel&& serialDevice)
         std::move(serialDevice),
         Thread::params())
 {
+    start();
+}
+
+template <typename Buffer, typename LowerLevel>
+PacketDeviceImpl<Buffer, LowerLevel>::~PacketDeviceImpl() {
+    wait();
 }
 
 template <typename Buffer, typename LowerLevel>

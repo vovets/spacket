@@ -2,26 +2,13 @@
 
 #include "chprintf.h"
 
-void debugPrintStart() {
-    chprintf(debugPrintStream, "D:%s: ", chRegGetThreadNameX(chThdGetSelfX()));
-}
+#include <cstdarg>
 
-void debugPrint(const char *fmt, ...) {
-    va_list ap;
-    va_start(ap, fmt);
-    chvprintf(debugPrintStream, fmt, ap);
-    va_end(ap);
+
+void debugPrint_(const char *fmt, std::va_list args) {
+    chvprintf(debugPrintStream, fmt, args);
 }
 
 void debugPrintFinish() {
-    chprintf(debugPrintStream, "\r\n");
-}
-
-void debugPrintLine(const char *fmt, ...) {
-    va_list ap;
-    debugPrintStart();
-    va_start(ap, fmt);
-    chvprintf(debugPrintStream, fmt, ap);
-    va_end(ap);
-    debugPrintFinish();
+    debugPrint("\r\n");
 }

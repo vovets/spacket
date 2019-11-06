@@ -31,11 +31,15 @@ struct PacketDeviceImpl: PacketDeviceImplBase<Buffer, LowerLevel>,
     using Base = PacketDeviceImplBase<Buffer, LowerLevel>;
     using ThisPtr = boost::intrusive_ptr<This>;
     using Mailbox = MailboxT<Result<Buffer>>;
-    using ThreadStorage = ThreadStorageT<512>;
+    using ThreadStorage = ThreadStorageT<400>;
+
+    using Base::start;
+    using Base::wait;
 
     static Result<ThisPtr> open(LowerLevel&& serialDevice, void* storage, tprio_t threadPriority);
 
     PacketDeviceImpl(Buffer&& buffer, LowerLevel&& serialDevice, tprio_t threadPriority);
+    ~PacketDeviceImpl();
 
     Result<boost::blank> reportError(Error e) override;
 
@@ -67,6 +71,12 @@ tprio_t threadPriority)
         std::move(serialDevice),
         Thread::params(threadStorage, threadPriority))
 {
+    start();
+}
+
+template <typename Buffer, typename LowerLevel>
+PacketDeviceImpl<Buffer, LowerLevel>::~PacketDeviceImpl() {
+    wait();
 }
 
 template <typename Buffer, typename LowerLevel>

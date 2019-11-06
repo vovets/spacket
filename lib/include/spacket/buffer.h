@@ -53,7 +53,7 @@ template<typename Allocator>
 class BufferT: private buffer_impl::BufferDebug {
 private:
     struct Storage { 
-       buffer_impl::Header header;
+        buffer_impl::Header header;
         uint8_t buffer[];
     };
 

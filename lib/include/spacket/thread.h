@@ -16,10 +16,17 @@ public:
         return { ThreadImpl::create(p, f) };
     }
 
+    static void checkStack() { Impl::checkStack(); }
+    static void setName(const char* name) { Impl::setName(name); }
+    static const char* getName() { return Impl::getName(); }
+
     Thread() {}
 
     Thread(Thread&&) = default;
-    Thread& operator=(Thread&&) = default;
+    Thread& operator=(Thread&& from) {
+        Impl::operator=(std::move(from));
+        return *this;
+    }
 
     Thread(const Thread&) = delete;
     Thread& operator=(const Thread&) = delete;

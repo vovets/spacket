@@ -46,13 +46,20 @@ public:
         return ThreadImpl(p.storage);
     }
 
+    static void checkStack() {
+        if (*((uint32_t*)chThdGetWorkingAreaX(chThdGetSelfX())) != 0x55555555U) {
+            chSysHalt("stack base overrun");
+        }
+    }
+    
+
     ThreadImpl(): storage(nullptr) {}
 
     static void threadFunction(void* arg) {
         static_cast<ThreadStorageBase *>(arg)->function();
     }
 
-    NativeHandle nativeHandle() { return storage != nullptr ? storage->thread : nullptr; }
+    NativeHandle nativeHandle() { return storage == nullptr ? nullptr : storage->thread; }
 
     bool joinable() const { return storage != nullptr; }
 
@@ -63,6 +70,8 @@ public:
     }
 
     static bool shouldStop() { return chThdShouldTerminateX(); }
+    static void setName(const char* name) { chRegSetThreadName(name); }
+    static const char* getName() { return chRegGetThreadNameX(chThdGetSelfX()); }
 
     void wait() {
         if (storage != nullptr) {

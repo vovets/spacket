@@ -22,10 +22,16 @@ void debugPrintLine(const char*, U&&...) {}
 
 template <size_t OBJECT_SIZE, size_t NUM_OBJECTS>
 class GuardedMemoryPoolT {
-public:
+private:
     GuardedMemoryPoolT()
         : pool(_GUARDEDMEMORYPOOL_DATA(pool, OBJECT_SIZE)) {
         chGuardedPoolLoadArray(&pool, data, NUM_OBJECTS);
+    }
+
+public:
+    static GuardedMemoryPoolT<OBJECT_SIZE, NUM_OBJECTS>& instance() {
+        static GuardedMemoryPoolT<OBJECT_SIZE, NUM_OBJECTS> pool;
+        return pool;
     }
 
     Result<void*> allocate() {

@@ -53,7 +53,7 @@ class SerialDeviceImpl {
 private:
     using This = SerialDeviceImpl<Buffer>;
     using Mailbox = MailboxT<Result<Buffer>>;
-    using ThreadStorage = ThreadStorageT<256>;
+    using ThreadStorage = ThreadStorageT<280>;
 
 public:
     template <typename SerialDevice>
@@ -118,6 +118,7 @@ UARTConfig SerialDeviceImpl<Buffer>::config = {
     .rxchar_cb = nullptr,
     .rxerr_cb = rxError_,
     .timeout_cb = rxIdle_,
+    .timeout = 0,
     .speed = 921600,
 //    .speed = 115200,
     .cr1 = USART_CR1_IDLEIE,
@@ -195,7 +196,6 @@ template <typename Buffer>
 void SerialDeviceImpl<Buffer>::start(tprio_t threadPriority) {
     uartStart(driver.get(), &config);
     readThread = Thread::create(Thread::params(readThreadStorage, threadPriority), This::readThreadFunction_);
-    chRegSetThreadNameX(readThread.nativeHandle(), "sd");
 }
 
 template <typename Buffer>
@@ -231,84 +231,88 @@ Result<boost::blank> SerialDeviceImpl<Buffer>::write(const uint8_t* buffer, size
         uartStopSendI(driver.get());
     }
     osalSysUnlock();
-    serial_device_impl::dpl("write: msg=%d", msg);
+    serial_device_impl::dpl("sdi::write|msg=%d", msg);
     return msg == MSG_OK ? ok(boost::blank()) : fail<boost::blank>(toError(ErrorCode::WriteTimeout));
 }
 
 template <typename Buffer>
 void SerialDeviceImpl<Buffer>::txend2_(UARTDriver*) {
-    serial_device_impl::dpl("txend2_: instance=%x", instance);
+    osalSysLockFromISR();
+    serial_device_impl::dpl("sdi::txend2_|instance=%x", instance);
     if (instance != nullptr) {
         instance->txCompleted();
     }
+    osalSysUnlockFromISR();
 }
 
 template <typename Buffer>
-void SerialDeviceImpl<Buffer>::rxIdle_(UARTDriver*) {
-    serial_device_impl::dpl("rxIdle_: instance=%x", instance);
-    if (instance != nullptr) {
+void SerialDeviceImpl<Buffer>::rxIdle_(UARTDriver* driver) {
+    osalSysLockFromISR();
+    serial_device_impl::dpl("sdi::rxIdle_|instance=%x", instance);
+    if (instance != nullptr && driver->rxstate == UART_RX_ACTIVE) {
+        // if we received exactly maxSize bytes then rxCompleted_ will fire
+        // and then rxIdle_, so we do nothing in rxIdle_ in that case
+        // because rxCompleted_ will handle everything
+        //
         // note that we call rxCompleted here
         instance->rxCompleted();
     }
+    osalSysUnlockFromISR();
 }
 
 template <typename Buffer>
 void SerialDeviceImpl<Buffer>::rxCompleted_(UARTDriver*) {
-    serial_device_impl::dpl("rxCompleted_: instance=%x", instance);
+    osalSysLockFromISR();
+    serial_device_impl::dpl("sdi::rxCompleted_|instance=%x", instance);
     if (instance != nullptr) {
         instance->rxCompleted();
     }
+    osalSysUnlockFromISR();
 }
 
 template <typename Buffer>
 void SerialDeviceImpl<Buffer>::rxError_(UARTDriver*, uartflags_t) {
-    serial_device_impl::dpl("rxError_");
+    serial_device_impl::dpl("sdi::rxError_");
 }
 
 template <typename Buffer>
 void SerialDeviceImpl<Buffer>::rxCompleted() {
-    osalSysLockFromISR();
+    serial_device_impl::dpl("sdi::rxCompleted");
     auto notReceived = uartStopReceiveI(driver.get());
     osalThreadResumeI(&readThreadRef, notReceived);
-    osalSysUnlockFromISR();
 }
 
 template <typename Buffer>
 void SerialDeviceImpl<Buffer>::txCompleted() {
-    osalSysLockFromISR();
     auto notSent = uartStopSendI(driver.get());
     osalThreadResumeI(&writeThreadRef, notSent);
-    osalSysUnlockFromISR();
 }
 
 template <typename Buffer>
 void SerialDeviceImpl<Buffer>::handleReceivedData_(std::size_t notReceived) {
+    serial_device_impl::dpl("sdi::handleReceivedData_|notReceived=%d", notReceived);
     Buffer::create(Buffer::maxSize()) >=
     [&] (Buffer&& newBuffer) {
+        instance->readBuffer.resize(Buffer::maxSize() - notReceived);
+        auto message = ok(std::move(instance->readBuffer));
         return
-        readMailbox.fetch(immediateTimeout()) >=
-        [] (Result<Buffer>&& result) { auto tmp = std::move(result); return ok(boost::blank()); } <=
-        [] (Error){ return ok(boost::blank()); } >
-        [&] () {
-            instance->readBuffer.resize(Buffer::maxSize() - notReceived);
-            auto message = ok(std::move(instance->readBuffer));
-            return
-            readMailbox.post(message, immediateTimeout()) >
+            readMailbox.replace(message) >
             [&]() {
                 instance->readBuffer = std::move(newBuffer);
+                serial_device_impl::dpl("sdi::handleReceivedData_|replaced");
                 return ok(boost::blank());
             };
-        };
     } <= threadErrorReport;
 }
 
 template <typename Buffer>
 void SerialDeviceImpl<Buffer>::readThreadFunction_() {
-    while (!chThdShouldTerminateX()) {
+    Thread::setName("sd");
+    while (!Thread::shouldStop()) {
         osalSysLock();
         uartStartReceiveI(instance->driver.get(), Buffer::maxSize(), instance->readBuffer.begin());
         auto result = osalThreadSuspendS(&readThreadRef);
-        serial_device_impl::dpl("readThreadFunction_: result=%d", result);
+        serial_device_impl::dpl("sdi::readThreadFunction_|result=%d", result);
         osalSysUnlock();
         if (result >= 0) {
             handleReceivedData_(result);

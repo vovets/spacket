@@ -10,10 +10,13 @@ struct MultiplexerImplT: MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>,
     using Base = MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>;
     using ThisPtr = boost::intrusive_ptr<This>;
 
+    using Base::start;
+    using Base::wait;
+
     static Result<ThisPtr> open(LowerLevel&& lowerLevel);
 
     MultiplexerImplT(LowerLevel&& lowerLevel);
-    virtual ~MultiplexerImplT() {}
+    virtual ~MultiplexerImplT();
 
     Result<boost::blank> reportError(Error e) override;
 };
@@ -31,6 +34,12 @@ MultiplexerImplT<Buffer, LowerLevel, NUM_CHANNELS>::MultiplexerImplT(
         std::move(lowerLevel),
         Thread::params())
 {
+    start();
+}
+
+template <typename Buffer, typename LowerLevel, std::uint8_t NUM_CHANNELS>
+MultiplexerImplT<Buffer, LowerLevel, NUM_CHANNELS>::~MultiplexerImplT() {
+    wait();
 }
 
 template <typename Buffer, typename LowerLevel, std::uint8_t NUM_CHANNELS>

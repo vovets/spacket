@@ -1,14 +1,37 @@
 #pragma once
 
 #include <spacket/debug_print_impl.h>
+#include <spacket/thread.h>
 
 #include <utility>
+#include <cstdarg>
 
-void debugPrint(const char *fmt, ...);
-void debugPrintStart();
+
+void debugPrint_(const char *fmt, std::va_list args);
 void debugPrintFinish();
 
-void debugPrintLine(const char *fmt, ...);
+inline
+void debugPrint(const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    debugPrint_(fmt, args);
+    va_end(args);
+}
+
+inline
+void debugPrintStart() {
+    debugPrint("D|%s|", Thread::getName());
+}
+
+inline
+void debugPrintLine(const char *fmt, ...) {
+    std::va_list args;
+    debugPrintStart();
+    va_start(args, fmt);
+    debugPrint_(fmt, args);
+    va_end(args);
+    debugPrintFinish();
+}
 
 #define IMPLEMENT_DPL_FUNCTION                          \
                                                         \

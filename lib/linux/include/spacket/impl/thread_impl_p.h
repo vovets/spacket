@@ -3,9 +3,22 @@
 #include <thread>
 #include <future>
 
+template <typename ValueType_>
+struct ThreadLocal {
+    using ValueType = ValueType_;
+    static thread_local ValueType value;
+};
+
+template <typename ValueType>
+typename ThreadLocal<ValueType>::ValueType thread_local ThreadLocal<ValueType>::value;
+
 namespace thread_impl {
 
-thread_local bool shouldStop = false;
+inline
+const char* defaultThreadName() { static const char* name = "noname"; return name; }
+
+using ShouldStop = ThreadLocal<bool>;
+using Name = ThreadLocal<const char*>;
 
 } // thread_impl
 
@@ -22,10 +35,21 @@ public:
         return { p, f };
     }
 
+    static void checkStack() {}
+    static void setName(const char* name) { thread_impl::Name::value = name; }
+    static const char* getName() { return thread_impl::Name::value; }
+
     ThreadImpl(ThreadImpl&& src)
     : thread(std::move(src.thread))
     , shouldStopPtr(src.shouldStopPtr) {
         src.shouldStopPtr = nullptr;
+    }
+
+    ThreadImpl& operator=(ThreadImpl&& from) {
+        thread = std::move(from.thread);
+        shouldStopPtr = from.shouldStopPtr;
+        from.shouldStopPtr = nullptr;
+        return *this;
     }
 
     ThreadImpl(const ThreadImpl&) = delete;
@@ -38,7 +62,7 @@ public:
 
     void requestStop() { *shouldStopPtr = true; }
 
-    static bool shouldStop() { return thread_impl::shouldStop; }
+    static bool shouldStop() { return thread_impl::ShouldStop::value; }
 
     void wait() { thread.join(); }
 
@@ -51,7 +75,9 @@ private:
         auto future = promise.get_future();
         thread = std::thread(
             [this, f, &promise] {
-                this->shouldStopPtr = &thread_impl::shouldStop;
+                thread_impl::ShouldStop::value = false;
+                thread_impl::Name::value = thread_impl::defaultThreadName();
+                this->shouldStopPtr = &thread_impl::ShouldStop::value;
                 promise.set_value();
                 f();
             });

@@ -1,4 +1,5 @@
 #include <spacket/debug_print.h>
+#include <spacket/thread.h>
 
 #include <thread>
 
@@ -12,28 +13,10 @@ const auto debugPrintStream = stderr;
 
 } // namespace
 
-void debugPrintStart() {
-    std::ostringstream ss;
-    ss << std::this_thread::get_id();
-    fprintf(debugPrintStream, "D: %s:", ss.str().c_str());
-}
-
-void debugPrint(const char *fmt, ...) {
-    va_list ap;
-    va_start(ap, fmt);
-    vfprintf(debugPrintStream, fmt, ap);
-    va_end(ap);
+void debugPrint_(const char *fmt, std::va_list args) {
+    vfprintf(debugPrintStream, fmt, args);
 }
 
 void debugPrintFinish() {
-    fprintf(debugPrintStream, "\n");
-}
-
-void debugPrintLine(const char *fmt, ...) {
-    va_list ap;
-    debugPrintStart();
-    va_start(ap, fmt);
-    vfprintf(debugPrintStream, fmt, ap);
-    va_end(ap);
-    debugPrintFinish();
+    debugPrint("\n");
 }

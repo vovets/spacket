@@ -13,7 +13,7 @@ extern BaseSequentialStream* errorReportStream;
 
 template <typename Success = boost::blank>
 Result<Success> threadErrorReportT(Error e) {
-    chprintf(errorReportStream, "E:%s: %s\r\n", chRegGetThreadNameX(chThdGetSelfX()), toString(e));
+    chprintf(errorReportStream, "E|%s|%s\r\n", Thread::getName(), toString(e));
     return fail<Success>(e);
 }
 

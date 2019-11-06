@@ -19,7 +19,7 @@ struct MailboxImplT {
         std::unique_lock<std::mutex> lock(mutex);
         if (full.wait_for(lock, timeout, [this] { return !!message; })) {
             Message m = std::move(*message);
-            message = {};
+            message = boost::optional<Message>();
             return ok(std::move(m));
         }
         return fail<Message>(toError(ErrorCode::Timeout));

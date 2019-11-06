@@ -2,9 +2,11 @@
 
 #include <spacket/debug_print.h>
 
+#include <cstdarg>
+
 template <typename Buffer>
 void debugPrintBuffer(const Buffer& b) {
-    debugPrint("%p %d:[", b.id(), b.size());
+    debugPrint("%X %d:[", b.id(), b.size());
 #ifdef DEBUG_PRINT_BUFFER_FULL
     bool first = true;
     for (auto c: b) {
@@ -24,19 +26,29 @@ void debugPrintBuffer(const Buffer& b) {
 }
 
 template <typename Buffer>
-void debugPrintBuffer(const char* message, const Buffer& b) {
+void debugPrintBuffer_(const char* fmt, const Buffer& b, std::va_list args) {
     debugPrintStart();
-    debugPrint("%s", message);
+    debugPrint_(fmt, args);
     debugPrintBuffer(b);
     debugPrintFinish();
 }
 
+template <typename Buffer>
+void debugPrintBuffer(const char* fmt, const Buffer& b, ...) {
+    va_list args;
+    va_start(args, b);
+    debugPrintBuffer_(fmt, b, args);
+    va_end(args);
+}
 #define IMPLEMENT_DPB_FUNCTION                          \
-    void dpb(const char* message, const Buffer& b) {    \
-        debugPrintBuffer(message, b);                   \
+    void dpb(const char* fmt, const Buffer& b, ...) {    \
+        std::va_list args;                                   \
+        va_start(args, b);                              \
+        debugPrintBuffer_(fmt, b, args);                   \
+        va_end(args);                                    \
     }
 
 #define IMPLEMENT_DPB_FUNCTION_NOP                      \
-    void dpb(const char*, const Buffer&) {}
+    void dpb(const char*, const Buffer&, ...) {}
 
 #define DPB(VAR_NAME) dpb(#VAR_NAME ": ", VAR_NAME)

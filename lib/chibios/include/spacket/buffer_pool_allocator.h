@@ -3,18 +3,18 @@
 #include <spacket/result.h>
 #include <spacket/errors.h>
 
-template <typename Pool, Pool& pool>
+template <typename Pool>
 class PoolAllocatorT {
 public:
     Result<void*> allocate(std::size_t size) {
         if (size > Pool::objectSize()) {
             return fail<void*>(toError(ErrorCode::PoolAllocatorObjectTooBig));
         }
-        return pool.allocate();
+        return Pool::instance().allocate();
     }
 
     void deallocate(void* ptr) {
-        pool.deallocate(ptr);
+        Pool::instance().deallocate(ptr);
     }
 
     static constexpr size_t maxSize() { return Pool::objectSize(); }
