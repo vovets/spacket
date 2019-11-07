@@ -1,4 +1,4 @@
-#include <spacket/serial_device_impl.h>
+#include <spacket/impl/serial_device_impl_p.h>
 #include "logging.h"
 #include "traced_call.h"
 #include "namespaces.h"

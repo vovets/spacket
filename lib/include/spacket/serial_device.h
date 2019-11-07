@@ -1,6 +1,6 @@
 #pragma once
 
-#include <spacket/serial_device_impl.h>
+#include <spacket/impl/serial_device_impl_p.h>
 
 #include <spacket/result.h>
 #include <spacket/time_utils.h>
