@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 project(test_target_crc_device_fw C CXX ASM)
 
 get_filename_component(SPACKET_ROOT ../../.. ABSOLUTE)
+set(EXTERNAL ${SPACKET_ROOT}/external)
 
 list(APPEND CMAKE_MODULE_PATH "${SPACKET_ROOT}/cmake")
 
@@ -15,7 +16,7 @@ list(APPEND SPACKET_EXCLUDED_FEATURES serial_device)
 set(debug_optimization_flags -Os)
 set(CH_CPU cortex-m3)
 set(CH_MCU_NAME STM32F103x8)
-set(CH_ROOT_DIR [[${SPACKET_EXT}/chibios]])
+set(CH_ROOT_DIR [[${EXTERNAL}/chibios]])
 
 fw_vars_set()
 fw_add_executable(fw)
@@ -48,15 +49,14 @@ fw_include_directories(fw
   conf
   .
   ${CH_ROOT_DIR}/os/license
-  "${SPACKET_EXT}/SEGGER_RTT_V614c/RTT"
-  "${SPACKET_EXT}/boost_1_66_0"
+  "${EXTERNAL}/SEGGER_RTT_V614c/RTT"
+  "${EXTERNAL}/boost_1_66_0"
   )
 
 fw_sources(fw
-  "${SPACKET_EXT}/SEGGER_RTT_V614c/RTT/SEGGER_RTT.c"
+  "${EXTERNAL}/SEGGER_RTT_V614c/RTT/SEGGER_RTT.c"
   main.cpp
   system_halt_hook.cpp
   rtt_stream.cpp
-  buffer.cpp
   shell_commands.cpp
   )

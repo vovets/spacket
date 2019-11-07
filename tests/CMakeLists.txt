@@ -10,6 +10,8 @@ add_compile_options(-Wno-unused-comparison)
 
 get_filename_component(SPACKET_ROOT .. ABSOLUTE)
 
+set(EXTERNAL ${SPACKET_ROOT}/external)
+
 list(APPEND CMAKE_MODULE_PATH "${SPACKET_ROOT}/cmake")
 
 include(util)
