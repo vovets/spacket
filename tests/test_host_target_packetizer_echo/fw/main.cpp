@@ -61,7 +61,7 @@ private:
 
 Result<boost::blank> writeBuffer(SerialDevice& sd, Buffer&& b) {
     palClearPad(GPIOC, GPIOC_LED);
-    dpb("write: ", b);
+    dpb("write: ", &b);
     return
     sd.write(b) >
     [&]() {
@@ -77,7 +77,7 @@ static __attribute__((noreturn)) THD_FUNCTION(rxThreadFunction, arg) {
         dpl("tick");
         g.sd().read(INFINITE_TIMEOUT) >=
         [&](Buffer&& read) {
-            dpb("read: ", read);
+            dpb("read: ", &read);
             return packetizerIn.post(read, IMMEDIATE_TIMEOUT);
         } <=
         threadErrorReport;

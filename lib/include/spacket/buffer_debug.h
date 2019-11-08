@@ -51,4 +51,4 @@ void debugPrintBuffer(const char* fmt, const Buffer* b, ...) {
 #define IMPLEMENT_DPB_FUNCTION_NOP                      \
     void dpb(const char*, const Buffer*, ...) {}
 
-#define DPB(VAR_NAME) dpb(#VAR_NAME ": ", VAR_NAME)
+#define DPB(VAR_NAME) dpb(#VAR_NAME ": ", &VAR_NAME)
