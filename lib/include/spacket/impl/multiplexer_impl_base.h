@@ -100,7 +100,7 @@ Result<Buffer> MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>::read(std:
     return
     readMailboxes[c].fetch(t) >=
     [&] (Result<Buffer>&& r) {
-        dpb("mib::read|channel %d|fetched ", getOk(r), c);
+        dpb("mib::read|channel %d|fetched ", &getOk(r), c);
         return std::move(r);
     } <=
     [&] (Error e) {
@@ -122,7 +122,7 @@ Result<boost::blank> MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>::wri
     return
     Buffer::create(Buffer::maxSize()) >=
     [&] (Buffer&& newBuffer) {
-        dpb("mib::write|channel %d|", b, c);
+        dpb("mib::write|channel %d|", &b, c);
         newBuffer.begin()[0] = c;
         std::memcpy(newBuffer.begin() + 1, b.begin(), b.size());
         newBuffer.resize(b.size() + 1);
@@ -154,7 +154,7 @@ void MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>::readThreadFunction(
             [&] (Buffer&& newBuffer) {
                 std::memcpy(newBuffer.begin(), b.begin() + 1, b.size() - 1);
                 newBuffer.resize(b.size() -1);
-                dpb("mib::readThreadFunction|channel %d|", newBuffer, channel);
+                dpb("mib::readThreadFunction|channel %d|", &newBuffer, channel);
                 auto message = ok(std::move(newBuffer));
                 return
                 readMailboxes[channel].replace(message) >

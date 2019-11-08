@@ -111,7 +111,7 @@ void PacketDeviceImplBase<Buffer, LowerLevel>::readThreadFunction() {
     while (!Thread::shouldStop()) {
         lowerLevel.read(stopCheckPeriod) >=
         [&] (Buffer&& b) {
-            dpb("pdib::readThreadFunction|read ", b);
+            dpb("pdib::readThreadFunction|read ", &b);
             for (std::size_t i = 0; i < b.size(); ++i) {
                 auto r = decodeFSM.consume(b.begin()[i]) <=
                 [&] (Error e) {
@@ -135,7 +135,7 @@ void PacketDeviceImplBase<Buffer, LowerLevel>::readThreadFunction() {
 
 template <typename Buffer, typename LowerLevel>
 Result<boost::blank> PacketDeviceImplBase<Buffer, LowerLevel>::packetFinished(Buffer& buffer) {
-    dpb("pdib::packetFinished|", buffer);
+    dpb("pdib::packetFinished|", &buffer);
     return
     Buffer::create(Buffer::maxSize()) >=
     [&] (Buffer&& newBuffer) {
@@ -156,7 +156,7 @@ Result<Buffer> PacketDeviceImplBase<Buffer, LowerLevel>::read(Timeout t) {
     return
     readMailbox.fetch(t) >=
     [&] (Result<Buffer> r) {
-        dpb("pdib::read|fetched ", getOk(r));
+        dpb("pdib::read|fetched ", &getOk(r));
         return std::move(r);
     } <=
     [&] (Error e) {
@@ -172,7 +172,7 @@ Result<boost::blank> PacketDeviceImplBase<Buffer, LowerLevel>::write(Buffer b) {
     return
     cobs::stuffAndDelim(std::move(b)) >=
     [&](Buffer&& stuffed) {
-        dpb("pdib::write| ", stuffed);
+        dpb("pdib::write| ", &stuffed);
         return lowerLevel.write(stuffed);
     };
 }
