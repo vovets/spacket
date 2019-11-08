@@ -109,25 +109,10 @@ private:
 
 
 template <typename Buffer>
-UARTConfig SerialDeviceImpl<Buffer>::config = {
-    .txend1_cb = nullptr,
-    // without this callback driver won't enable TC interrupt
-    // so uartSendFullTimeout will stuck forever
-    .txend2_cb = txend2_,
-    .rxend_cb = rxCompleted_,
-    .rxchar_cb = nullptr,
-    .rxerr_cb = rxError_,
-    .timeout_cb = rxIdle_,
-    // .timeout = 0,
-    .speed = 921600,
-//    .speed = 115200,
-    .cr1 = USART_CR1_IDLEIE,
-    .cr2 = 0,
-    .cr3 = 0
-};
+UARTConfig SerialDeviceImpl<Buffer>::config; // zero-initialized
 
 template <typename Buffer>
-SerialDeviceImpl<Buffer>* SerialDeviceImpl<Buffer>::instance = nullptr;
+SerialDeviceImpl<Buffer>* SerialDeviceImpl<Buffer>::instance;
 
 template <typename Buffer>
 typename SerialDeviceImpl<Buffer>::Mailbox SerialDeviceImpl<Buffer>::readMailbox;
@@ -164,6 +149,16 @@ SerialDeviceImpl<Buffer>::SerialDeviceImpl(UARTDriver* driver_, Buffer&& dmaBuff
     , readBuffer(std::move(dmaBuffer))
 {
     instance = this;
+
+    // without this callback driver won't enable TC interrupt
+    // so uartSendFullTimeout will stuck forever
+    config.txend2_cb = txend2_;
+    config.rxend_cb = rxCompleted_;
+    config.rxerr_cb = rxError_;
+    config.timeout_cb = rxIdle_;
+    config.speed = 921600;
+    config.cr1 = USART_CR1_IDLEIE;
+    
     start(threadPriority);
 }
 
