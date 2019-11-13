@@ -190,7 +190,7 @@ SerialDeviceImpl<Buffer>& SerialDeviceImpl<Buffer>::operator=(SerialDeviceImpl&&
 template <typename Buffer>
 void SerialDeviceImpl<Buffer>::start(tprio_t threadPriority) {
     uartStart(driver.get(), &config);
-    readThread = Thread::create(Thread::params(readThreadStorage, threadPriority), This::readThreadFunction_);
+    readThread = Thread::create(Thread::params(readThreadStorage, threadPriority), &This::readThreadFunction_);
 }
 
 template <typename Buffer>

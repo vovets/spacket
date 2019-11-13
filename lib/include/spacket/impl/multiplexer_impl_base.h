@@ -100,7 +100,9 @@ Result<Buffer> MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>::read(std:
     return
     readMailboxes[c].fetch(t) >=
     [&] (Result<Buffer>&& r) {
-        dpb("mib::read|channel %d|fetched ", &getOk(r), c);
+        if (isOk(r)) {
+            dpb("mib::read|channel %d|fetched ", &getOkUnsafe(r), c);
+        }
         return std::move(r);
     } <=
     [&] (Error e) {

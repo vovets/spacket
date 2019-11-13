@@ -43,6 +43,8 @@ struct PacketDeviceImpl: PacketDeviceImplBase<Buffer, LowerLevel>,
 
     Result<boost::blank> reportError(Error e) override;
 
+    void operator delete(void* ) {}
+
     ThreadStorage threadStorage;
 };
 

@@ -45,6 +45,8 @@ public:
 
     Result<boost::blank> write(Buffer b);
 
+    void operator delete(void* ) {}
+
 protected:
     using Dbg::dpl;
     using Dbg::dpb;
@@ -156,7 +158,9 @@ Result<Buffer> PacketDeviceImplBase<Buffer, LowerLevel>::read(Timeout t) {
     return
     readMailbox.fetch(t) >=
     [&] (Result<Buffer> r) {
-        dpb("pdib::read|fetched ", &getOk(r));
+        if (isOk(r)) {
+            dpb("pdib::read|fetched ", &getOkUnsafe(r));
+        }
         return std::move(r);
     } <=
     [&] (Error e) {

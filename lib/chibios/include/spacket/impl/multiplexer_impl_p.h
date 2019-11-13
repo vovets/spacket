@@ -15,6 +15,7 @@ struct MultiplexerImplT: MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>,
 
     MultiplexerImplT(LowerLevel&& lowerLevel, tprio_t threadPriority);
     virtual ~MultiplexerImplT();
+    void operator delete(void* ) {}
 
     using Base::start;
     using Base::wait;
