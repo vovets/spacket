@@ -74,7 +74,7 @@ static void cmd_test_rx_timeout(BaseSequentialStream *stream, int, char*[]) {
         };
     };
     CHECK(isFail(result));
-    auto e = getFail(result);
+    auto e = getFailUnsafe(result);
     dpl("cmd_test_rx_timeout: %s", toString(e));
     CHECK(e == toError(ErrorCode::ReadTimeout));
 }
