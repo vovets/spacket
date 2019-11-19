@@ -47,7 +47,8 @@ public:
     }
 
     static void checkStack() {
-        if (*((uint32_t*)chThdGetWorkingAreaX(chThdGetSelfX())) != 0x55555555U) {
+        std::uint32_t* base = reinterpret_cast<uint32_t*>(chThdGetWorkingAreaX(chThdGetSelfX()));
+        if (base[0] != 0x55555555U || base[1] != 0x55555555U) {
             chSysHalt("stack base overrun");
         }
     }

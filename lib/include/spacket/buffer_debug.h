@@ -7,11 +7,22 @@
 template <typename Buffer>
 void debugPrintBuffer(const Buffer& b) {
     debugPrint("%X %d:[", b.id(), b.size());
+
+#ifdef DEBUG_PRINT_BUFFER_ASCII
+#define DP(C) debugPrint("%c", (C))
+#else
+#define DP(C) debugPrint("%02x", (C))
+#endif
+
 #ifdef DEBUG_PRINT_BUFFER_FULL
+#ifndef DEBUG_PRINT_BUFFER_ASCII
     bool first = true;
+#endif
     for (auto c: b) {
+#ifndef DEBUG_PRINT_BUFFER_ASCII
         if (!first) { debugPrint(", "); } else { first = false; }
-        debugPrint("%02x", c);
+#endif
+        DP(c);
     }
 #elif defined DEBUG_PRINT_BUFFER_FIRST_ONLY
     std::size_t i = 0;

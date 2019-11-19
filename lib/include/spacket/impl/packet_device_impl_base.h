@@ -6,6 +6,7 @@
 #include <spacket/mailbox.h>
 #include <spacket/thread.h>
 #include <spacket/impl/packet_decode_fsm.h>
+#include <spacket/cobs.h>
 
 namespace packet_device_impl_base {
 
