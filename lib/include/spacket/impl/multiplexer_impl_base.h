@@ -40,7 +40,7 @@ protected:
     using Dbg::dpl;
     using Dbg::dpb;
 
-    MultiplexerImplBaseT(LowerLevel&& lowerLevel, ThreadParams p);
+    MultiplexerImplBaseT(LowerLevel& lowerLevel, ThreadParams p);
     virtual ~MultiplexerImplBaseT();
     
     MultiplexerImplBaseT(MultiplexerImplBaseT&&) = delete;
@@ -58,7 +58,7 @@ private:
     virtual Result<boost::blank> reportError(Error e) = 0;
 
 private:
-    LowerLevel lowerLevel;
+    LowerLevel& lowerLevel;
     Mailboxes readMailboxes;
     ThreadParams readThreadParams;
     Thread readThread;
@@ -69,9 +69,9 @@ constexpr Timeout MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>::stopCh
 
 template <typename Buffer, typename LowerLevel, std::uint8_t NUM_CHANNELS>
 MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>::MultiplexerImplBaseT(
-    LowerLevel&& lowerLevel,
+    LowerLevel& lowerLevel,
     ThreadParams p)
-    : lowerLevel(std::move(lowerLevel))
+    : lowerLevel(lowerLevel)
     , readThreadParams(p)
 {
 }

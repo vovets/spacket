@@ -51,6 +51,7 @@ void debugPrintBuffer(const char* fmt, const Buffer* b, ...) {
     debugPrintBuffer_(fmt, *b, args);
     va_end(args);
 }
+
 #define IMPLEMENT_DPB_FUNCTION                          \
     void dpb(const char* fmt, const Buffer* b, ...) {    \
         std::va_list args;                                   \
@@ -58,6 +59,7 @@ void debugPrintBuffer(const char* fmt, const Buffer* b, ...) {
         debugPrintBuffer_(fmt, *b, args);                   \
         va_end(args);                                    \
     }
+
 
 #define IMPLEMENT_DPB_FUNCTION_NOP                      \
     void dpb(const char*, const Buffer*, ...) {}

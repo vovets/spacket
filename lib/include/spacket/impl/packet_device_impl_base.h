@@ -46,13 +46,11 @@ public:
 
     Result<boost::blank> write(Buffer b);
 
-    void operator delete(void* ) {}
-
 protected:
     using Dbg::dpl;
     using Dbg::dpb;
 
-    PacketDeviceImplBase(Buffer&& buffer, LowerLevel&& lowerLevel, ThreadParams p);
+    PacketDeviceImplBase(LowerLevel& lowerLevel, Buffer&& buffer, ThreadParams p);
     virtual ~PacketDeviceImplBase();
 
     PacketDeviceImplBase(PacketDeviceImplBase&&) = delete;
@@ -69,7 +67,7 @@ private:
     
 private:
     PacketDecodeFSM decodeFSM;
-    LowerLevel lowerLevel;
+    LowerLevel& lowerLevel;
     Mailbox readMailbox;
     ThreadParams readThreadParams;
     Thread readThread;
@@ -80,14 +78,14 @@ constexpr Timeout PacketDeviceImplBase<Buffer, LowerLevel>::stopCheckPeriod;
 
 template <typename Buffer, typename LowerLevel>
 PacketDeviceImplBase<Buffer, LowerLevel>::PacketDeviceImplBase(
+LowerLevel& lowerLevel,
 Buffer&& buffer,
-LowerLevel&& lowerLevel,
 ThreadParams p)
     : decodeFSM(
         [&] (Buffer& b) { return this->packetFinished(b); },
         std::move(buffer)
         )
-    , lowerLevel(std::move(lowerLevel))
+    , lowerLevel(lowerLevel)
     , readThreadParams(p)
 {
 }
