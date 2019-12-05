@@ -6,24 +6,24 @@
 template <typename SuccessType, typename F>
 auto operator>=(Result<SuccessType>&& r, F f) {
     using FResult = std::result_of_t<F(SuccessType)>;
-    Thread::checkStack();
+    SPACKET_THREAD_CHECK_STACK();
     if (isOk(r)) {
-        Thread::checkStack();
+        SPACKET_THREAD_CHECK_STACK();
         return f(std::move(getOkUnsafe(std::move(r))));
     }
-    Thread::checkStack();
+    SPACKET_THREAD_CHECK_STACK();
     return fail<SuccessT<FResult>>(getFailUnsafe(r));
 }
 
 template <typename R, typename F>
 auto operator>(R&& r, F f) {
     using FResult = std::result_of_t<F()>;
-    Thread::checkStack();
+    SPACKET_THREAD_CHECK_STACK();
     if (isOk(r)) {
-        Thread::checkStack();
+        SPACKET_THREAD_CHECK_STACK();
         return f();
     }
-    Thread::checkStack();
+    SPACKET_THREAD_CHECK_STACK();
     return fail<SuccessT<FResult>>(getFailUnsafe(r));
 }
 
@@ -32,11 +32,11 @@ typename std::enable_if_t<
     std::is_same<R, Result<SuccessT<R>>>::value,
     R>
 operator<=(R&& r, F f) {
-    Thread::checkStack();
+    SPACKET_THREAD_CHECK_STACK();
     if (isFail(r)) {
-        Thread::checkStack();
+        SPACKET_THREAD_CHECK_STACK();
         return f(getFailUnsafe(r));
     }
-    Thread::checkStack();
+    SPACKET_THREAD_CHECK_STACK();
     return std::move(r);
 }

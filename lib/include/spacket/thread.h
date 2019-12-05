@@ -2,6 +2,11 @@
 
 #include <spacket/impl/thread_impl_p.h>
 
+#ifdef SPACKET_ENABLE_THREAD_CHECK_STACK
+#define SPACKET_THREAD_CHECK_STACK() Thread::checkStack()
+#else
+#define SPACKET_THREAD_CHECK_STACK() do {} while (false)
+#endif
 
 struct ThreadParams;
 
