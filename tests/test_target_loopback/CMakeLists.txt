@@ -5,7 +5,7 @@ list(APPEND CMAKE_MODULE_PATH "${SPACKET_ROOT}/cmake")
 
 include(fw_tests)
 
-fw_tests_add_fw_subdirectory(test_target_loopback_fw "${CMAKE_CURRENT_SOURCE_DIR}/fw")
+fw_add_fw_targets(test_target_loopback_fw "${CMAKE_CURRENT_SOURCE_DIR}/fw")
 
 fw_tests_add_jlink_test(target_loopback
   test_target_loopback_fw

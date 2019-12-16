@@ -8,6 +8,9 @@ class MultiplexerT: private MultiplexerImplT<Buffer, LowerLevel, NUM_CHANNELS> {
     using Impl = MultiplexerImplT<Buffer, LowerLevel, NUM_CHANNELS>;
 
 public:
+    static constexpr std::size_t maxSize() { return LowerLevel::maxSize() - 1; }
+
+public:
     template <typename ...U>
     MultiplexerT(LowerLevel& lowerLevel, U&&... u)
         : Impl(lowerLevel, std::forward<U>(u)...) {

@@ -28,7 +28,7 @@ target_compile_definitions(test_host_target_multiplexer PUBLIC
   )
 #target_compile_options(test_host_target_multiplexer PUBLIC -fsanitize=address)
 
-fw_tests_add_fw_subdirectory(test_host_target_multiplexer_fw "${CMAKE_CURRENT_SOURCE_DIR}/fw")
+fw_add_fw_targets(test_host_target_multiplexer_fw "${CMAKE_CURRENT_SOURCE_DIR}/fw")
 
 fw_tests_add_jlink_test(host_target_multiplexer
   test_host_target_multiplexer_fw

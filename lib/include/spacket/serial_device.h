@@ -17,6 +17,8 @@ class SerialDeviceT: private SerialDeviceImpl<Buffer> {
 public:
     using Impl = SerialDeviceImpl<Buffer>;
 
+    static constexpr std::size_t maxSize() { return Buffer::maxSize(); }
+
 public:
     template <typename... U>
     static Result<SerialDeviceT> open(U&&... u) {

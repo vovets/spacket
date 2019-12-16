@@ -1,3 +1,5 @@
+include(ExternalProject)
+
 function(fw_add_executable name)
   add_executable(${name} "")
   target_compile_options(${name} PUBLIC
@@ -30,5 +32,36 @@ function(fw_compile_definitions name)
 endfunction()
 
 function(fw_sources name)
-  target_sources(${name} PUBLIC ${ARGN})
+  target_sources(${name} PRIVATE ${ARGN})
+endfunction()
+
+function(fw_add_flash_target fw_project)
+  ExternalProject_Get_Property(${fw_project} BINARY_DIR)
+
+  set(jlink_flash_hex "${BINARY_DIR}/fw.hex")
+  set(jlink_flash_commandfile "${BINARY_DIR}/flash.jlink")
+  configure_file("${SPACKET_ROOT}/misc/flash.jlink.in" "${jlink_flash_commandfile}")
+  set(target "${fw_project}-flash")
+  add_custom_target(${target}
+    ${JLINK_EXE} ${JLINK_CONNECT_OPTIONS} ${JLINK_FLASH_OPTIONS} -commandfile ${jlink_flash_commandfile}
+    VERBATIM
+    )
+  add_dependencies(${target} ${fw_project})
+endfunction()
+
+# As one cannot have two different compilers in one cmake tree,
+# this is used to add fw project via ExternalProject machinery to host project.
+#
+function(fw_add_fw_targets name source_dir)
+  ExternalProject_Add(${name}
+    SOURCE_DIR "${source_dir}"
+    BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/${name}"
+    CMAKE_ARGS "-DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}" "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}" "-G${CMAKE_GENERATOR}"
+    CMAKE_CACHE_ARGS "-DCMAKE_TOOLCHAIN_FILE:FILEPATH=${SPACKET_FW_TOOLCHAIN_FILE}"
+    INSTALL_COMMAND ""
+    USES_TERMINAL_BUILD 1
+    BUILD_ALWAYS 1
+    )
+  ExternalProject_Add_StepTargets(${name} configure build)
+  fw_add_flash_target("${name}")
 endfunction()

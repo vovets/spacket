@@ -23,7 +23,7 @@ add_executable(test_host_target_packet_echo tests.cpp "${CMAKE_CURRENT_BINARY_DI
 
 target_link_libraries(test_host_target_packet_echo spacket utils)
 
-fw_tests_add_fw_subdirectory(test_host_target_packet_echo_fw "${CMAKE_CURRENT_SOURCE_DIR}/fw")
+fw_add_fw_targets(test_host_target_packet_echo_fw "${CMAKE_CURRENT_SOURCE_DIR}/fw")
 fw_tests_add_jlink_test(host_target_packet_echo
   test_host_target_packet_echo_fw
   "${CMAKE_CURRENT_BINARY_DIR}/test_host_target_packet_echo")

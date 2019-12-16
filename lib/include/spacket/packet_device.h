@@ -10,6 +10,8 @@ public:
     using Dbg = packet_device_impl_base::Debug<Buffer>;
     using Dbg::dpl;
 
+    static constexpr std::size_t maxSize() { return LowerLevel::maxSize() - 4 /*crc*/ - 1 /*cobs*/ - 2 /*delim*/; }
+
 public:
     template <typename ...U>
     PacketDeviceT(LowerLevel& lowerLevel, U&&... u)
