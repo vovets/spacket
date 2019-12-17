@@ -37,10 +37,10 @@ template <typename Success>
 Result<Success> fail(Error error) { return Result<Success>{std::move(error)}; }
 
 template <typename Result>
-bool isOk(const Result& r) { return !boost::get<Error>(&r.value); }
+bool isOk(const Result& r) { return r.value.which() > 0; }
 
 template <typename Result>
-bool isFail(const Result& r) { return !isOk(r); }
+bool isFail(const Result& r) { return r.value.which() == 0; }
 
 template <typename Result>
 using SuccessT = typename boost::mpl::at<typename Result::ValueType::types, boost::mpl::int_<1>>::type;
