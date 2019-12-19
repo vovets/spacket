@@ -35,6 +35,7 @@
     X(ID(MultiplexerBufferTooSmall), CODE(1302),  SEP())  \
     X(ID(MiserableFailure0),         CODE(10000), SEP())  \
     X(ID(MiserableFailure1),         CODE(10001), SEP())  \
+    X(ID(MiserableFailure2),         CODE(10002), SEP())  \
     X(ID(MiserableFailure9),         CODE(10010), )
 #endif
 
