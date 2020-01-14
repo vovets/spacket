@@ -3,6 +3,7 @@
 #include <spacket/macro_utils.h>
 
 #include <type_traits>
+#include <cstdint>
 
 #ifdef ERROR_LIST
 #error "ERROR_LIST macro should not be defined here"
@@ -40,12 +41,18 @@
 #endif
 
 struct Error {
-    using Code = unsigned;
+    using Code = std::uint16_t;
+    using Source = std::uint16_t;
+
+    Source source;
     Code code;
+
     bool operator==(const Error& rhs) const {
-        return code == rhs.code;
+        return source == rhs.source && code == rhs.code;
     }
 };
+
+constexpr Error::Source ERROR_SOURCE = 0;
 
 enum class ErrorCode: Error::Code {
 #define X(ID, CODE, SEP) ID = CODE SEP
@@ -58,12 +65,18 @@ constexpr typename std::underlying_type_t<ErrorCode> toInt(ErrorCode e) noexcept
     return static_cast<typename std::underlying_type_t<ErrorCode>>(e);
 }
 
-template <typename ErrorCode>
+inline
 constexpr Error toError(ErrorCode e) noexcept {
-    return Error{toInt(e)};
+    return Error{ERROR_SOURCE, toInt(e)};
 }
 
-const char* toString(Error e);
+constexpr Error toError(Error::Source s, Error::Code e) noexcept {
+    return Error{s, e};
+}
+
+const char* toString(ErrorCode e);
+
+const char* toString(Error e, char* buffer, std::size_t size);
 
 using ErrorToStringF = const char*(*)(Error);
 

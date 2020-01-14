@@ -33,17 +33,15 @@ constexpr size_t allocSize(size_t dataSize) {
 
 struct BufferDebug {
 
+#define PREFIX()
 #ifdef BUFFER_ENABLE_DEBUG_PRINT
-
 IMPLEMENT_DPL_FUNCTION
 IMPLEMENT_DPX_FUNCTIONS
-
 #else
-
 IMPLEMENT_DPL_FUNCTION_NOP
 IMPLEMENT_DPX_FUNCTIONS_NOP
-
 #endif
+#undef PREFIX
 
 };
 

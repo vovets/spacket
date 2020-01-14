@@ -8,18 +8,14 @@ static const char* defaultErrorToStringHandler(Error) {
 
 static ErrorToStringF errorToStringHandler = &defaultErrorToStringHandler;
 
-const char* toString(Error e) {
-    switch (ErrorCode(e.code)) {
-#ifdef SPACKET_NO_ERROR_STRINGS
-#define X(ID, CODE, SEP) case ErrorCode::ID: return CODE;
-#else
-#define X(ID, CODE, SEP) case ErrorCode::ID: return CODE ":" STR(ID);
-#endif
+const char* toString(ErrorCode e) {
+    switch (e) {
+#define X(ID, CODE, SEP) case ErrorCode::ID: return STR(ID);
 #define STR(X) BOOST_PP_STRINGIZE(X)
         ERROR_LIST(ID, STR, ID)
 #undef X
 #undef STR
-        default: return errorToStringHandler(e);
+        default: return "unknown";
     }
 }
 

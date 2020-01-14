@@ -1,6 +1,7 @@
 #pragma once
 
 #include <spacket/format_utils.h>
+#include <spacket/buffer.h>
 
 #include <iomanip>
 #include <cstring>
@@ -71,3 +72,15 @@ bool isPrefix(const Buffer& prefix, const Buffer& b) {
     }
     return 0 == std::memcmp(prefix.begin(), b.begin(), prefix.size());
 }
+
+struct BufferView {
+    std::uint8_t* buffer;
+    std::size_t size_;
+
+    std::size_t size() const { return size_; }
+
+    std::uint8_t* begin() const { return buffer; }
+    std::uint8_t* end() const { return buffer + size_; }
+
+    const void *id() const { return buffer; }
+};

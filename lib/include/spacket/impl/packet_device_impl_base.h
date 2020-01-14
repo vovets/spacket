@@ -13,6 +13,7 @@ namespace packet_device_impl_base {
 template <typename Buffer>
 struct Debug {
 
+#define PREFIX()
 #ifdef PACKET_DEVICE_ENABLE_DEBUG_PRINT
 
 IMPLEMENT_DPL_FUNCTION
@@ -26,6 +27,7 @@ IMPLEMENT_DPX_FUNCTIONS_NOP
 IMPLEMENT_DPB_FUNCTION_NOP
 
 #endif
+#undef PREFIX
 
 };
 

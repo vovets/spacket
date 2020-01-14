@@ -1,5 +1,7 @@
 #pragma once
 
+#include <spacket/errors.h>
+
 void fatalError(const char* reason, const char* file, int line);
 
 #ifdef ENABLE_FILE_LINE_INFO

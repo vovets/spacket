@@ -4,6 +4,8 @@ gt_add_sources(
   aeabi_atexit.cpp
   debug_print.cpp
   crc_p.cpp
+  errors.cpp
+  result_fatal.cpp
   )
 
 # if(NOT serial_device IN_LIST SPACKET_EXCLUDED_FEATURES)

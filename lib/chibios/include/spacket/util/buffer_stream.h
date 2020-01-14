@@ -1,5 +1,9 @@
 #pragma once
 
+#include <hal.h>
+
+#include <spacket/fatal_error.h>
+
 template <typename Buffer>
 struct BufferSequentialStreamT: BaseSequentialStream {
     static BufferSequentialStreamT* cast(void* p) { return static_cast<BufferSequentialStreamT*>(p); }
@@ -27,12 +31,12 @@ struct BufferSequentialStreamT: BaseSequentialStream {
 
     BufferSequentialStreamT(Buffer& buffer): BaseSequentialStream{&vmt_}, buffer(buffer), pos(0) {}
 
-    size_t write(const uint8_t *bp, size_t n) {
+    size_t write(const uint8_t*, size_t) {
         FATAL_ERROR("not implemented");
         return 0;
     }
 
-    size_t read(uint8_t *bp, size_t n) {
+    size_t read(uint8_t*, size_t) {
         FATAL_ERROR("not implemented");
         return 0;
     }

@@ -9,7 +9,10 @@ void debugPrintBuffer(const Buffer& b) {
     debugPrint("%X %d:[", b.id(), b.size());
 
 #ifdef DEBUG_PRINT_BUFFER_ASCII
-#define DP(C) debugPrint("%c", (C))
+#define DP(C) do { \
+    if (unsigned(C) < 32 || unsigned(C) > 127) { debugPrint("%02x", (C)); } \
+    else { debugPrint("%c", (C)); } \
+} while(false)
 #else
 #define DP(C) debugPrint("%02x", (C))
 #endif

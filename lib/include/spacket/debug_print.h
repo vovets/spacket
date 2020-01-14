@@ -47,17 +47,28 @@ void debugPrintLine(const char *fmt, ...) {
 
 #define IMPLEMENT_DPX_FUNCTIONS_NOP \
                                     \
+    PREFIX()                        \
     void dps() {}                   \
                                     \
-    void dpf() {}
+    PREFIX()                        \
+    void dpf() {}                   \
+                                    \
+    template <typename ...Args>     \
+    void dp(Args&&...) {}
 
 #define IMPLEMENT_DPX_FUNCTIONS                         \
                                                         \
+    PREFIX()                                            \
     void dps() {                                        \
         debugPrintStart();                              \
     }                                                   \
                                                         \
+    PREFIX()                                            \
     void dpf() {                                        \
         debugPrintFinish();                             \
+    }                                                   \
+                                                        \
+    template <typename ...Args>                         \
+    void dp(Args&&...args) {                            \
+        debugPrint(std::forward<Args>(args)...);        \
     }
-

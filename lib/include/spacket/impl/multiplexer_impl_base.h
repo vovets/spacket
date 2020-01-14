@@ -10,6 +10,7 @@ namespace multiplexer_impl_base {
 template <typename Buffer>
 struct Debug {
 
+#define PREFIX()
 #ifdef MULTIPLEXER_ENABLE_DEBUG_PRINT
 
     IMPLEMENT_DPL_FUNCTION
@@ -23,6 +24,7 @@ struct Debug {
     IMPLEMENT_DPB_FUNCTION_NOP
 
 #endif
+#undef PREFIX
 
 };
 

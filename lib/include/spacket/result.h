@@ -13,6 +13,7 @@ struct TypeId {};
 
 } // result_impl
 
+
 template <typename Success>
 struct Result {
     using ValueType = boost::variant<Error, Success>;

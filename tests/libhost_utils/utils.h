@@ -6,6 +6,7 @@
 #include <spacket/time_utils.h>
 #include <spacket/port_config.h>
 #include <spacket/cobs.h>
+#include <spacket/error_to_string.h>
 
 #include <catch.hpp>
 
@@ -86,7 +87,7 @@ Buffer createTestBufferNoZero(size_t size) {
 template<typename Success>
 Result<Success> fatalT(Error e) {
     std::ostringstream ss;
-    ss << "fatal error " << e.code << ":" << toString(e);
+    ss << "fatal:" << e.source << "." << e.code << " " << toString(ErrorCode(e.code));
     throw std::runtime_error(ss.str());
 }
 
