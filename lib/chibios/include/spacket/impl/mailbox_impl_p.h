@@ -11,7 +11,9 @@ Error toError(msg_t msg) {
         case MSG_TIMEOUT: return toError(ErrorCode::Timeout);
         case MSG_RESET:   return toError(ErrorCode::ChMsgReset);
     }
-    return toError(ErrorCode::MiserableFailure1);
+    FATAL_ERROR("bad msg");
+    // should not reach here
+    return toError(ErrorCode::Timeout);
 }
 
 template <typename Message_, size_t SIZE_>
@@ -23,9 +25,9 @@ public:
 public:
     QueueT();
 
-    Result<boost::blank> post(Message& msg, Timeout timeout);
-    Result<boost::blank> postS(Message& msg, Timeout timeout);
-    Result<boost::blank> postI(Message& msg);
+    Result<Void> post(Message& msg, Timeout timeout);
+    Result<Void> postS(Message& msg, Timeout timeout);
+    Result<Void> postI(Message& msg);
         
     Result<Message> fetch(Timeout timeout);
     Result<Message> fetchS(Timeout timeout);
@@ -59,7 +61,7 @@ QueueT<Message, SIZE>::QueueT()
 }
 
 template <typename Message, size_t SIZE>
-Result<boost::blank> QueueT<Message, SIZE>::post(Message& msg, Timeout timeout) {
+Result<Void> QueueT<Message, SIZE>::post(Message& msg, Timeout timeout) {
     chSysLock();
     auto result = postS(msg, timeout);
     chSysUnlock();
@@ -67,7 +69,7 @@ Result<boost::blank> QueueT<Message, SIZE>::post(Message& msg, Timeout timeout) 
 }
 
 template <typename Message, size_t SIZE>
-Result<boost::blank> QueueT<Message, SIZE>::postS(Message& msg, Timeout timeout) {
+Result<Void> QueueT<Message, SIZE>::postS(Message& msg, Timeout timeout) {
 
     chDbgCheckClassS();
 
@@ -75,7 +77,7 @@ Result<boost::blank> QueueT<Message, SIZE>::postS(Message& msg, Timeout timeout)
     do {
         /* If the mailbox is in reset state then returns immediately.*/
         if (reset) {
-            return fail<boost::blank>(toError(ErrorCode::ChMsgReset));
+            return fail(toError(ErrorCode::ChMsgReset));
         }
 
         /* Is there a free message slot in queue? if so then post.*/
@@ -91,24 +93,24 @@ Result<boost::blank> QueueT<Message, SIZE>::postS(Message& msg, Timeout timeout)
             chThdDequeueNextI(&qr, MSG_OK);
             chSchRescheduleS();
 
-            return ok(boost::blank{});
+            return ok();
         }
 
         /* No space in the queue, waiting for a slot to become available.*/
         rdymsg = chThdEnqueueTimeoutS(&qw, toSystime(timeout));
     } while (rdymsg == MSG_OK);
 
-    return fail<boost::blank>(toError(rdymsg));
+    return fail(toError(rdymsg));
 }
 
 template <typename Message, size_t SIZE>
-Result<boost::blank> QueueT<Message, SIZE>::postI(Message& msg) {
+Result<Void> QueueT<Message, SIZE>::postI(Message& msg) {
 
     chDbgCheckClassI();
 
     /* If the mailbox is in reset state then returns immediately.*/
     if (reset) {
-        return fail<boost::blank>(toError(ErrorCode::ChMsgReset));
+        return fail(toError(ErrorCode::ChMsgReset));
     }
 
     /* Is there a free message slot in queue? if so then post.*/
@@ -123,11 +125,11 @@ Result<boost::blank> QueueT<Message, SIZE>::postI(Message& msg) {
         /* If there is a reader waiting then makes it ready.*/
         chThdDequeueNextI(&qr, MSG_OK);
 
-        return ok(boost::blank{});
+        return ok();
     }
 
     /* No space in the queue, immediate timeout.*/
-    return fail<boost::blank>(toError(ErrorCode::ChMsgTimeout));
+    return fail(toError(ErrorCode::ChMsgTimeout));
 }
 
 template <typename Message, size_t SIZE>
@@ -222,18 +224,17 @@ template <typename Message>
 struct MailboxImplT: QueueT<Message, 1> {
     using Base = QueueT<Message, 1>;
     
-    Result<boost::blank> replace(Message& message) {
+    Result<Void> replace(Message& message) {
         return
         Base::fetch(immediateTimeout()) >=
-        [&] (Message&& m) {
-            Message tmp = std::move(m);
-            return ok(boost::blank());
+        [&] (Message) {
+            return ok();
         } <=
         [&] (Error e) {
             if (e == toError(ErrorCode::Timeout)) {
-                return ok(boost::blank());
+                return ok();
             }
-            return fail<boost::blank>(e);
+            return fail(e);
         } >
         [&] { return Base::post(message, immediateTimeout()); };
     }

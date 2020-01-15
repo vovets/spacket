@@ -61,7 +61,7 @@ Result<size_t> SerialDeviceImpl::read(uint8_t* buffer, size_t maxRead, Timeout t
     return ok(received);
 }
 
-Result<boost::blank> SerialDeviceImpl::write(const uint8_t* buffer, size_t size, Timeout t) {
+Result<Void> SerialDeviceImpl::write(const uint8_t* buffer, size_t size, Timeout t) {
     auto msg = uartSendFullTimeout(driver.get(), &size, buffer, toSystime(t));
-    return msg == MSG_OK ? ok(boost::blank()) : fail<boost::blank>(toError(ErrorCode::DevWriteTimeout));
+    return msg == MSG_OK ? ok() : fail(toError(ErrorCode::DevWriteTimeout));
 }

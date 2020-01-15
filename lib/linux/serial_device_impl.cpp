@@ -31,7 +31,7 @@ struct NativeDevice::Impl {
     Impl(int fd, struct timeval byteTimeout);
     ~Impl();
     Result<size_t> read(uint8_t* buffer, size_t maxRead, Timeout t);
-    Result<boost::blank> write(const uint8_t* buffer, size_t size);
+    Result<Void> write(const uint8_t* buffer, size_t size);
 
     int fd;
     struct timeval byteTimeout;
@@ -73,7 +73,7 @@ Result<size_t> NativeDevice::read(uint8_t* buffer, size_t maxRead, Timeout t) {
     return impl->read(buffer, maxRead, t);
 }
 
-Result<boost::blank> NativeDevice::write(const uint8_t* buffer, size_t size) {
+Result<Void> NativeDevice::write(const uint8_t* buffer, size_t size) {
     return impl->write(buffer, size);
 }
 
@@ -125,8 +125,8 @@ Result<size_t> NativeDevice::Impl::read(uint8_t* buffer, size_t maxRead, Timeout
     return ok(static_cast<size_t>(cur - buffer));
 }
 
-Result<boost::blank> NativeDevice::Impl::write(const uint8_t* buffer, size_t size) {
-    auto f = []{ return fail<b::blank>(toError(ErrorCode::SerialDeviceWriteError)); };
+Result<Void> NativeDevice::Impl::write(const uint8_t* buffer, size_t size) {
+    auto f = []{ return fail(toError(ErrorCode::SerialDeviceWriteError)); };
     const uint8_t* cur = buffer;
     const uint8_t* end = buffer + size;
     while (cur < end) {
@@ -139,5 +139,5 @@ Result<boost::blank> NativeDevice::Impl::write(const uint8_t* buffer, size_t siz
             end - cur);
         cur += bytesWritten;
     }
-    return ok(b::blank());
+    return ok();
 }

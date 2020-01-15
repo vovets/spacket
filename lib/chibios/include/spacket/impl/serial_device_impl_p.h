@@ -89,9 +89,9 @@ public:
 
     Result<Buffer> read(Timeout t);
 
-    Result<boost::blank> write(const uint8_t* buffer, size_t size, Timeout t);
+    Result<Void> write(const uint8_t* buffer, size_t size, Timeout t);
 
-    Result<boost::blank> write(const uint8_t* buffer, size_t size) {
+    Result<Void> write(const uint8_t* buffer, size_t size) {
         return write(buffer, size, INFINITE_TIMEOUT);
     }
 
@@ -235,7 +235,7 @@ Result<Buffer> SerialDeviceImpl<Buffer>::read(Timeout t) {
 }
 
 template <typename Buffer>
-Result<boost::blank> SerialDeviceImpl<Buffer>::write(const uint8_t* buffer, size_t size, Timeout t) {
+Result<Void> SerialDeviceImpl<Buffer>::write(const uint8_t* buffer, size_t size, Timeout t) {
     osalSysLock();
     uartStartSendI(driver.get(), size, buffer);
     auto msg = osalThreadSuspendTimeoutS(&writeThreadRef, toSystime(t));
@@ -244,7 +244,7 @@ Result<boost::blank> SerialDeviceImpl<Buffer>::write(const uint8_t* buffer, size
     }
     osalSysUnlock();
     dpl("sdi::write|msg=%d", msg);
-    return msg == MSG_OK ? ok(boost::blank()) : fail<boost::blank>(toError(ErrorCode::WriteTimeout));
+    return msg == MSG_OK ? ok() : fail(toError(ErrorCode::WriteTimeout));
 }
 
 template <typename Buffer>
@@ -312,7 +312,7 @@ void SerialDeviceImpl<Buffer>::handleReceivedData_(std::size_t notReceived) {
             [&]() {
                 instance->readBuffer = std::move(newBuffer);
                 dpl("sdi::handleReceivedData_|replaced");
-                return ok(boost::blank());
+                return ok();
             };
     } <= threadErrorReport;
 }

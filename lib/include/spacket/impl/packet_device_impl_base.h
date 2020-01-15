@@ -46,7 +46,7 @@ class PacketDeviceImplBase: public packet_device_impl_base::Debug<Buffer>
 public:
     Result<Buffer> read(Timeout t);
 
-    Result<boost::blank> write(Buffer b);
+    Result<Void> write(Buffer b);
 
 protected:
     using Dbg::dpl;
@@ -64,8 +64,8 @@ protected:
     void readThreadFunction();
 
 private:
-    Result<boost::blank> packetFinished(Buffer& buffer);
-    virtual Result<boost::blank> reportError(Error e) = 0;
+    Result<Void> packetFinished(Buffer& buffer);
+    virtual Result<Void> reportError(Error e) = 0;
     
 private:
     PacketDecodeFSM decodeFSM;
@@ -122,12 +122,12 @@ void PacketDeviceImplBase<Buffer, LowerLevel>::readThreadFunction() {
                 };
                 if (isFail(r)) { return r; }
             }
-            return ok(boost::blank());
+            return ok();
         } <=
         [&] (Error e) {
             if (e == toError(ErrorCode::ReadTimeout)) {
                 // do nothing, just chance to stop
-                return ok(boost::blank());
+                return ok();
             }
             auto message = fail<Buffer>(e);
             return readMailbox.replace(message);
@@ -137,7 +137,7 @@ void PacketDeviceImplBase<Buffer, LowerLevel>::readThreadFunction() {
 }
 
 template <typename Buffer, typename LowerLevel>
-Result<boost::blank> PacketDeviceImplBase<Buffer, LowerLevel>::packetFinished(Buffer& buffer) {
+Result<Void> PacketDeviceImplBase<Buffer, LowerLevel>::packetFinished(Buffer& buffer) {
     dpb("pdib::packetFinished|", &buffer);
     return
     Buffer::create(Buffer::maxSize()) >=
@@ -148,7 +148,7 @@ Result<boost::blank> PacketDeviceImplBase<Buffer, LowerLevel>::packetFinished(Bu
         [&] {
             buffer = std::move(newBuffer);
             Dbg::dpl("pdib::packetFinished|replaced");
-            return ok(boost::blank());
+            return ok();
         };
     };
 }
@@ -173,7 +173,7 @@ Result<Buffer> PacketDeviceImplBase<Buffer, LowerLevel>::read(Timeout t) {
 }
 
 template <typename Buffer, typename LowerLevel>
-Result<boost::blank> PacketDeviceImplBase<Buffer, LowerLevel>::write(Buffer b) {
+Result<Void> PacketDeviceImplBase<Buffer, LowerLevel>::write(Buffer b) {
     return
     cobs::stuffAndDelim(std::move(b)) >=
     [&](Buffer&& stuffed) {

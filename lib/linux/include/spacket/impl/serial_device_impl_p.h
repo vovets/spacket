@@ -1,6 +1,7 @@
 #pragma once
 
 #include <spacket/result.h>
+#include <spacket/result_utils.h>
 #include <spacket/port_config.h>
 #include <spacket/time_utils.h>
 
@@ -17,7 +18,7 @@ public:
     NativeDevice& operator=(const NativeDevice&) = delete;
 
     Result<size_t> read(uint8_t* buffer, size_t maxRead, Timeout t);
-    Result<boost::blank> write(const uint8_t* buffer, size_t size);
+    Result<Void> write(const uint8_t* buffer, size_t size);
 
 private:
     struct Impl;
@@ -63,7 +64,7 @@ public:
         };
     }
 
-    Result<boost::blank> write(const uint8_t* buffer, size_t size) {
+    Result<Void> write(const uint8_t* buffer, size_t size) {
         return nativeDevice.write(buffer, size);
     }
 

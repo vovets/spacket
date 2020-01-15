@@ -15,7 +15,7 @@ struct MultiplexerImplT: MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>
     using Base::start;
     using Base::wait;
 
-    Result<boost::blank> reportError(Error e) final;
+    Result<Void> reportError(Error e) final;
 
     ThreadStorage threadStorage;
 };
@@ -37,6 +37,6 @@ MultiplexerImplT<Buffer, LowerLevel, NUM_CHANNELS>::~MultiplexerImplT() {
 }
 
 template <typename Buffer, typename LowerLevel, std::uint8_t NUM_CHANNELS>
-Result<boost::blank> MultiplexerImplT<Buffer, LowerLevel, NUM_CHANNELS>::reportError(Error e) {
+Result<Void> MultiplexerImplT<Buffer, LowerLevel, NUM_CHANNELS>::reportError(Error e) {
     return threadErrorReport(e);
 }

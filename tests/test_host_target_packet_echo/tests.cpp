@@ -64,27 +64,27 @@ TEST_CASE("packet loopback") {
                 // only prefix of the packet written so we read until total read bytes equal written
                 // bytes
                 do {
-                    returnOnFailT(finished_, boost::blank, readAppend());
+                    returnOnFailT(finished_, Void, readAppend());
                     finished = finished_;
                 } while (!finished);
-                return ok(boost::blank{});
+                return ok();
             } >
             [&]() {
                 if (counter % 100 == 0) {
                     WARN("size: " << size << ", counter: " << counter);
                 }
                 REQUIRE(rb == wb);
-                return ok(boost::blank{});
+                return ok();
             } <=
             [&](Error e) {
                 throw std::runtime_error(toString(e));
-                return ok(boost::blank{});
+                return ok();
             };
         }
-        return ok(boost::blank{});
+        return ok();
     } <=
     [&](Error e) {
         throw std::runtime_error(toString(e));
-        return ok(boost::blank{});
+        return ok();
     };
 }

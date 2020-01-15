@@ -68,13 +68,13 @@ private:
     PacketDevice pd_;
 };
 
-Result<boost::blank> writeBuffer(PacketDevice& pd, Buffer b) {
+Result<Void> writeBuffer(PacketDevice& pd, Buffer b) {
     palClearPad(GPIOC, GPIOC_LED);
     return
     pd.write(std::move(b)) >
     [&]() {
         palSetPad(GPIOC, GPIOC_LED);
-        return ok(boost::blank{});
+        return ok();
     };
 }
 

@@ -91,12 +91,12 @@ void runCaseOnce(const PortConfig& pc, TestCase2 c) {
             }
             auto r = future.get();
             REQUIRE(r == c.expected);
-            return ok(boost::blank{});
+            return ok();
         };
     } <=
     [&] (Error e) {
         FAIL("" << toString(e));
-        return fail<boost::blank>(e);
+        return fail(e);
     };
 }
 

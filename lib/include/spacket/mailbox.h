@@ -6,11 +6,11 @@ template <typename Message>
 struct MailboxT: MailboxImplT<Message> {
     using Impl = MailboxImplT<Message>;
     
-    Result<boost::blank> replace(Message& message) {
+    Result<Void> replace(Message& message) {
         return Impl::replace(message);
     }
     
-    Result<boost::blank> post(Message& message, Timeout timeout) {
+    Result<Void> post(Message& message, Timeout timeout) {
         return Impl::post(message, timeout);
     }
     

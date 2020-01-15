@@ -78,14 +78,14 @@ private:
     Multiplexer mx_;
 };
 
-Result<boost::blank> writeBuffer(std::uint8_t channel, Multiplexer& mx, Buffer b) {
+Result<Void> writeBuffer(std::uint8_t channel, Multiplexer& mx, Buffer b) {
     palClearPad(GPIOC, GPIOC_LED);
     return
     mx.write(channel, std::move(b)) >
     [&]() {
         dpl("write");
         palSetPad(GPIOC, GPIOC_LED);
-        return ok(boost::blank{});
+        return ok();
     };
 }
 

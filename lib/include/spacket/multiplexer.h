@@ -25,7 +25,7 @@ public:
         return Impl::read(channel, t);
     }
 
-    Result<boost::blank> write(std::uint8_t channel, Buffer b) {
+    Result<Void> write(std::uint8_t channel, Buffer b) {
         return Impl::write(channel, std::move(b));
     }
 };

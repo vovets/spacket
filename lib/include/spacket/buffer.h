@@ -8,6 +8,7 @@
 #include <boost/intrusive_ptr.hpp>
 #include <cstring>
 #include <vector>
+#include <limits>
 
 
 namespace buffer_impl {

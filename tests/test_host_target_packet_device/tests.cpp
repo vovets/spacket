@@ -85,25 +85,25 @@ struct TestCase2 {
     }
 };
 
-Result<boost::blank> send(SerialDevice& sd, Timeout holdOffTime, Buffer b) {
+Result<Void> send(SerialDevice& sd, Timeout holdOffTime, Buffer b) {
     WARN("sent: " << hr(b));
     return
     sd.write(b) >
     [&]() {
         std::this_thread::sleep_for(holdOffTime);
-        return ok(boost::blank{});
+        return ok();
     } <=
     [&](Error e) {
         throw std::runtime_error(toString(e));
-        return fail<boost::blank>(e);
+        return fail(e);
     };
 }
 
-Result<boost::blank> send(SerialDevice& sd, Timeout holdOffTime, std::vector<Buffer> v) {
+Result<Void> send(SerialDevice& sd, Timeout holdOffTime, std::vector<Buffer> v) {
     for (auto&& b: v) {
         returnOnFailE(send(sd, holdOffTime, std::move(b)));
     }
-    return ok(boost::blank{});
+    return ok();
 }
 
 Result<std::vector<Buffer>> receive(SerialDevice& sd, std::promise<void>& launched) {
@@ -139,16 +139,16 @@ Result<std::vector<Buffer>> receive(SerialDevice& sd, std::promise<void>& launch
                     buffers.emplace_back(std::move(unstuffed));
                     return ok(std::move(buffers));
                 };
-                return ok(boost::blank{});
+                return ok();
             };
         } <=
         [&](Error e) {
             finished = true;
             if (e == toError(ErrorCode::Timeout)) {
-                return ok(boost::blank{});
+                return ok();
             }
             result = fail<SuccessT<decltype(result)>>(e);
-            return ok(boost::blank{});
+            return ok();
         };
     }
     return result;
@@ -163,7 +163,7 @@ void runCaseOnce(const PortConfig& pc, TestCase c) {
         send(sd, c.holdOffTime, std::move(c.send));
         auto result = future.get();
         REQUIRE(result == c.expected);
-        return ok(boost::blank{});
+        return ok();
     };
 }
 
@@ -191,7 +191,7 @@ void runCaseOnce(const PortConfig& pc, TestCase2 c) {
             }
             auto r = future.get();
             REQUIRE(r == c.expected);
-            return ok(boost::blank{});
+            return ok();
         };
     };
 }

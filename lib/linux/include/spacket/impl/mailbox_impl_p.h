@@ -8,11 +8,11 @@
 
 template <typename Message>
 struct MailboxImplT {
-    Result<boost::blank> replace(Message& message_) {
+    Result<Void> replace(Message& message_) {
         std::lock_guard<std::mutex> lock(mutex);
         message = std::move(message_);
         full.notify_one();
-        return ok(boost::blank());
+        return ok();
     }
     
     Result<Message> fetch(Timeout timeout) {

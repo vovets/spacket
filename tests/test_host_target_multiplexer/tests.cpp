@@ -91,13 +91,13 @@ void runCase(const PortConfig& pc, TestCase c) {
                     REQUIRE(r == c.expected);
                     std::this_thread::sleep_for(c.holdOffTime);
                 }
-                return ok(boost::blank{});
+                return ok();
             };
         };
     } <=
     [&] (Error e) {
         FAIL("" << toString(e));
-        return fail<boost::blank>(e);
+        return fail(e);
     };
 }
 

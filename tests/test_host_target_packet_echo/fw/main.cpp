@@ -27,7 +27,7 @@ static __attribute__((noreturn)) void echoThreadFunction() {
             sd.write(b) >
             [&]() {
                 palSetPad(GPIOC, GPIOC_LED);
-                return ok(boost::blank{});
+                return ok();
             };
         };
         
@@ -36,16 +36,16 @@ static __attribute__((noreturn)) void echoThreadFunction() {
             writeBuffer <=
             [&](Error e) {
                 chprintf(&rttStream, "E: %s", toString(e));
-                return ok(boost::blank{});
+                return ok();
             };
         }
         // will never get here
-        return ok(boost::blank{});
+        return ok();
     } <=
     [&](Error e) {
         FATAL_ERROR(toString(e));
         // will never get here
-        return ok(boost::blank{});
+        return ok();
     };
     for (;;) {}
 }

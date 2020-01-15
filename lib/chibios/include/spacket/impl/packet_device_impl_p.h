@@ -19,7 +19,7 @@ struct PacketDeviceImpl: PacketDeviceImplBase<Buffer, LowerLevel>
     PacketDeviceImpl(LowerLevel& serialDevice, Buffer&& buffer, tprio_t threadPriority);
     ~PacketDeviceImpl();
 
-    Result<boost::blank> reportError(Error e) override;
+    Result<Void> reportError(Error e) override;
 
     ThreadStorage threadStorage;
 };
@@ -43,6 +43,6 @@ PacketDeviceImpl<Buffer, LowerLevel>::~PacketDeviceImpl() {
 }
 
 template <typename Buffer, typename LowerLevel>
-Result<boost::blank> PacketDeviceImpl<Buffer, LowerLevel>::reportError(Error e) {
+Result<Void> PacketDeviceImpl<Buffer, LowerLevel>::reportError(Error e) {
     return threadErrorReport(e);
 }

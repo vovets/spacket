@@ -53,11 +53,11 @@ protected:
 
 public:
     Result<Buffer> read(std::uint8_t channel, Timeout t);
-    Result<boost::blank> write(std::uint8_t channel, Buffer b);
+    Result<Void> write(std::uint8_t channel, Buffer b);
 
 private:
     void readThreadFunction();
-    virtual Result<boost::blank> reportError(Error e) = 0;
+    virtual Result<Void> reportError(Error e) = 0;
 
 private:
     LowerLevel& lowerLevel;
@@ -116,12 +116,12 @@ Result<Buffer> MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>::read(std:
 }
 
 template <typename Buffer, typename LowerLevel, std::uint8_t NUM_CHANNELS>
-Result<boost::blank> MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>::write(std::uint8_t c, Buffer b) {
+Result<Void> MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>::write(std::uint8_t c, Buffer b) {
     if (c >= NUM_CHANNELS) {
-        return fail<boost::blank>(toError(ErrorCode::MultiplexerBadChannel));
+        return fail(toError(ErrorCode::MultiplexerBadChannel));
     }
     if (b.size() > Buffer::maxSize() - 1) {
-        return fail<boost::blank>(toError(ErrorCode::MultiplexerBufferTooBig));
+        return fail(toError(ErrorCode::MultiplexerBufferTooBig));
     }
     return
     Buffer::create(Buffer::maxSize()) >=
@@ -147,11 +147,11 @@ void MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>::readThreadFunction(
         } >=
         [&] (Buffer&& b) {
             if (b.size() == 0) {
-                return fail<boost::blank>(toError(ErrorCode::MultiplexerBufferTooSmall));
+                return fail(toError(ErrorCode::MultiplexerBufferTooSmall));
             }
             std::uint8_t channel = b.begin()[0];
             if (channel >= NUM_CHANNELS) {
-                return fail<boost::blank>(toError(ErrorCode::MultiplexerBadChannel));
+                return fail(toError(ErrorCode::MultiplexerBadChannel));
             }
             return
             Buffer::create(Buffer::maxSize()) >=
@@ -164,13 +164,13 @@ void MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>::readThreadFunction(
                 readMailboxes[channel].replace(message) >
                 [&] {
                     dpl("mib::readThreadFunction|channel %d|replaced", channel);
-                    return ok(boost::blank());
+                    return ok();
                 };
             };
         } <=
         [&] (Error e) {
             if (e == toError(ErrorCode::ReadTimeout)) {
-                return ok(boost::blank());
+                return ok();
             }
             return reportError(e);
         };

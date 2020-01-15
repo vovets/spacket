@@ -14,7 +14,7 @@ struct MultiplexerImplT: MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>
     MultiplexerImplT(LowerLevel& lowerLevel);
     virtual ~MultiplexerImplT();
 
-    Result<boost::blank> reportError(Error e) override;
+    Result<Void> reportError(Error e) override;
 };
 
 template <typename Buffer, typename LowerLevel, std::uint8_t NUM_CHANNELS>
@@ -33,6 +33,6 @@ MultiplexerImplT<Buffer, LowerLevel, NUM_CHANNELS>::~MultiplexerImplT() {
 }
 
 template <typename Buffer, typename LowerLevel, std::uint8_t NUM_CHANNELS>
-Result<boost::blank> MultiplexerImplT<Buffer, LowerLevel, NUM_CHANNELS>::reportError(Error e) {
-    return fail<boost::blank>(e);
+Result<Void> MultiplexerImplT<Buffer, LowerLevel, NUM_CHANNELS>::reportError(Error e) {
+    return fail(e);
 }

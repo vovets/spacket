@@ -21,7 +21,7 @@ struct PacketDeviceImpl: PacketDeviceImplBase<Buffer, LowerLevel>
     PacketDeviceImpl(LowerLevel& serialDevice, Buffer&& buffer);
     ~PacketDeviceImpl();
 
-    Result<boost::blank> reportError(Error e) override;
+    Result<Void> reportError(Error e) override;
 };
 
 template <typename Buffer, typename LowerLevel>
@@ -42,6 +42,6 @@ PacketDeviceImpl<Buffer, LowerLevel>::~PacketDeviceImpl() {
 }
 
 template <typename Buffer, typename LowerLevel>
- Result<boost::blank> PacketDeviceImpl<Buffer, LowerLevel>::reportError(Error e) {
-    return fail<boost::blank>(e);
+ Result<Void> PacketDeviceImpl<Buffer, LowerLevel>::reportError(Error e) {
+    return fail(e);
 }

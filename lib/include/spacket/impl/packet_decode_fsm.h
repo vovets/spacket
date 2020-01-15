@@ -7,8 +7,8 @@
 template <typename Buffer>
 struct PacketDecodeFSMT {
     using This = PacketDecodeFSMT<Buffer>;
-    using PacketFinishedCallback = std::function<Result<boost::blank>(Buffer&)>;
-    using State = Result<boost::blank> (This::*)(std::uint8_t byte);
+    using PacketFinishedCallback = std::function<Result<Void>(Buffer&)>;
+    using State = Result<Void> (This::*)(std::uint8_t byte);
 
     PacketDecodeFSMT(
         PacketFinishedCallback packetFinishedCallback,
@@ -21,7 +21,7 @@ struct PacketDecodeFSMT {
         , blockAppendZero(false)
     {}
 
-    Result<boost::blank> consume(std::uint8_t byte) {
+    Result<Void> consume(std::uint8_t byte) {
         return (this->*state)(byte);
     }
     
@@ -29,15 +29,15 @@ struct PacketDecodeFSMT {
         state = toState;
     }
 
-    Result<boost::blank> delimiter(std::uint8_t byte);
-    Result<boost::blank> start(std::uint8_t byte);
-    Result<boost::blank> block(std::uint8_t byte);
-    Result<boost::blank> nextBlock(std::uint8_t byte);
+    Result<Void> delimiter(std::uint8_t byte);
+    Result<Void> start(std::uint8_t byte);
+    Result<Void> block(std::uint8_t byte);
+    Result<Void> nextBlock(std::uint8_t byte);
 
     void startBlock(std::uint8_t code);
-    Result<boost::blank> finishBlock();
-    Result<boost::blank> append(std::uint8_t byte);
-    Result<boost::blank> finishPacket();
+    Result<Void> finishBlock();
+    Result<Void> append(std::uint8_t byte);
+    Result<Void> finishPacket();
 
     PacketFinishedCallback packetFinishedCallback;
     Buffer buffer;
@@ -48,18 +48,18 @@ struct PacketDecodeFSMT {
 };
 
 template <typename Buffer>
-Result<boost::blank> PacketDecodeFSMT<Buffer>::delimiter(std::uint8_t byte) {
+Result<Void> PacketDecodeFSMT<Buffer>::delimiter(std::uint8_t byte) {
     switch (byte) {
         case 0:
             transit(&This::start);
         default:
             ;
     }
-    return ok(boost::blank());
+    return ok();
 }
 
 template <typename Buffer>
-Result<boost::blank> PacketDecodeFSMT<Buffer>::start(std::uint8_t byte) {
+Result<Void> PacketDecodeFSMT<Buffer>::start(std::uint8_t byte) {
     switch (byte) {
         case 0:
             break;
@@ -67,22 +67,22 @@ Result<boost::blank> PacketDecodeFSMT<Buffer>::start(std::uint8_t byte) {
             startBlock(byte);
             return
             finishBlock() >
-            [&] { transit(&This::nextBlock); return ok(boost::blank()); } <=
-            [&] (Error e) { transit(&This::delimiter); return fail<boost::blank>(e); };
+            [&] { transit(&This::nextBlock); return ok(); } <=
+            [&] (Error e) { transit(&This::delimiter); return fail(e); };
         default:
             startBlock(byte);
             transit(&This::block);
             break;
     }
-    return ok(boost::blank());
+    return ok();
 }
             
 template <typename Buffer>
-Result<boost::blank> PacketDecodeFSMT<Buffer>::block(std::uint8_t byte) {
+Result<Void> PacketDecodeFSMT<Buffer>::block(std::uint8_t byte) {
     switch (byte) {
         case 0:
             transit(&This::delimiter);
-            return fail<boost::blank>(toError(ErrorCode::CobsBadEncoding));
+            return fail(toError(ErrorCode::CobsBadEncoding));
         default:
             return
             append(byte) >
@@ -90,23 +90,23 @@ Result<boost::blank> PacketDecodeFSMT<Buffer>::block(std::uint8_t byte) {
                 if (blockBytesLeft == 0) {
                     return
                     finishBlock() >
-                    [&] { transit(&This::nextBlock); return ok(boost::blank()); };
+                    [&] { transit(&This::nextBlock); return ok(); };
                 }
-                return ok(boost::blank());
+                return ok();
             } <=
-            [&] (Error e) { transit(&This::delimiter); return fail<boost::blank>(e); };
+            [&] (Error e) { transit(&This::delimiter); return fail(e); };
     }
-    return ok(boost::blank());
+    return ok();
 }
 
 template <typename Buffer>
-Result<boost::blank> PacketDecodeFSMT<Buffer>::nextBlock(std::uint8_t byte) {
+Result<Void> PacketDecodeFSMT<Buffer>::nextBlock(std::uint8_t byte) {
     switch (byte) {
         case 0:
             return
             finishPacket() >
-            [&] { transit(&This::start); return ok(boost::blank()); } <=
-            [&] (Error e) { transit(&This::delimiter); return fail<boost::blank>(e); };
+            [&] { transit(&This::start); return ok(); } <=
+            [&] (Error e) { transit(&This::delimiter); return fail(e); };
         case 1:
             startBlock(byte);
             return finishBlock();
@@ -115,7 +115,7 @@ Result<boost::blank> PacketDecodeFSMT<Buffer>::nextBlock(std::uint8_t byte) {
             transit(&This::block);
             break;
     }
-    return ok(boost::blank());
+    return ok();
 }
 
 template <typename Buffer>
@@ -125,28 +125,28 @@ void PacketDecodeFSMT<Buffer>::startBlock(std::uint8_t code) {
 }
 
 template <typename Buffer>
-Result<boost::blank> PacketDecodeFSMT<Buffer>::finishBlock() {
+Result<Void> PacketDecodeFSMT<Buffer>::finishBlock() {
     if (blockAppendZero) {
         return append(0);
     }
-    return ok(boost::blank());
+    return ok();
 }
 
 template <typename Buffer>
-Result<boost::blank> PacketDecodeFSMT<Buffer>::append(std::uint8_t byte) {
+Result<Void> PacketDecodeFSMT<Buffer>::append(std::uint8_t byte) {
     if (bytesRead >= buffer.maxSize()) {
-        return fail<boost::blank>(toError(ErrorCode::PacketTooBig));
+        return fail(toError(ErrorCode::PacketTooBig));
     }
     *(buffer.begin() + bytesRead++) = byte;
     --blockBytesLeft;
-    return ok(boost::blank());
+    return ok();
 }
 
 template <typename Buffer>
-Result<boost::blank> PacketDecodeFSMT<Buffer>::finishPacket() {
+Result<Void> PacketDecodeFSMT<Buffer>::finishPacket() {
     if (buffer.begin()[bytesRead - 1] == 0) { --bytesRead; }
     if (bytesRead == 0) {
-        return fail<boost::blank>(toError(ErrorCode::CobsBadEncoding));
+        return fail(toError(ErrorCode::CobsBadEncoding));
     }
     buffer.resize(bytesRead);
     bytesRead = 0;

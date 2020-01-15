@@ -112,7 +112,7 @@ void rxThreadFunction() {
                 c.sd.read(std::chrono::milliseconds(50)) >
                 [&] {
                     dpl("second read ok");
-                    return ok(boost::blank());
+                    return ok();
                 };
                 return fail<Buffer>(e);
             };

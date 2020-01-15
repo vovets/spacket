@@ -14,19 +14,19 @@ using PacketDecodeFSM = PacketDecodeFSMT<Buffer>;
 
 namespace Catch {
 template<> struct StringMaker<Buffer>: public StringMakerBufferBase<Buffer> {};
-template<> struct StringMaker<Result<boost::blank>>: public StringMakerBufferBase<Result<boost::blank>> {};
+template<> struct StringMaker<Result<Void>>: public StringMakerBufferBase<Result<Void>> {};
 }
 
 struct Case {
     Buffer input;
     std::vector<Buffer> expectedOutput;
-    Result<boost::blank> expectedResult;
+    Result<Void> expectedResult;
     std::size_t expectedInputConsumed;
 };
 
 struct DecodeResult {
     std::vector<Buffer> decoded;
-    Result<boost::blank> result = fail<boost::blank>(toError(ErrorCode::MiserableFailure0));
+    Result<Void> result = fail(toError(ErrorCode::MiserableFailure0));
     std::size_t consumed = 0;
 };
 
@@ -39,11 +39,11 @@ DecodeResult decode(Buffer b) {
         Buffer::create(Buffer::maxSize()) >=
         [&] (Buffer&& newBuffer) {
             b = std::move(newBuffer);
-            return ok(boost::blank());
+            return ok();
         };
     };
     auto decoder = PacketDecodeFSM(callback, throwOnFail(Buffer::create(Buffer::maxSize())));
-    retval.result = ok(boost::blank());
+    retval.result = ok();
     for (auto byte: b) {
         retval.result = decoder.consume(byte);
         if (isFail(retval.result)) {
@@ -64,7 +64,7 @@ void runCase(Case c) {
 void runCase(Buffer b) {
     auto encoded = stuffDelim(copy(b));
     auto result = decode(std::move(encoded));
-    REQUIRE(result.result == ok(boost::blank()));
+    REQUIRE(result.result == ok(Void()));
     REQUIRE(result.decoded == vec({std::move(b)}));
 }
 
@@ -73,7 +73,7 @@ TEST_CASE("01") {
     {
     buf({ 0 }),
     {},
-    ok(boost::blank()),
+    ok(),
     1
     });
 }
@@ -83,7 +83,7 @@ TEST_CASE("02") {
     {
     buf({ 0, 1, 1, 0 }),
     vec({ buf({0}) }),
-    ok(boost::blank()),
+    ok(),
     4
     });
 }
@@ -92,7 +92,7 @@ TEST_CASE("03") {
     Case c = {
     buf({ 0, 1, 1, 0, 0, 2, 1, 0, 3, 1, 2, 1, 2, 1, 0 }),
     vec({ buf({ 0 }), buf({ 1 }), buf({ 1, 2, 0, 0, 1 }) }),
-    ok(boost::blank()),
+    ok(),
     15
     };
     CAPTURE(c.input);
@@ -104,7 +104,7 @@ TEST_CASE("04") {
     {
     buf({ 5, 4, 3, 2, 1, 0, 2, 1, 0 }),
     vec({ buf({ 1 }) }),
-    ok(boost::blank()),
+    ok(),
     9
     });
 }
@@ -114,7 +114,7 @@ TEST_CASE("05", "[fail]") {
     {
     buf({ 0, 1, 0, 0 }),
     {},
-    fail<boost::blank>(toError(ErrorCode::CobsBadEncoding)),
+    fail(toError(ErrorCode::CobsBadEncoding)),
     2
     });
 }
@@ -124,7 +124,7 @@ TEST_CASE("06", "[fail]") {
     {
     buf({ 0, 3, 1, 0, 0 }),
     {},
-    fail<boost::blank>(toError(ErrorCode::CobsBadEncoding)),
+    fail(toError(ErrorCode::CobsBadEncoding)),
     3
     });
 }
@@ -134,7 +134,7 @@ TEST_CASE("07") {
     {
     cat(buf({ 0 }), buf({ 255 }), nz(254), buf({ 0 })),
     vec({ nz(254) }),
-    ok(boost::blank()),
+    ok(),
     257
     }
     );
@@ -145,7 +145,7 @@ TEST_CASE("08") {
     {
     cat(buf({ 0, 255 }), nz(254), buf({ 255 }), nz(254), buf({ 1, 1, 0 })),
     vec({ cat(nz(254), nz(254), buf({ 0 })) }),
-    ok(boost::blank()),
+    ok(),
     2 + 254 + 1 + 254 + 3
     }
     );

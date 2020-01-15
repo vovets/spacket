@@ -14,7 +14,7 @@ using Buffer = BufferT<NewAllocator>;
 
 namespace Catch {
 template<> struct StringMaker<Buffer>: public StringMakerBufferBase<Buffer> {};
-template<> struct StringMaker<Result<boost::blank>>: public StringMakerBufferBase<Result<boost::blank>> {};
+template<> struct StringMaker<Result<Void>>: public StringMakerBufferBase<Result<Void>> {};
 }
 
 #ifdef ENABLE_DEBUG_PRINT

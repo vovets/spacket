@@ -41,11 +41,11 @@ void packetizerThreadFunctionT(Mailbox& in, Mailbox& out, ErrorReportF reportErr
                             fatal<Packetizer> >=
                             [&](Packetizer&& p) {
                                 pktz = std::move(p);
-                                return fail<boost::blank>(toError(ErrorCode::PacketizerOverflow));
+                                return fail(toError(ErrorCode::PacketizerOverflow));
                             } <=
                             [&](Error e) {
                                 reportError(e);
-                                return ok(boost::blank{});
+                                return ok();
                             };
                             break;
                         case Packetizer::Finished: {
@@ -53,7 +53,7 @@ void packetizerThreadFunctionT(Mailbox& in, Mailbox& out, ErrorReportF reportErr
                             out.post(packet, IMMEDIATE_TIMEOUT) <=
                             [&](Error e) {
                                 reportError(e);
-                                return ok(boost::blank{});
+                                return ok();
                             } >
                             [&]() {
                                 // ATTN: in real application there may be no need to demand sync here
@@ -63,7 +63,7 @@ void packetizerThreadFunctionT(Mailbox& in, Mailbox& out, ErrorReportF reportErr
 								fatal<Packetizer> >=
                                 [&](Packetizer&& p) {
                                     pktz = std::move(p);
-                                    return ok(boost::blank{});
+                                    return ok();
                                 };
                             };
                             break;
@@ -73,14 +73,14 @@ void packetizerThreadFunctionT(Mailbox& in, Mailbox& out, ErrorReportF reportErr
                     }
                 }
                 fetched.release();
-                return ok(boost::blank{});
+                return ok();
             } <=
             [&](Error e) {
                 reportError(e);
-                return ok(boost::blank{});
+                return ok();
             };
         }
-        return ok(boost::blank{});
+        return ok();
     } <=
-    fatal<boost::blank>;
+    fatal<Void>;
 }

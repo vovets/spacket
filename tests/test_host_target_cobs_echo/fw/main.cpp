@@ -62,17 +62,17 @@ private:
     SerialDevice sd_;
 };
 
-Result<boost::blank> writeBuffer(SerialDevice& sd, const Buffer& b) {
+Result<Void> writeBuffer(SerialDevice& sd, const Buffer& b) {
     palClearPad(GPIOC, GPIOC_LED);
     return
     sd.write(b) >
     [&]() {
         palSetPad(GPIOC, GPIOC_LED);
-        return ok(boost::blank{});
+        return ok();
     };
 }
 
-Result<boost::blank> encodeAndSend(SerialDevice& sd, Buffer&& b) {
+Result<Void> encodeAndSend(SerialDevice& sd, Buffer&& b) {
     DPB(b);
     return
     cobs::stuffAndDelim(std::move(b)) >=
@@ -134,15 +134,15 @@ static __attribute__((noreturn)) THD_FUNCTION(txThreadFunction, arg) {
                         fatal<Packetizer> >=
                         [&](Packetizer&& p) {
                             packetizer = std::move(p);
-                            return ok(boost::blank{});
+                            return ok();
                         };
                     };
                 }
-                return ok(boost::blank{});
+                return ok();
             } <=
             threadErrorReport;
         }
-        return ok(boost::blank{});
+        return ok();
     };
     for (;;) {}
 }    

@@ -59,16 +59,16 @@ Result<Buffer> readFull(SerialDevice& sd, Timeout timeout, std::promise<void>& l
             std::move(result) >=
             [&](Buffer&& result_) {
                 result = result_ + read;
-                return ok(boost::blank{});
+                return ok();
             };
         } <=
         [&](Error e) {
             finished = true;
             if (e == toError(ErrorCode::ReadTimeout)) {
-                return ok(boost::blank{});
+                return ok();
             }
             result = fail<SuccessT<decltype(result)>>(e);
-            return ok(boost::blank{});
+            return ok();
         };
     }
     return result;
@@ -86,16 +86,16 @@ void runCaseOnce(const PortConfig& pc, TestCase c) {
             sd.write(bufferToSend) <=
             [&](Error e) {
                 throw std::runtime_error(toString(e));
-                return fail<boost::blank>(e);
+                return fail(e);
             } >
             [&]() {
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                return ok(boost::blank{});
+                return ok();
             };
         }
         auto result = future.get();
         REQUIRE(result == c.expected);
-        return ok(boost::blank{});
+        return ok();
     };
 }
 

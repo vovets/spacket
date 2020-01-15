@@ -30,10 +30,8 @@
     } while(false)
 
 
-inline
-std::ostream& operator<<(std::ostream& os, const Hr<boost::blank>&) {
-    return os;
-}
+template <typename Success>
+Result<Success> idFail(Error e) { return fail<Success>(e); }
 
 template<typename Result>
 typename std::enable_if_t<
@@ -41,9 +39,9 @@ std::is_same<typename Result::TypeId, result_impl::TypeId>::value,
 std::ostream&>
 operator<<(std::ostream& os, Hr<Result> hr_) {
     if (isOk(hr_.w)) {
-        os << "ok[" << hr(getOkUnsafe(hr_.w)) << "]";
+        os << std::string("ok[") << hr(getOkUnsafe(hr_.w)) << "]";
     } else {
-        os << "fail[" << toString(getFailUnsafe(hr_.w)) << "]";
+        os << std::string("fail[") << toString(getFailUnsafe(hr_.w)) << "]";
     }
     return os;
 }
@@ -53,7 +51,12 @@ typename std::enable_if_t<
 std::is_same<typename Result::TypeId, result_impl::TypeId>::value,
 bool>
 operator==(const Result& lhs, const Result& rhs) {
-        return lhs.value == rhs.value;
+    if (lhs.isOk() != rhs.isOk()) { return false; }
+    if (lhs.isOk()) {
+        return lhs.getOk() == rhs.getOk();
+    } else {
+        return lhs.getFailure() == rhs.getFailure();
+    }
 }
 
 template<typename Result>
@@ -62,4 +65,23 @@ std::is_same<typename Result::TypeId, result_impl::TypeId>::value,
 bool>
 operator!=(const Result& lhs, const Result& rhs) {
     return !operator==(lhs, rhs);
+}
+
+struct Void {};
+
+inline
+bool operator==(const Result<Void>& lhs, const Result<Void>& rhs) {
+    if (lhs.isOk() != rhs.isOk()) { return false; }
+    return true;
+}
+
+inline
+Result<Void> ok() { return ok(Void()); }
+
+inline
+Result<Void> fail(Error e) { return fail<Void>(e); }
+
+inline
+std::ostream& operator<<(std::ostream& os, const Hr<Void>&) {
+    return os;
 }

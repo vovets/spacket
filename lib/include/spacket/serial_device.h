@@ -36,13 +36,13 @@ public:
         return Impl::read(t);
     }
 
-    Result<boost::blank> write(const Buffer& b) {
+    Result<Void> write(const Buffer& b) {
         return Impl::write(b.begin(), b.size());
     }
 
     // not every platform supports write with timeout
     // so there may be static assert error here
-    Result<boost::blank> write(const Buffer& b, Timeout t) {
+    Result<Void> write(const Buffer& b, Timeout t) {
         return Impl::write(b.begin(), b.size(), t);
     }
 

@@ -25,7 +25,7 @@ public:
         return Impl::read(t);
     }
 
-    Result<boost::blank> write(Buffer b) {
+    Result<Void> write(Buffer b) {
         return Impl::write(std::move(b));
     }
 };

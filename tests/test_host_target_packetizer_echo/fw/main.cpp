@@ -59,14 +59,14 @@ private:
     SerialDevice sd_;
 };
 
-Result<boost::blank> writeBuffer(SerialDevice& sd, Buffer&& b) {
+Result<Void> writeBuffer(SerialDevice& sd, Buffer&& b) {
     palClearPad(GPIOC, GPIOC_LED);
     dpb("write: ", &b);
     return
     sd.write(b) >
     [&]() {
         palSetPad(GPIOC, GPIOC_LED);
-        return ok(boost::blank{});
+        return ok();
     };
 }
 
