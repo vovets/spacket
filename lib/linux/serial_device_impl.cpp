@@ -95,10 +95,10 @@ Result<size_t> NativeDevice::Impl::read(uint8_t* buffer, size_t maxRead, Timeout
     uint8_t* const end = buffer + maxRead;
     while (now < deadline && cur < end) {
         struct timeval timeout = byteTimeout;
-        fd_set fds;
-        FD_ZERO(&fds);
-        FD_SET(fd, &fds);
-        callv(result, f, ::select, fd + 1, &fds, nullptr, nullptr, &timeout);
+        fd_set readSet;
+        FD_ZERO(&readSet);
+        FD_SET(fd, &readSet);
+        callv(result, f, ::select, fd + 1, &readSet, nullptr, nullptr, &timeout);
         if (!result) {
             TRACE("select timeout");
             if (cur == buffer) {
@@ -109,7 +109,7 @@ Result<size_t> NativeDevice::Impl::read(uint8_t* buffer, size_t maxRead, Timeout
             TRACE("<1== " << cur - buffer);
             return ok(static_cast<size_t>(cur - buffer));
         }
-        if (!FD_ISSET(fd, &fds)) {
+        if (!FD_ISSET(fd, &readSet)) {
             TRACE("fd not ready");
             continue;
         }
@@ -117,6 +117,7 @@ Result<size_t> NativeDevice::Impl::read(uint8_t* buffer, size_t maxRead, Timeout
         callv(bytesRead, f, ::read, fd, cur, requested);
         TRACE("requested " << requested << ", read " << bytesRead);
         cur += bytesRead;
+        now = Clock::now();
     }
     TRACE("<2== " << cur - buffer);
     if (cur == buffer) {
