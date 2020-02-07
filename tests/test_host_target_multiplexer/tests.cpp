@@ -71,28 +71,26 @@ void runCase(const PortConfig& pc, TestCase c) {
     SerialDevice::open(pc) >=
     [&](SerialDevice sd) {
         return
-        PacketDevice::open(std::move(sd)) >=
-        [&](PacketDevice pd) {
-            return
-            Multiplexer::open(std::move(pd)) >=
-            [&] (Multiplexer mx) {
-                for (std::size_t rep = 0; rep < REP; ++rep) {
-                    std::promise<void> launched;
-                    auto receive = [&] (std::promise<void> launched) {
-                        launched.set_value();
-                        return
+        Buffer::create(Buffer::maxSize()) >=
+        [&](Buffer&& pdBuffer) {
+            PacketDevice pd(sd, std::move(pdBuffer));
+            Multiplexer mx(pd);
+            for (std::size_t rep = 0; rep < REP; ++rep) {
+                std::promise<void> launched;
+                auto receive = [&] (std::promise<void> launched) {
+                    launched.set_value();
+                    return
                         mx.read(toChannel(rep), readPacketTimeout);
-                    };
-                    auto launchedFuture = launched.get_future();
-                    auto future = std::async(std::launch::async, receive, std::move(launched));
-                    launchedFuture.wait();
-                    throwOnFail(mx.write(toChannel(rep), copy(c.send)));
-                    auto r = future.get();
-                    REQUIRE(r == c.expected);
-                    std::this_thread::sleep_for(c.holdOffTime);
-                }
-                return ok();
-            };
+                };
+                auto launchedFuture = launched.get_future();
+                auto future = std::async(std::launch::async, receive, std::move(launched));
+                launchedFuture.wait();
+                throwOnFail(mx.write(toChannel(rep), copy(c.send)));
+                auto r = future.get();
+                REQUIRE(r == c.expected);
+                std::this_thread::sleep_for(c.holdOffTime);
+            }
+            return ok();
         };
     } <=
     [&] (Error e) {

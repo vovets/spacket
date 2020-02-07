@@ -24,19 +24,17 @@ ThreadStorageT<512> packetizerThreadStorage;
 BufferMailbox packetizerIn;
 BufferMailbox packetizerOut;
 
+#define PREFIX()
 #ifdef ENABLE_DEBUG_PRINT
-
 IMPLEMENT_DPL_FUNCTION
 IMPLEMENT_DPX_FUNCTIONS
 IMPLEMENT_DPB_FUNCTION
-
 #else
-
 IMPLEMENT_DPL_FUNCTION_NOP
 IMPLEMENT_DPX_FUNCTIONS_NOP
 IMPLEMENT_DPB_FUNCTION_NOP
-
 #endif
+#undef PREFIX
 
 class Globals {
 public:

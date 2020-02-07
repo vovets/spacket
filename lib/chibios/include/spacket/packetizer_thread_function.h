@@ -8,17 +8,15 @@
 
 namespace packetizer_thread_function {
 
+#define PREFIX()
 #ifdef PACKETIZER_THREAD_FUNCTION_ENABLE_DEBUG_PRINT
-
 IMPLEMENT_DPL_FUNCTION
 IMPLEMENT_DPX_FUNCTIONS
-
 #else
-
 IMPLEMENT_DPL_FUNCTION_NOP
 IMPLEMENT_DPX_FUNCTIONS_NOP
-
 #endif
+#undef PREFIX
 
 } // packetizer_thread_function
 

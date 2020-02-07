@@ -4,6 +4,7 @@
 
 #include <type_traits>
 #include <cstdint>
+#include <array>
 
 #ifdef ERROR_LIST
 #error "ERROR_LIST macro should not be defined here"
@@ -37,8 +38,8 @@
 #endif
 
 struct Error {
-    using Code = std::uint16_t;
     using Source = std::uint16_t;
+    using Code = std::uint16_t;
 
     Source source;
     Code code;
@@ -48,7 +49,7 @@ struct Error {
     }
 };
 
-constexpr Error::Source ERROR_SOURCE = 0;
+constexpr Error::Source SPACKET_ERROR_SOURCE = 0;
 
 enum class ErrorCode: Error::Code {
 #define X(ID, CODE, SEP) ID = CODE SEP
@@ -63,7 +64,7 @@ constexpr typename std::underlying_type_t<ErrorCode> toInt(ErrorCode e) noexcept
 
 inline
 constexpr Error toError(ErrorCode e) noexcept {
-    return Error{ERROR_SOURCE, toInt(e)};
+    return Error{SPACKET_ERROR_SOURCE, toInt(e)};
 }
 
 constexpr Error toError(Error::Source s, Error::Code e) noexcept {
@@ -74,6 +75,9 @@ const char* toString(ErrorCode e);
 
 const char* toString(Error e, char* buffer, std::size_t size);
 
-using ErrorToStringF = const char*(*)(Error);
+using DefaultToStringBuffer = std::array<char, 5+1+5+1>;
 
-ErrorToStringF setErrorToStringHandler(ErrorToStringF handler);
+template <typename Array>
+const char* toString(Error e, Array& a) {
+    return toString(e, a.data(), a.size());
+}

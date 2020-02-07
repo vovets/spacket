@@ -2,11 +2,6 @@
 
 #include <boost/preprocessor/stringize.hpp>
 
-static const char* defaultErrorToStringHandler(Error) {
-    return "Unknown error";
-}
-
-static ErrorToStringF errorToStringHandler = &defaultErrorToStringHandler;
 
 const char* toString(ErrorCode e) {
     switch (e) {
@@ -17,10 +12,4 @@ const char* toString(ErrorCode e) {
 #undef STR
         default: return "unknown";
     }
-}
-
-ErrorToStringF setErrorToStringHandler(ErrorToStringF handler) {
-    auto retval = errorToStringHandler;
-    errorToStringHandler = handler;
-    return retval;
 }

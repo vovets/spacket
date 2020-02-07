@@ -64,7 +64,7 @@ def test_packet_size_limit(conn, reset):
     conn.send_line(b"test_loopback %d 100" % BUFFER_SIZE)
 
     conn.expect_line(b"test_loopback %d 100" % BUFFER_SIZE)
-    conn.expect_line(b"FAILURE\[500:BufferCreateTooBig\]")
+    conn.expect_line(b"FAILURE\[0.500\]")
     conn.expect(b"ch> ")
 
 
@@ -93,7 +93,7 @@ def test_rx_timeout(conn, reset):
 
     conn.expect_line(b"test_loopback 200 10 1")
     for i in range(0, 10):
-        conn.expect_line(b"FAILURE\[404:ReadTimeout\]")
+        conn.expect_line(b"FAILURE\[0.404\]")
     conn.expect(b"ch> ")
 
 

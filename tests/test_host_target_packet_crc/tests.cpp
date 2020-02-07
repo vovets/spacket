@@ -66,8 +66,9 @@ void runCaseOnce(const PortConfig& pc, TestCase2 c) {
     SerialDevice::open(pc) >=
     [&](SerialDevice sd) {
         return
-        PacketDevice::open(std::move(sd)) >=
-        [&](PacketDevice pd) {
+        Buffer::create(Buffer::maxSize()) >=
+        [&](Buffer&& pdBuffer) {
+            PacketDevice pd(sd, std::move(pdBuffer));
             std::promise<void> launched;
             auto receive = [&] (std::promise<void> launched) {
                 launched.set_value();

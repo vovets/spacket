@@ -35,7 +35,8 @@ static __attribute__((noreturn)) void echoThreadFunction() {
             sd.read(INFINITE_TIMEOUT) >=
             writeBuffer <=
             [&](Error e) {
-                chprintf(&rttStream, "E: %s", toString(e));
+                DefaultToStringBuffer buf;
+                chprintf(&rttStream, "E: %s", toString(e, buf));
                 return ok();
             };
         }
@@ -43,7 +44,8 @@ static __attribute__((noreturn)) void echoThreadFunction() {
         return ok();
     } <=
     [&](Error e) {
-        FATAL_ERROR(toString(e));
+        DefaultToStringBuffer buf;
+        FATAL_ERROR(toString(e, buf));
         // will never get here
         return ok();
     };

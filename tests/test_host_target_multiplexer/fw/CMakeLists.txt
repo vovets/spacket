@@ -13,7 +13,7 @@ include(fw_vars)
 set(CH_CPU cortex-m3)
 set(CH_MCU_NAME STM32F103x8)
 set(CH_ROOT_DIR [[${EXTERNAL}/chibios]])
-set(debug_optimization_flags -O3)
+set(debug_optimization_flags -Os)
 #set(CH_PROCESS_STACK_SIZE 0x1000)
 #set(CH_MAIN_STACK_SIZE 0x1000)
 
@@ -23,6 +23,9 @@ fw_add_executable(fw)
 fw_compile_definitions(fw
   -DUART_USE_WAIT=FALSE
   -DBOOST_STRICT_CONFIG
+  -DBOOST_DISABLE_ASSERTS
+  -DSPACKET_ENABLE_THREAD_CHECK_STACK
+  -DNDEBUG
   # -DSERIAL_DEVICE_ENABLE_DEBUG_PRINT
   # -DPACKET_DEVICE_ENABLE_DEBUG_PRINT
   # -DDEBUG_PRINT_BUFFER_FIRST_ONLY

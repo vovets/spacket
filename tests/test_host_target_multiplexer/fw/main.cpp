@@ -17,6 +17,7 @@
 #include <spacket/packet_device.h>
 #include <spacket/multiplexer.h>
 #include <spacket/crc.h>
+#include <spacket/memory_utils.h>
 
 
 ThreadStorageT<256> echoThreadStorage[MULTIPLEXER_NUM_CHANNELS];
@@ -30,53 +31,47 @@ constexpr tprio_t SD_THREAD_PRIORITY = NORMALPRIO + 3;
 constexpr tprio_t PD_THREAD_PRIORITY = NORMALPRIO + 2;
 constexpr tprio_t MX_THREAD_PRIORITY = NORMALPRIO + 1;
 
-PacketDevice::Storage packetDeviceStorage;
-Multiplexer::Storage multiplexerStorage;
-
 namespace {
 
 #ifdef ENABLE_DEBUG_PRINT
-
 IMPLEMENT_DPL_FUNCTION
-
 #else
-
 IMPLEMENT_DPL_FUNCTION_NOP
-
 #endif
 
 } // namespace
 
 class Globals {
 public:
-    static Result<Globals> init() {
+    static Result<StaticPtr<Globals>> init(void* storage) {
         return
-        SerialDevice::open(&UARTD1, SD_THREAD_PRIORITY) >=
-        [&](SerialDevice sd) {
-            return
-            PacketDevice::open(std::move(sd), &packetDeviceStorage, PD_THREAD_PRIORITY) >=
-            [&] (PacketDevice pd) {
+            SerialDevice::open(&UARTD1, SD_THREAD_PRIORITY) >=
+            [&](SerialDevice sd) {
                 return
-                Multiplexer::open(std::move(pd), &multiplexerStorage, MX_THREAD_PRIORITY) >=
-                [&] (Multiplexer mx) {
-                    return ok(Globals(std::move(mx)));
-                };
+                    Buffer::create(Buffer::maxSize()) >=
+                    [&] (Buffer&& pdBuffer) {
+                        return ok(makeStatic<Globals>(storage, std::move(sd), std::move(pdBuffer)));
+                    };
             };
-        };
     }
 
-    Globals(Globals&&) = default;
+    Multiplexer& mx() { return *mx_; }
 
-Multiplexer& mx() { return mx_; }
-
-private:
-    Globals(Multiplexer&& mx)
-        : mx_(std::move(mx))
+    Globals(SerialDevice&&sd, Buffer&& pdBuffer)
+        : sd_(std::move(sd))
+        , pd_(new (&pdStorage) PacketDevice(sd_, std::move(pdBuffer), PD_THREAD_PRIORITY))
+        , mx_(new (&mxStorage) Multiplexer(*pd_, MX_THREAD_PRIORITY))
     {}
 
 private:
-    Multiplexer mx_;
+    SerialDevice sd_;
+    Storage<PacketDevice> pdStorage;
+    Storage<Multiplexer> mxStorage;
+    StaticPtr<PacketDevice> pd_;
+    StaticPtr<Multiplexer> mx_;
 };
+
+Storage<Globals> globalsStorage;
 
 Result<Void> writeBuffer(std::uint8_t channel, Multiplexer& mx, Buffer b) {
     palClearPad(GPIOC, GPIOC_LED);
@@ -109,10 +104,10 @@ int main(void) {
     chprintf(&rttStream, "RTT ready\r\n");
     chprintf(&rttStream, "Buffer::maxSize(): %d\r\n", Buffer::maxSize());
 
-    auto globals = std::move(getOkUnsafe(Globals::init() <= fatal<Globals>));
+    auto globals = std::move(getOkUnsafe(Globals::init(&globalsStorage) <= fatal<StaticPtr<Globals>>));
 
     for (std::uint8_t c = 0; c < MULTIPLEXER_NUM_CHANNELS; ++c) {
-        Thread::create(Thread::params(echoThreadStorage[c], NORMALPRIO), [&] { echoThreadFunction(globals, c); });
+        Thread::create(Thread::params(echoThreadStorage[c], NORMALPRIO), [&] { echoThreadFunction(*globals, c); });
     }
 
     for (;;) {

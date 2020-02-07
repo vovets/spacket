@@ -17,6 +17,8 @@ template<> struct StringMaker<Buffer>: public StringMakerBufferBase<Buffer> {};
 template<> struct StringMaker<Result<Void>>: public StringMakerBufferBase<Result<Void>> {};
 }
 
+constexpr Error::Source ERROR_SOURCE = 10;
+
 struct Case {
     Buffer input;
     std::vector<Buffer> expectedOutput;
@@ -26,7 +28,7 @@ struct Case {
 
 struct DecodeResult {
     std::vector<Buffer> decoded;
-    Result<Void> result = fail(toError(ErrorCode::MiserableFailure0));
+    Result<Void> result = fail(toError(ERROR_SOURCE, toInt(ErrorCode::Timeout)));
     std::size_t consumed = 0;
 };
 

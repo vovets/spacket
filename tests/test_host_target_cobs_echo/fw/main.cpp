@@ -27,17 +27,15 @@ constexpr tprio_t SD_THREAD_PRIORITY = NORMALPRIO + 2;
 
 BufferMailbox receivedMb;
 
+#define PREFIX()
 #ifdef ENABLE_DEBUG_PRINT
-
 IMPLEMENT_DPX_FUNCTIONS
 IMPLEMENT_DPB_FUNCTION
-
 #else
-
 IMPLEMENT_DPX_FUNCTIONS_NOP
 IMPLEMENT_DPB_FUNCTION_NOP
-
 #endif
+#undef PREFIX
 
 class Globals {
 public:

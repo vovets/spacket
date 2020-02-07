@@ -75,7 +75,8 @@ static void cmd_test_rx_timeout(BaseSequentialStream *stream, int, char*[]) {
     };
     CHECK(isFail(result));
     auto e = getFailUnsafe(result);
-    dpl("cmd_test_rx_timeout: %s", toString(e));
+    DefaultToStringBuffer buf;
+    dpl("cmd_test_rx_timeout: %s", toString(e, buf));
     CHECK(e == toError(ErrorCode::ReadTimeout));
 }
 
@@ -168,7 +169,8 @@ static void test_loopback_loop(BaseSequentialStream *stream, size_t packetSize, 
                 return ok(true);
             } <=
             [&](Error e) {
-                chprintf(stream, "FAILURE[%s]\r\n", toString(e));
+                DefaultToStringBuffer buf;
+                chprintf(stream, "FAILURE[%s]\r\n", toString(e, buf));
                 return ok(false);
             };
             returnOnFail(passed_, result);
