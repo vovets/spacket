@@ -34,7 +34,11 @@
     X(ID(CrcCheckBufferTooSmall),    CODE(1203),  SEP())  \
     X(ID(MultiplexerBadChannel),     CODE(1300),  SEP())  \
     X(ID(MultiplexerBufferTooBig),   CODE(1301),  SEP())  \
-    X(ID(MultiplexerBufferTooSmall), CODE(1302),)
+    X(ID(MultiplexerBufferTooSmall), CODE(1302),  SEP())  \
+    X(ID(UartNothingToWait),         CODE(1400),  SEP())  \
+    X(ID(UartRxTimeout),             CODE(1401),  SEP())  \
+    X(ID(UartTxTimeout),             CODE(1402),  SEP())  \
+    X(ID(LastCode),                  CODE(10000),)
 #endif
 
 struct Error {
