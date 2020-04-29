@@ -38,6 +38,10 @@
     X(ID(UartNothingToWait),         CODE(1400),  SEP())  \
     X(ID(UartRxTimeout),             CODE(1401),  SEP())  \
     X(ID(UartTxTimeout),             CODE(1402),  SEP())  \
+    X(ID(ModulePacketConsumed),      CODE(1500),  SEP())  \
+    X(ID(ModulePacketDropped),       CODE(1501),  SEP())  \
+    X(ID(ModuleNoLower),             CODE(1502),  SEP())  \
+    X(ID(ModuleNoUpper),             CODE(1503),  SEP())  \
     X(ID(LastCode),                  CODE(10000),)
 #endif
 
@@ -50,6 +54,10 @@ struct Error {
 
     bool operator==(const Error& rhs) const {
         return source == rhs.source && code == rhs.code;
+    }
+
+    bool operator!=(const Error& rhs) const {
+        return !operator==(rhs);
     }
 };
 

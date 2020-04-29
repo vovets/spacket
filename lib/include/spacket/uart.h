@@ -1,72 +1,5 @@
 #pragma once
 
-#include <spacket/time_utils.h>
-#include <spacket/memory_utils.h>
-#include <spacket/guard_utils.h>
-
-#include <boost/optional.hpp>
-
-#include <functional>
-
-namespace cph {
-
-#ifdef CPH_ENABLE_DEBUG_PRINT
-
-    IMPLEMENT_DPL_FUNCTION
-
-#else
-
-    IMPLEMENT_DPL_FUNCTION_NOP
-
-#endif
-
-}
-
-template <typename Buffer>
-using StreamT = boost::optional<Buffer>;
-
-template <typename Buffer>
-using HandlerT = std::function<Result<Void>(Buffer&&)>;
-
-template <typename Buffer>
-struct ConnectionT {
-    using Stream = StreamT<Buffer>;
-    using Handler = HandlerT<Buffer>;
-    
-    Stream* stream;
-    Handler handler;
-};
-
-template <typename Stream>
-typename Stream::value_type extract(Stream& stream) {
-    using Buffer = typename Stream::value_type;
-    if (!stream) { FATAL_ERROR("extract"); }
-    Buffer tmp = std::move(*stream);
-    stream = {};
-    return tmp;
-}
-
-template <typename Array>
-struct ArrayInserter {
-    Array& array;
-    std::size_t firstFree = 0;
-
-    ArrayInserter(Array& array): array(array) {}
-    
-    void insert(typename Array::value_type v) {
-        if (firstFree >= array.size()) {
-            FATAL_ERROR("ArrayInserter::insertBack");
-        }
-        array[firstFree] = v;
-        ++firstFree;
-    }
-};
-
-template <typename Array>
-ArrayInserter<Array> makeArrayInserter(Array& array) {
-    return ArrayInserter<Array>(array);
-}
-
 template <typename Buffer>
 struct UartT {
     using Uart = UartT<Buffer>;
@@ -112,12 +45,12 @@ public:
 
     Result<Buffer> waitRx(Timeout t) {
         auto guard = makeOsalSysLockGuard(); // dmaRx needs to be protected
-        cph::dpl("waitRx|locked");
+        cpm::dpl("waitRx|locked");
         if (!dmaRx) {
             return fail<Buffer>(toError(ErrorCode::UartNothingToWait));
         }
         if (driver.rxstate == UART_RX_ACTIVE) {
-            cph::dpl("waitRx|suspend");
+            cpm::dpl("waitRx|suspend");
             auto result = osalThreadSuspendTimeoutS(&waitingThreadRx, toSystime(t));
             if (result == MSG_TIMEOUT) {
                 return fail<Buffer>(toError(ErrorCode::UartRxTimeout));
@@ -135,9 +68,9 @@ public:
 
     Result<Void> waitTx(Timeout t) {
         auto guard = makeOsalSysLockGuard();
-        cph::dpl("waitTx|locked");
+        cpm::dpl("waitTx|locked");
         if (driver.txstate == UART_TX_ACTIVE) {
-            cph::dpl("waitTx|suspend");
+            cpm::dpl("waitTx|suspend");
             auto result = osalThreadSuspendTimeoutS(&waitingThreadTx, toSystime(t));
             if (result == MSG_TIMEOUT) {
                 return fail(toError(ErrorCode::UartTxTimeout));
@@ -209,65 +142,3 @@ private:
         getUart(driver).rxIdleI();
     }
 };
-
-template <typename Buffer>
-struct UartServiceT {
-    using Stream = StreamT<Buffer>;
-    using Uart = UartT<Buffer>;
-
-    Stream rxInput;
-    Stream up;
-    Stream down;
-
-    Uart& uart;
-
-    UartServiceT(Uart& uart): uart(uart) {}
-
-    template <typename ArrayInserterUp, typename ArrayInserterDown>
-    void addHandlers(ArrayInserterUp& u, ArrayInserterDown& d) {
-        u.insert({ &rxInput, [&](Buffer&& b){ return handleRxInput(std::move(b)); } });
-
-        d.insert({ &down, [&](Buffer&& b){ return handleDown(std::move(b)); } });
-    }
-
-    Result<Void> handleRxInput(Buffer&& buffer) {
-        cph::dpl("handleRxInput|enter");
-        return
-        Buffer::create(Buffer::maxSize()) >=
-        [&](Buffer&& newBuffer) {
-            uart.startRx(std::move(newBuffer));
-            cph::dpl("handleRxInput|startRx");
-            up = std::move(buffer);
-            return ok();
-        };
-    }
-
-    Result<Void> handleDown(Buffer&& buffer) {
-        uart.startTx(std::move(buffer));
-        cph::dpl("handleDown|startTx");
-        return ok();
-    }
-};
-
-template <typename Buffer>
-struct ExecutorT {
-    using Stream = StreamT<Buffer>;
-    using Handler = HandlerT<Buffer>;
-    using Connection = ConnectionT<Buffer>;
-    
-    template <std::size_t SIZE>
-    using ConnArray = std::array<Connection, SIZE>;
-
-    template <std::size_t NCONN>
-    static Result<Void> execute(ConnArray<NCONN>& connections) {
-        auto result = ok();
-        for (const auto& c: connections) {
-            if (!!*c.stream) {
-                result = c.handler(extract(*c.stream));
-                if (isFail(result)) { return result; }
-            }
-        }
-        return ok();
-    }
-};
-    

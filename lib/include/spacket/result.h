@@ -87,10 +87,10 @@ private:
 //}
 
 template <typename Success>
-Result<Success> ok(Success value) { return Result<Success>{std::move(value)}; }
+Result<Success> ok(Success&& value) { return {std::forward<Success>(value)}; }
 
 template <typename Success>
-Result<Success> fail(Error error) { return Result<Success>{std::move(error)}; }
+Result<Success> fail(Error error) { return {std::move(error)}; }
 
 template <typename Result>
 bool isOk(const Result& r) { return r.isOk(); }

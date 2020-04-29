@@ -1,4 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
+
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 project(test_host_target_cph_uart_fw C CXX ASM)
 
 get_filename_component(SPACKET_ROOT ../../.. ABSOLUTE)
