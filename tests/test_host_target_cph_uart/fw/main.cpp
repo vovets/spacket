@@ -28,29 +28,31 @@ constexpr Timeout TX_TIMEOUT = std::chrono::milliseconds(20);
 template <typename Buffer>
 struct UartServiceT: ModuleT<Buffer> {
     using Module = ModuleT<Buffer>;
-    using Stream = StreamT<Buffer>;
     using Uart = UartT<Buffer>;
     using DeferredProc = DeferredProcT<Buffer>;
-    using ContextOps = ContextOpsT<Buffer>;
+    using Module::upper;
+    using Module::lower;
 
     Uart& uart;
 
     UartServiceT(Uart& uart): uart(uart) {}
 
-    Result<DeferredProc> up(Buffer&& buffer, ContextOps& ops) override {
+    Result<DeferredProc> up(Buffer&& buffer) override {
         cpm::dpl("UartServiceT::up|enter");
         return
         Buffer::create(Buffer::maxSize()) >=
         [&](Buffer&& newBuffer) {
             uart.startRx(std::move(newBuffer));
             cpm::dpl("UartServiceT::up|startRx");
-            Module* m = ops.upper(*this);
-            if (m == nullptr) { return fail<DeferredProc>(toError(ErrorCode::ModuleNoUpper)); }
-            return ok(DeferredProc(std::move(buffer), *m, &Module::up));
+            return
+            upper(*this) >=
+            [&] (Module* m) {
+                return ok(DeferredProc(std::move(buffer), *m, &Module::up));
+            };
         };
     }
 
-    Result<DeferredProc> down(Buffer&& buffer, ContextOps&) override {
+    Result<DeferredProc> down(Buffer&& buffer) override {
         cpm::dpb("UartServiceT::down|", &buffer);
         uart.startTx(std::move(buffer));
         cpm::dpl("UartServiceT::down|startTx");
@@ -59,7 +61,7 @@ struct UartServiceT: ModuleT<Buffer> {
 };
 
 template <typename Buffer>
-class SerialServiceT: ContextOpsT<Buffer> {
+class SerialServiceT {
     using Uart = UartT<Buffer>;
     using UartService = UartServiceT<Buffer>;
     using ModuleList = ModuleListT<Buffer>;
@@ -76,6 +78,7 @@ public:
     }
 
     void push(Module& m) {
+        m.moduleList = &moduleList;
         moduleList.push_back(m);
     }
 
@@ -102,7 +105,7 @@ public:
                 &Module::up
             ));
         while (isOk(r)) {
-            r = getOkUnsafe(std::move(r))(*this);
+            r = getOkUnsafe(std::move(r))();
         }
         std::move(r) <=
         [&] (Error e) {
@@ -113,22 +116,6 @@ public:
         };
     }
 
-    Module* lower(Module& m) override {
-        auto it = typename ModuleList::reverse_iterator(moduleList.iterator_to(m));
-        if (it == moduleList.rend()) {
-            return nullptr;
-        }
-        return &(*it);
-    }
-
-    Module* upper(Module& m) override {
-        auto it = ++moduleList.iterator_to(m);
-        if (it == moduleList.end()) {
-            return nullptr;
-        }
-        return &(*it);
-    }
-    
 private:
     Buffer createInitialBuffer() {
         return getOkUnsafe(
@@ -150,17 +137,20 @@ template <typename Buffer>
 struct LoopbackT: ModuleT<Buffer> {
     using Module = ModuleT<Buffer>;
     using DeferredProc = DeferredProcT<Buffer>;
-    using ContextOps = ContextOpsT<Buffer>;
+    using Module::upper;
+    using Module::lower;
 
-    Result<DeferredProc> up(Buffer&& buffer, ContextOps& ops) override {
+    Result<DeferredProc> up(Buffer&& buffer) override {
         cpm::dpl("LoopbackT::up|enter");
-        Module* m = ops.lower(*this);
-        if (m == nullptr) { return fail<DeferredProc>(toError(ErrorCode::ModuleNoLower)); }
-        return ok(DeferredProc(std::move(buffer), *m, &Module::down));
+        return
+        lower(*this) >=
+        [&] (Module* m) {
+            return ok(DeferredProc(std::move(buffer), *m, &Module::down));
+        };
     }
 
-    Result<DeferredProc> down(Buffer&&, ContextOps&) override {
-        cpm::dpl("LoopbackT::down|startTx");
+    Result<DeferredProc> down(Buffer&&) override {
+        cpm::dpl("LoopbackT::down|enter");
         return fail<DeferredProc>(toError(ErrorCode::ModulePacketDropped));
     }
 };

@@ -45,19 +45,10 @@ template <typename Buffer>
 struct ModuleT;
 
 template <typename Buffer>
-struct ContextOpsT {
-    using Module = ModuleT<Buffer>;
-    
-    virtual Module* lower(Module& m) = 0;
-    virtual Module* upper(Module& m) = 0;
-};
-
-template <typename Buffer>
 struct DeferredProcT {
     using Module = ModuleT<Buffer>;
-    using ContextOps = ContextOpsT<Buffer>;
     using DeferredProc = DeferredProcT<Buffer>;
-    using Func = Result<DeferredProc> (Module::*)(Buffer&&, ContextOps&);
+    using Func = Result<DeferredProc> (Module::*)(Buffer&&);
 
     Buffer buffer;
     Module* module;
@@ -72,22 +63,41 @@ struct DeferredProcT {
     DeferredProcT(const DeferredProcT&) = delete;
     DeferredProcT(DeferredProcT&&) = default;
 
-    Result<DeferredProc> operator()(ContextOps& ops) {
-        return (module->*func)(std::move(buffer), ops);
+    Result<DeferredProc> operator()() {
+        return (module->*func)(std::move(buffer));
     }
 };
 
 template <typename Buffer>
-struct ModuleT: bi::list_base_hook<bi::link_mode<bi::normal_link>> {
-    using ContextOps = ContextOpsT<Buffer>;
-    using DeferredProc = DeferredProcT<Buffer>;
-    
-    virtual Result<DeferredProc> up(Buffer&& b, ContextOps& ops) = 0;
-    virtual Result<DeferredProc> down(Buffer&& b, ContextOps& ops) = 0;
-};
+using ModuleListT = boost::intrusive::list<ModuleT<Buffer>>;
 
 template <typename Buffer>
-using ModuleListT = boost::intrusive::list<ModuleT<Buffer>>;
+struct ModuleT: bi::list_base_hook<bi::link_mode<bi::normal_link>> {
+    using Module = ModuleT<Buffer>;
+    using DeferredProc = DeferredProcT<Buffer>;
+    using ModuleList = ModuleListT<Buffer>;
+
+    ModuleList* moduleList = nullptr;
+    
+    Result<Module*> lower(Module& m) {
+        auto it = typename ModuleList::reverse_iterator(moduleList->iterator_to(m));
+        if (it == moduleList->rend()) {
+            return fail<Module*>(toError(ErrorCode::ModuleNoLower));
+        }
+        return ok(&(*it));
+    }
+    
+    Result<Module*> upper(Module& m) {
+        auto it = ++moduleList->iterator_to(m);
+        if (it == moduleList->end()) {
+            return fail<Module*>(toError(ErrorCode::ModuleNoUpper));
+        }
+        return ok(&(*it));
+    }    
+
+    virtual Result<DeferredProc> up(Buffer&& b) = 0;
+    virtual Result<DeferredProc> down(Buffer&& b) = 0;
+};
 
 struct SimpleAddress {};
 
