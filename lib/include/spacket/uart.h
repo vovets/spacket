@@ -5,6 +5,10 @@
 #include <spacket/driver.h>
 
 
+// TODO: design mechanism that allows for client to wait for completion
+// of the actual transmission of all the bits from the shift register
+// (use txend2 callback)
+
 template <typename Buffer, std::size_t RingCapacity>
 struct UartT: DriverT<Buffer> {
     using Uart = UartT<Buffer, RingCapacity>;
@@ -73,7 +77,7 @@ public:
         , rxRequestQueue_(*this)
         , txRequestQueue_(*this)
     {
-        uartConfig.txend2_cb = txEnd2_;
+        uartConfig.txend1_cb = txEnd1_;
         uartConfig.rxend_cb = rxEnd_;
         uartConfig.rxerr_cb = rxError_;
         uartConfig.timeout_cb = rxIdle_;
@@ -226,7 +230,7 @@ private:
     }
     
 private:
-    void txEnd2I() {
+    void txEnd1I() {
         txFinishI();
     }
     
@@ -251,8 +255,8 @@ private:
         return static_cast<const UARTConfigExt*>(driver->config)->uart;
     }
     
-    static void txEnd2_(UARTDriver* driver) {
-        getUart(driver).txEnd2I();
+    static void txEnd1_(UARTDriver* driver) {
+        getUart(driver).txEnd1I();
     }
 
     static void rxEnd_(UARTDriver* driver) {
