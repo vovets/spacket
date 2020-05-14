@@ -27,11 +27,10 @@ auto operator>(R&& r, F f) {
     return fail<SuccessT<FResult>>(getFailUnsafe(r));
 }
 
-template <typename R, typename F>
-typename std::enable_if_t<
-    std::is_same<R, Result<SuccessT<R>>>::value,
-    R>
-operator<=(R&& r, F f) {
+// "error handler" operator cannot change SuccessType
+// because it must return r as it is if true==isOk(r)
+template <typename SuccessType, typename F>
+auto operator<=(Result<SuccessType>&& r, F f) {
     SPACKET_THREAD_CHECK_STACK();
     if (isFail(r)) {
         SPACKET_THREAD_CHECK_STACK();

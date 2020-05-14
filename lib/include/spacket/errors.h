@@ -42,6 +42,10 @@
     X(ID(ModulePacketDropped),       CODE(1501),  SEP())  \
     X(ID(ModuleNoLower),             CODE(1502),  SEP())  \
     X(ID(ModuleNoUpper),             CODE(1503),  SEP())  \
+    X(ID(ModuleRxEmpty),             CODE(1504),  SEP())  \
+    X(ID(ModuleNoModules),           CODE(1505),  SEP())  \
+    X(ID(ModuleTxQueueFull),         CODE(1506),  SEP())  \
+    X(ID(StackRxRequestFull),        CODE(1600),  SEP())  \
     X(ID(LastCode),                  CODE(10000),)
 #endif
 
