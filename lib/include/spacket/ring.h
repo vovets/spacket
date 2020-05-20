@@ -6,36 +6,33 @@
 
 #include <array>
 
-template <typename Buffer, std::size_t Capacity>
-class RingT: public QueueT<Buffer> {
-public:
-    using Element = boost::optional<Buffer>;
-
+template <typename T, std::size_t Capacity>
+class RingT: public QueueT<T> {
 private:
+    using Element = boost::optional<T>;
     using Array = std::array<Element, Capacity>;
 
 private:
-    Element emptyElement;
     Array array;
     std::size_t headIndex = 0;
     std::size_t tailIndex = 0;
 
 public:
-    virtual ~RingT() {}
+    ~RingT() override {}
 
     // why is it needed?
     // google deleting destructors and https://eli.thegreenplace.net/2015/c-deleting-destructors-and-virtual-operator-delete/ 
     void operator delete(void*, std::size_t) {}
     
     bool canPut() const override { return !full(); }
-    bool put(Buffer& b) override { return put_(b); }
+    bool put(T& b) override { return put_(b); }
     
     bool full() const {
         return next(headIndex) == tailIndex;
     }
 
     // false if full
-    bool put_(Buffer& b) {
+    bool put_(T& b) {
         std::size_t nextHead = next(headIndex);
         if (nextHead == tailIndex) { return false; }
         array[headIndex] = std::move(b);
@@ -46,7 +43,7 @@ public:
     // false if empty
     bool eraseTail() {
         if (empty()) { return false; }
-        array[tailIndex] = {};
+        array[tailIndex] = boost::none;
         tailIndex = next(tailIndex);
         return true;
     }
@@ -55,9 +52,9 @@ public:
         return headIndex == tailIndex;
     }
 
-    Element& tail() {
-        if (empty()) { return emptyElement; }
-        return array[tailIndex];
+    T& tail() {
+        if (empty()) { FATAL_ERROR("RingT::tail"); }
+        return *array[tailIndex];
     }
 
 private:

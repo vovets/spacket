@@ -9,11 +9,12 @@
 // of the actual transmission of all the bits from the shift register
 // (use txend2 callback)
 
-template <typename Buffer, std::size_t RingCapacity>
+template <typename Buffer, std::size_t RxRingCapacity, std::size_t TxRingCapacity>
 struct UartT: DriverT<Buffer> {
-    using Uart = UartT<Buffer, RingCapacity>;
+    using Uart = UartT<Buffer, RxRingCapacity, TxRingCapacity>;
     using Queue = QueueT<Buffer>;
-    using Ring = RingT<Buffer, RingCapacity>;
+    using RxRing = RingT<Buffer, RxRingCapacity>;
+    using TxRing = RingT<Buffer, TxRingCapacity>;
 
     struct UARTConfigExt: UARTConfig {
         Uart& uart;
@@ -62,8 +63,8 @@ struct UartT: DriverT<Buffer> {
 private:
     UARTConfigExt uartConfig;
     UARTDriver& driver;
-    Ring rxRing;
-    Ring txRing;
+    RxRing rxRing;
+    TxRing txRing;
     RxRequestQueue rxRequestQueue_;
     TxRequestQueue txRequestQueue_;
     Queue* rxCompleteQueue = nullptr;
@@ -132,10 +133,10 @@ private:
         bool wasEmpty = rxRing.empty();
         if (!rxRing.put(b)) { return false; }
         if (wasEmpty) {
-            typename Ring::Element& tail = rxRing.tail();
+            auto& tail = rxRing.tail();
             bytesReceived = 0;
-            cpm::dpb("UartT::rxRequestPut|uartStartReceive ", &*tail);
-            uartStartReceiveI(&driver, tail->size(), tail->begin());
+            cpm::dpb("UartT::rxRequestPut|uartStartReceive ", &tail);
+            uartStartReceiveI(&driver, tail.size(), tail.begin());
         }
         return true;
     }
@@ -149,9 +150,9 @@ private:
         bool wasEmpty = txRing.empty();
         if (!txRing.put(b)) { return false; }
         if (wasEmpty) {
-            typename Ring::Element& tail = txRing.tail();
+            auto& tail = txRing.tail();
             cpm::dpl("UartT::txRequestPut|uartStartSend");
-            uartStartSendI(&driver, tail->size(), tail->begin());
+            uartStartSendI(&driver, tail.size(), tail.begin());
         }
         return true;
     }
@@ -167,18 +168,19 @@ private:
             return;
         }
 
-        // it cannot be empty here, but anyway
+        // it should not be empty here, but anyway
+        // (because uartStartReceive invoked only if the ring was not empty)
         if (rxRing.empty()) {
             cpm::dpl("UartT::rxFinishI|rxRing empty");
             return;
         }
 
         auto notReceived = uartStopReceiveI(&driver);
-        bytesReceived = rxRing.tail()->size() - notReceived;
+        bytesReceived = rxRing.tail().size() - notReceived;
         cpm::dpl("UartT::rxFinishI|bytesReceived=%u", bytesReceived);
         
         if (bytesReceived == 0) {
-            uartStartReceiveI(&driver, rxRing.tail()->size(), rxRing.tail()->begin());
+            uartStartReceiveI(&driver, rxRing.tail().size(), rxRing.tail().begin());
             return;
         }
         
@@ -186,17 +188,17 @@ private:
             cpm::dpl("UartT::rxFinishI|rxCompleteQueue blocked");
             // TODO: log lost packet
             bytesReceived = 0;
-            uartStartReceiveI(&driver, rxRing.tail()->size(), rxRing.tail()->begin());
+            uartStartReceiveI(&driver, rxRing.tail().size(), rxRing.tail().begin());
             return;
         }
         
-        rxRing.tail()->resize(bytesReceived);
-        rxCompleteQueue->put(*rxRing.tail());
+        rxRing.tail().resize(bytesReceived);
+        if (!rxCompleteQueue->put(rxRing.tail())) { FATAL_ERROR("UartT::txFinishI|rxRing full"); }
         rxRing.eraseTail();
         
         if (!rxRing.empty()) {
             bytesReceived = 0;
-            uartStartReceiveI(&driver, rxRing.tail()->size(), rxRing.tail()->begin());
+            uartStartReceiveI(&driver, rxRing.tail().size(), rxRing.tail().begin());
         }
     }
     
@@ -205,7 +207,8 @@ private:
         auto guard = makeOsalSysLockFromISRGuard();
         if (txCompleteQueue == nullptr) { FATAL_ERROR("UartT::txFinishI|txCompleteQueue == nullptr"); }
 
-        // it cannot be empty here, but anyway
+        // it should not be empty here, but anyway
+        // (because uartStartSend invoked only if the ring was not empty)
         if (txRing.empty()) {
             cpm::dpl("UartT::txFinishI|txRing empty");
             return;
@@ -219,11 +222,14 @@ private:
             return;
         }
         
-        txCompleteQueue->put(*txRing.tail());
+        if (!txCompleteQueue->put(txRing.tail())) {
+            FATAL_ERROR("UartT::txFinishI|txCompleteQueue blocked");
+        }
+        
         txRing.eraseTail();
         
         if (!txRing.empty()) {
-            auto& tail = *txRing.tail();
+            auto& tail = txRing.tail();
             cpm::dpb("UartT::txFinishI|uartStartSendI|", &tail);
             uartStartSendI(&driver, tail.size(), tail.begin());
         }

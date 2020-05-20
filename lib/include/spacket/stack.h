@@ -17,12 +17,13 @@ struct DriverServiceT: ModuleT<Buffer> {
     DriverServiceT(Driver& driver): driver(driver) {}
 
     Result<DeferredProc> up(Buffer&& buffer) override {
-        cpm::dpl("DriverServiceT::up|");
-        return
+        cpm::dpb("DriverServiceT::up|", &buffer);
+        auto r =
         upper(*this) >=
         [&] (Module* m) {
-            return ok(DeferredProc(std::move(buffer), *m, &Module::up));
+            return defer(std::move(buffer), *m, &Module::up);
         };
+        return r;
     }
 
     Result<DeferredProc> down(Buffer&& buffer) override {
@@ -37,32 +38,61 @@ struct DriverServiceT: ModuleT<Buffer> {
     }
 };
 
-template <typename Buffer>
+template <typename Buffer, std::size_t RingCapacity>
 class StackT {
     using Driver = DriverT<Buffer>;
-    using Stack = StackT<Buffer>;
+    using Stack = StackT<Buffer, RingCapacity>;
     using DriverService = DriverServiceT<Buffer>;
     using ModuleList = ModuleListT<Buffer>;
     using Module = ModuleT<Buffer>;
     using DeferredProc = DeferredProcT<Buffer>;
     using Queue = QueueT<Buffer>;
-    using Ring = RingT<Buffer, 4>;
+    using Ring = RingT<DeferredProc, RingCapacity>;
 
+    struct RxCompleteQueue: public Queue {
+        Stack& stack;
+
+        RxCompleteQueue(Stack& stack): stack(stack) {}
+        
+        void operator delete(void*, std::size_t) {}
+
+        bool canPut() const override {
+            return stack.ring.canPut();
+        }
+
+        bool put(Buffer& b) { return stack.rxCompletePut(b); }
+    };
+            
+    struct TxCompleteQueue: public Queue {
+        Stack& stack;
+
+        TxCompleteQueue(Stack& stack): stack(stack) {}
+
+        void operator delete(void*, std::size_t) {}
+
+        bool canPut() const override {
+            return stack.ring.canPut();
+        }
+
+        bool put(Buffer& b) { return stack.txCompletePut(b); }
+    };
+    
 private:
     ModuleList moduleList;
-    Ring rxCompleteRing;
-    Ring txCompleteRing;
+    Ring ring;
+    RxCompleteQueue rxCompleteQueue;
+    TxCompleteQueue txCompleteQueue;
     Driver& driver;
     DriverService driverService;
-    
 
 public:
     StackT(Driver& driver)
-        : driver(driver)
+        : rxCompleteQueue(*this)
+        , txCompleteQueue(*this)
+        , driver(driver)
         , driverService(driver)
     {
         push(driverService);
-        driver.start(rxCompleteRing, txCompleteRing);
     }
 
     ~StackT() {
@@ -71,44 +101,33 @@ public:
 
     void push(Module& m) {
         m.moduleList = &moduleList;
+        bool wasEmpty = moduleList.empty();
         moduleList.push_back(m);
+        if (wasEmpty) {
+            driver.start(rxCompleteQueue, txCompleteQueue);
+        }
     }
 
     void tick() {
-        releaseTxBuffers();
         allocateRxBuffers();
-        pollRx() >=
-        [&](Buffer&& b) {
-            cpm::dpb("StackT::tick|", &b);
-            allocateRxBuffers();
-            return runModules(std::move(b));
-        } <=
-        [&](Error e) {
-            if (e != toError(ErrorCode::ModuleRxEmpty)) {
-                return threadErrorReport(e);
-            }
-            return ok();
-        // } <=
-        // [&](Error) {
-        //     chThdSleep(toSystime(std::chrono::milliseconds(1000)));
-        //     return ok();
-        };
+        while (!ring.empty()) {
+            auto guard = driverGuard();
+            if (ring.empty()) { break; }
+            DeferredProc dp = std::move(ring.tail());
+            ring.eraseTail();
+            guard.unlock();
+            exec(dp);
+        }
     }
 
 private:
-    Result<Void> runModules(Buffer&& b) {
-        if (moduleList.empty()) { return fail(toError(ErrorCode::ModuleNoModules)); }
-        Result<DeferredProc> r = ok(
-            DeferredProc(
-                std::move(b),
-                *moduleList.begin(),
-                &Module::up
-            ));
+    void exec(DeferredProc& p) {
+        cpm::dpl("StackT::exec|");
+        Result<DeferredProc> r = ok(std::move(p));
         while (isOk(r)) {
             r = getOkUnsafe(std::move(r))();
         }
 
-        return
         std::move(r) >
         []() { return ok(); } <= // it is here just to convert the success type, never executed
         [&] (Error e) {
@@ -116,11 +135,51 @@ private:
                 return ok();
             }
             return fail(e);
-        };
+        } <=
+        threadErrorReport;
     }
 
     auto driverGuard() {
         return makeGuard([&]() { driver.lock(); }, [&]() { driver.unlock(); });
+    }
+
+    // called from interrupt context
+    bool rxCompletePut(Buffer& b) {
+        cpm::dpb("StackT::rxCompletePut|", &b);
+
+        if (ring.full()) { return false; }
+        
+        DeferredProc dp(
+            [&,buffer=std::move(b),module=&moduleList.front()] () mutable {
+                this->allocateRxBuffers();
+                return module->up(std::move(buffer));
+            });
+        
+        if (!ring.put(dp)) {
+            FATAL_ERROR("rxCompletePut");
+        }
+        
+        return true;
+    }
+
+    // called from interrupt context
+    bool txCompletePut(Buffer& b) {
+        cpm::dpb("StackT::txCompletePut|", &b);
+
+        if (ring.full()) { return false; }
+        
+        DeferredProc dp(
+            [&,buffer=std::move(b)] () mutable {
+                cpm::dpb("StackT::txCompletePut|lambda|", &buffer);
+                Buffer tmp = std::move(buffer);
+                return fail<DeferredProc>(toError(ErrorCode::ModulePacketConsumed));
+            });
+        
+        if (!ring.put(dp)) {
+            FATAL_ERROR("txCompletePut");
+        }
+        
+        return true;
     }
 
     void allocateRxBuffers() {
@@ -143,26 +202,5 @@ private:
                 return threadErrorReport(e);
             };
         }
-    }
-
-    void releaseTxBuffers() {
-        while (true) {
-            auto guard = driverGuard();
-            if (txCompleteRing.empty()) { break; }
-            Buffer tmp = extract(txCompleteRing.tail());
-            txCompleteRing.eraseTail();
-            guard.unlock();
-            cpm::dpb("StackT::releaseTxBuffer|", &tmp);
-        }
-    }
-            
-    Result<Buffer> pollRx() {
-        auto guard = driverGuard();
-        if (rxCompleteRing.empty()) {
-            return fail<Buffer>(toError(ErrorCode::ModuleRxEmpty));
-        }
-        auto r = ok(extract(rxCompleteRing.tail()));
-        rxCompleteRing.eraseTail();
-        return std::move(r);
     }
 };

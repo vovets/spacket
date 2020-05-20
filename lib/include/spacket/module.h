@@ -6,6 +6,7 @@
 #include <spacket/memory_utils.h>
 #include <spacket/guard_utils.h>
 #include <spacket/buffer_debug.h>
+#include <spacket/deferred_proc.h>
 
 #include <boost/optional.hpp>
 #include <boost/intrusive/list.hpp>
@@ -41,28 +42,16 @@ template <typename Buffer>
 struct ModuleT;
 
 template <typename Buffer>
-struct DeferredProcT {
-    using Module = ModuleT<Buffer>;
-    using DeferredProc = DeferredProcT<Buffer>;
-    using Func = Result<DeferredProc> (Module::*)(Buffer&&);
-
-    Buffer buffer;
-    Module* module;
-    Func func;
-
-    DeferredProcT(Buffer&& buffer, Module& module, Func func)
-        : buffer(std::move(buffer))
-        , module(&module)
-        , func(func)
-    {}
-    
-    DeferredProcT(const DeferredProcT&) = delete;
-    DeferredProcT(DeferredProcT&&) = default;
-
-    Result<DeferredProc> operator()() {
-        return (module->*func)(std::move(buffer));
-    }
-};
+auto defer(
+    Buffer&& b,
+    ModuleT<Buffer>& m,
+    typename DeferredProcT<Buffer>::Retval (ModuleT<Buffer>::*f)(Buffer&&))
+{
+    return ok(DeferredProcT<Buffer>(
+        [buffer=std::move(b), module=&m, func=f]() mutable {
+            return (module->*func)(std::move(buffer));
+        }));
+}
 
 template <typename Buffer>
 using ModuleListT = boost::intrusive::list<ModuleT<Buffer>>;
