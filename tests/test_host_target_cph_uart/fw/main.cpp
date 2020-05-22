@@ -30,13 +30,12 @@ template <typename Buffer>
 struct LoopbackT: ModuleT<Buffer> {
     using Module = ModuleT<Buffer>;
     using DeferredProc = DeferredProcT<Buffer>;
-    using Module::upper;
-    using Module::lower;
+    using Module::ops;
 
     Result<DeferredProc> up(Buffer&& buffer) override {
         cpm::dpl("LoopbackT::up|enter");
         return
-        lower(*this) >=
+        ops->lower(*this) >=
         [&] (Module* m) {
             return defer(std::move(buffer), *m, &Module::down);
         };
@@ -51,8 +50,9 @@ struct LoopbackT: ModuleT<Buffer> {
 using Driver = UartT<Buffer, DRIVER_RX_RING_CAPACITY, DRIVER_TX_RING_CAPACITY>;
 using Stack = StackT<Buffer, STACK_RING_CAPACITY>;
 using Loopback = LoopbackT<Buffer>;
-using EndpointService = EndpointServiceT<Buffer>;
-using EndpointHandle = EndpointHandleT<Buffer, EndpointService>;
+// using EndpointService = EndpointServiceT<Buffer>;
+// using EndpointHandle = EndpointHandleT<Buffer, EndpointService>;
+using Endpoint = EndpointT<Buffer>;
 
 int main(void) {
     halInit();
@@ -63,15 +63,25 @@ int main(void) {
 
     Driver driver(UARTD1);
     Stack stack(driver);
-    Loopback loopback;
-    // EndpointService endpointService;
+    // Loopback loopback;
+    Endpoint endpoint;
     
-    stack.push(loopback);
-    // stack.push(endpointService);
-
-    // auto handle = createHandle<Buffer>(endpointService, SimpleAddress{});
+    
+    // stack.push(loopback);
+    stack.push(endpoint);
 
     for (;;) {
         stack.tick();
+        endpoint.read() >=
+        [&] (Buffer&& b) {
+            return
+            endpoint.write(std::move(b));
+        } <=
+        [] (Error e) {
+            if (e != toError(ErrorCode::Timeout)) {
+                return threadErrorReport(e);
+            }
+            return fail(e);
+        };
     }
 }

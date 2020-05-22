@@ -3,7 +3,14 @@
 #include <spacket/queue.h>
 #include <spacket/module.h>
 
-struct SimpleAddress {};
+
+template <typename Buffer>
+Buffer extract(boost::optional<Buffer>& opt) {
+    if (!opt) { FATAL_ERROR("extract"); }
+    Buffer tmp = std::move(*opt);
+    opt = {};
+    return tmp;
+}
 
 template <typename Buffer>
 struct BufferBoxT: public QueueT<Buffer> {
@@ -23,24 +30,51 @@ struct BufferBoxT: public QueueT<Buffer> {
 };
 
 template <typename Buffer>
-struct EndpointBaseT {
+struct EndpointT: ModuleT<Buffer> {
     using Queue = QueueT<Buffer>;
     using Module = ModuleT<Buffer>;
+    using DeferredProc = DeferredProcT<Buffer>;
+    using Module::ops;
     
     BufferBoxT<Buffer> readBox;
-    BufferBoxT<Buffer> writeBox;
 
-    Module* module;
+    Result<DeferredProc> up(Buffer&& b_) override {
+        Buffer b = std::move(b_);
+        if (!readBox.put(b)) {
+            return { toError(ErrorCode::ModulePacketDropped) };
+        }
+        return { toError(ErrorCode::ModulePacketConsumed) };
+    }
+    
+    Result<DeferredProc> down(Buffer&& b) override {
+        return
+        ops->lower(*this) >=
+        [&] (Module* m) {
+            return ok(makeProc(std::move(b), *m, &Module::down));
+        };
+    }
 
-    EndpointBaseT(Module* module): module(module) {}
+    Result<Buffer> read() {
+        if (readBox.buffer) { return ok(extract(readBox.buffer)); }
+        return { toError(ErrorCode::Timeout) };
+    }
 
-    Queue& readQueue() { return readBox; }
-    Queue& writeQueue() { return writeBox; }
+    Result<Void> write(Buffer b) {
+        return
+        ops->lower(*this) >=
+        [&] (Module* m) {
+            auto dp = makeProc(std::move(b), *m, &Module::down);
+            if (!ops->defer(dp)) {
+                return fail(toError(ErrorCode::Timeout));
+            }
+            return ok();
+        };
+    }
 };
 
 template <typename Buffer, typename Proto>
 struct EndpointHandleT {
-    using Endpoint = EndpointBaseT<Buffer>;
+    using Endpoint = EndpointT<Buffer>;
 
     Endpoint* endpoint;
     Proto* proto;
@@ -73,20 +107,14 @@ struct EndpointHandleT {
     }
 };
 
-template <typename Buffer>
-struct EndpointSimpleT: EndpointBaseT<Buffer> {
-    using Module = ModuleT<Buffer>;
-    using Base = EndpointBaseT<Buffer>;
-    EndpointSimpleT(Module* module): Base(module) {}
-};
+struct SimpleAddress {};
 
 template <typename Buffer>
 struct EndpointServiceT: ModuleT<Buffer> {
     using This = EndpointServiceT<Buffer>;
     using Address = SimpleAddress;
     static constexpr std::size_t maxEndpoint = 1;
-    using Endpoint = EndpointSimpleT<Buffer>;
-    using EndpointBase = EndpointBaseT<Buffer>;
+    using Endpoint = EndpointT<Buffer>;
     using EndpointStorage = Storage<Endpoint>;
     using EndpointHandle = EndpointHandleT<Buffer, This>;
     using DeferredProc = DeferredProcT<Buffer>;
@@ -103,10 +131,9 @@ struct EndpointServiceT: ModuleT<Buffer> {
         return endpoint;
     }
         
-    void destroy(EndpointBase* endpoint_) {
+    void destroy(Endpoint* endpoint_) {
         if (endpoint_ != endpoint || endpoint == nullptr) {
             FATAL_ERROR("EndpointServiceT::destroy|");
-            return;
         }
         endpoint->~Endpoint();
         endpoint = nullptr;
@@ -142,8 +169,4 @@ struct EndpointServiceT: ModuleT<Buffer> {
 template <typename Buffer, typename Proto, typename Address>
 EndpointHandleT<Buffer, Proto> createHandle(Proto& proto, const Address& address) {
     return EndpointHandleT<Buffer, Proto>(proto.create(address), &proto);
-}
-
-template <typename Buffer, typename Endpoint>
-Result<Buffer> write(Endpoint& endpoint) {
 }

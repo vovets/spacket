@@ -230,13 +230,14 @@ private:
         
         if (!txRing.empty()) {
             auto& tail = txRing.tail();
-            cpm::dpb("UartT::txFinishI|uartStartSendI|", &tail);
+            cpm::dpl("UartT::txFinishI|uartStartSendI|%X", tail.id());
             uartStartSendI(&driver, tail.size(), tail.begin());
         }
     }
     
 private:
     void txEnd1I() {
+        cpm::dpl("UartT::txEndI1|");
         txFinishI();
     }
     

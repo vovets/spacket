@@ -9,8 +9,7 @@ struct DriverServiceT: ModuleT<Buffer> {
     using Driver = DriverT<Buffer>;
     using Module = ModuleT<Buffer>;
     using DeferredProc = DeferredProcT<Buffer>;
-    using Module::upper;
-    using Module::lower;
+    using Module::ops;
 
     Driver& driver;
 
@@ -19,9 +18,9 @@ struct DriverServiceT: ModuleT<Buffer> {
     Result<DeferredProc> up(Buffer&& buffer) override {
         cpm::dpb("DriverServiceT::up|", &buffer);
         auto r =
-        upper(*this) >=
+        ops->upper(*this) >=
         [&] (Module* m) {
-            return defer(std::move(buffer), *m, &Module::up);
+            return ok(makeProc(std::move(buffer), *m, &Module::up));
         };
         return r;
     }
@@ -39,7 +38,7 @@ struct DriverServiceT: ModuleT<Buffer> {
 };
 
 template <typename Buffer, std::size_t RingCapacity>
-class StackT {
+class StackT: ModuleOpsT<Buffer> {
     using Driver = DriverT<Buffer>;
     using Stack = StackT<Buffer, RingCapacity>;
     using DriverService = DriverServiceT<Buffer>;
@@ -100,7 +99,7 @@ public:
     }
 
     void push(Module& m) {
-        m.moduleList = &moduleList;
+        m.ops = this;
         bool wasEmpty = moduleList.empty();
         moduleList.push_back(m);
         if (wasEmpty) {
@@ -110,14 +109,12 @@ public:
 
     void tick() {
         allocateRxBuffers();
-        while (!ring.empty()) {
-            auto guard = driverGuard();
-            if (ring.empty()) { break; }
-            DeferredProc dp = std::move(ring.tail());
-            ring.eraseTail();
-            guard.unlock();
-            exec(dp);
-        }
+        auto guard = driverGuard();
+        if (ring.empty()) { return; }
+        DeferredProc dp = std::move(ring.tail());
+        ring.eraseTail();
+        guard.unlock();
+        exec(dp);
     }
 
 private:
@@ -143,9 +140,37 @@ private:
         return makeGuard([&]() { driver.lock(); }, [&]() { driver.unlock(); });
     }
 
+    Result<Module*> lower(Module& m) override {
+        auto it = typename ModuleList::reverse_iterator(moduleList.iterator_to(m));
+        if (it == moduleList.rend()) {
+            return fail<Module*>(toError(ErrorCode::ModuleNoLower));
+        }
+        return ok(&(*it));
+    }
+    
+    Result<Module*> upper(Module& m) override {
+        auto it = ++moduleList.iterator_to(m);
+        if (it == moduleList.end()) {
+            return fail<Module*>(toError(ErrorCode::ModuleNoUpper));
+        }
+        return ok(&(*it));
+    }    
+
+    bool defer(DeferredProc& dp) override {
+        auto guard = driverGuard();
+
+        if (ring.full()) return false;
+
+        if (!ring.put(dp)) {
+            FATAL_ERROR("StackT::defer|");
+        }
+        
+        return true;
+    }
+
     // called from interrupt context
     bool rxCompletePut(Buffer& b) {
-        cpm::dpb("StackT::rxCompletePut|", &b);
+        cpm::dpl("StackT::rxCompletePut|%X", b.id());
 
         if (ring.full()) { return false; }
         
@@ -164,13 +189,13 @@ private:
 
     // called from interrupt context
     bool txCompletePut(Buffer& b) {
-        cpm::dpb("StackT::txCompletePut|", &b);
+        cpm::dpl("StackT::txCompletePut|%X", b.id());
 
         if (ring.full()) { return false; }
         
         DeferredProc dp(
             [&,buffer=std::move(b)] () mutable {
-                cpm::dpb("StackT::txCompletePut|lambda|", &buffer);
+                cpm::dpl("StackT::txCompletePut|lambda|%X", buffer.id());
                 Buffer tmp = std::move(buffer);
                 return fail<DeferredProc>(toError(ErrorCode::ModulePacketConsumed));
             });

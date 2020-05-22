@@ -31,27 +31,29 @@ namespace cpm {
 }
 
 template <typename Buffer>
-Buffer extract(boost::optional<Buffer>& opt) {
-    if (!opt) { FATAL_ERROR("extract"); }
-    Buffer tmp = std::move(*opt);
-    opt = {};
-    return tmp;
-}
-
-template <typename Buffer>
 struct ModuleT;
 
 template <typename Buffer>
-auto defer(
+auto makeProc(
     Buffer&& b,
     ModuleT<Buffer>& m,
-    typename DeferredProcT<Buffer>::Retval (ModuleT<Buffer>::*f)(Buffer&&))
+    Result<DeferredProcT<Buffer>> (ModuleT<Buffer>::*f)(Buffer&&))
 {
-    return ok(DeferredProcT<Buffer>(
+    return DeferredProcT<Buffer>(
         [buffer=std::move(b), module=&m, func=f]() mutable {
             return (module->*func)(std::move(buffer));
-        }));
+        });
 }
+
+template <typename Buffer>
+struct ModuleOpsT {
+    using Module = ModuleT<Buffer>;
+    using DeferredProc = DeferredProcT<Buffer>;
+
+    virtual Result<Module*> lower(Module& m) = 0;
+    virtual Result<Module*> upper(Module& m) = 0;
+    virtual bool defer(DeferredProc& dp) = 0;
+};
 
 template <typename Buffer>
 using ModuleListT = boost::intrusive::list<ModuleT<Buffer>>;
@@ -61,25 +63,10 @@ struct ModuleT: bi::list_base_hook<bi::link_mode<bi::normal_link>> {
     using Module = ModuleT<Buffer>;
     using DeferredProc = DeferredProcT<Buffer>;
     using ModuleList = ModuleListT<Buffer>;
+    using ModuleOps = ModuleOpsT<Buffer>;
 
-    ModuleList* moduleList = nullptr;
+    ModuleOps* ops = nullptr;
     
-    Result<Module*> lower(Module& m) {
-        auto it = typename ModuleList::reverse_iterator(moduleList->iterator_to(m));
-        if (it == moduleList->rend()) {
-            return fail<Module*>(toError(ErrorCode::ModuleNoLower));
-        }
-        return ok(&(*it));
-    }
-    
-    Result<Module*> upper(Module& m) {
-        auto it = ++moduleList->iterator_to(m);
-        if (it == moduleList->end()) {
-            return fail<Module*>(toError(ErrorCode::ModuleNoUpper));
-        }
-        return ok(&(*it));
-    }    
-
     virtual Result<DeferredProc> up(Buffer&& b) = 0;
     virtual Result<DeferredProc> down(Buffer&& b) = 0;
 };
