@@ -156,16 +156,16 @@ private:
         return ok(&(*it));
     }    
 
-    bool defer(DeferredProc& dp) override {
+    Result<Void> defer(DeferredProc& dp) override {
         auto guard = driverGuard();
 
-        if (ring.full()) return false;
+        if (ring.full()) return { toError(ErrorCode::StackRingFull) };
 
         if (!ring.put(dp)) {
             FATAL_ERROR("StackT::defer|");
         }
         
-        return true;
+        return ok();
     }
 
     // called from interrupt context

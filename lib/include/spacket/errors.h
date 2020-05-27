@@ -46,6 +46,8 @@
     X(ID(ModuleNoModules),           CODE(1505),  SEP())  \
     X(ID(ModuleTxQueueFull),         CODE(1506),  SEP())  \
     X(ID(StackRxRequestFull),        CODE(1600),  SEP())  \
+    X(ID(StackRingFull),             CODE(1601),  SEP())  \
+    X(ID(AddressNoRoom),             CODE(1700),  SEP())  \
     X(ID(LastCode),                  CODE(10000),)
 #endif
 

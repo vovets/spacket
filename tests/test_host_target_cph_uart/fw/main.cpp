@@ -11,6 +11,7 @@
 #include <spacket/stack.h>
 #include <spacket/buffer_debug.h>
 #include <spacket/endpoint.h>
+#include <spacket/multistack.h>
 
 
 namespace {
@@ -37,7 +38,7 @@ struct LoopbackT: ModuleT<Buffer> {
         return
         ops->lower(*this) >=
         [&] (Module* m) {
-            return defer(std::move(buffer), *m, &Module::down);
+            return ok(makeProc(std::move(buffer), *m, &Module::down));
         };
     }
 
@@ -53,6 +54,8 @@ using Loopback = LoopbackT<Buffer>;
 // using EndpointService = EndpointServiceT<Buffer>;
 // using EndpointHandle = EndpointHandleT<Buffer, EndpointService>;
 using Endpoint = EndpointT<Buffer>;
+using Address = AddressT<Buffer>;
+using Multistack = MultistackT<Buffer, Address, 2>;
 
 int main(void) {
     halInit();
@@ -63,19 +66,35 @@ int main(void) {
 
     Driver driver(UARTD1);
     Stack stack(driver);
-    // Loopback loopback;
-    Endpoint endpoint;
+    Loopback loopback;
+    Multistack multistack;
+    Address addressA{'A'};
+    Address addressB{'B'};
+    Endpoint endpointA;
+    Endpoint endpointB;
     
     
-    // stack.push(loopback);
-    stack.push(endpoint);
+    stack.push(multistack);
+    stack.push(loopback);
+    multistack.push(addressA, endpointA);
+    multistack.push(addressB, endpointB);
 
     for (;;) {
         stack.tick();
-        endpoint.read() >=
+        endpointA.read() >=
         [&] (Buffer&& b) {
             return
-            endpoint.write(std::move(b));
+            endpointB.write(std::move(b));
+        } <=
+        [] (Error e) {
+            if (e != toError(ErrorCode::Timeout)) {
+                return threadErrorReport(e);
+            }
+            return fail(e);
+        };
+        endpointB.read() >=
+        [&] (Buffer&& b) {
+            return endpointA.write(std::move(b));
         } <=
         [] (Error e) {
             if (e != toError(ErrorCode::Timeout)) {

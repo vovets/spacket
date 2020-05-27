@@ -52,7 +52,7 @@ struct ModuleOpsT {
 
     virtual Result<Module*> lower(Module& m) = 0;
     virtual Result<Module*> upper(Module& m) = 0;
-    virtual bool defer(DeferredProc& dp) = 0;
+    virtual Result<Void> defer(DeferredProc& dp) = 0;
 };
 
 template <typename Buffer>
