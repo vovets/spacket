@@ -6,7 +6,7 @@
 template <typename Buffer>
 struct DeferredProcT {
     using DeferredProc = DeferredProcT<Buffer>;
-    using Retval = Result<DeferredProc>;
+    using Retval = Result<Void>;
     using Storage = std::aligned_storage_t<sizeof(void*) * 5, alignof(void*)>;
 
     struct FuncBase {
@@ -71,7 +71,7 @@ struct DeferredProcT {
         return *this;
     }
 
-    Result<DeferredProc> operator()() {
+    Result<Void> operator()() {
         return func->operator()();
     }
 };

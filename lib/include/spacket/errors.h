@@ -38,7 +38,6 @@
     X(ID(UartNothingToWait),         CODE(1400),  SEP())  \
     X(ID(UartRxTimeout),             CODE(1401),  SEP())  \
     X(ID(UartTxTimeout),             CODE(1402),  SEP())  \
-    X(ID(ModulePacketConsumed),      CODE(1500),  SEP())  \
     X(ID(ModulePacketDropped),       CODE(1501),  SEP())  \
     X(ID(ModuleNoLower),             CODE(1502),  SEP())  \
     X(ID(ModuleNoUpper),             CODE(1503),  SEP())  \
@@ -46,7 +45,8 @@
     X(ID(ModuleNoModules),           CODE(1505),  SEP())  \
     X(ID(ModuleTxQueueFull),         CODE(1506),  SEP())  \
     X(ID(StackRxRequestFull),        CODE(1600),  SEP())  \
-    X(ID(StackRingFull),             CODE(1601),  SEP())  \
+    X(ID(StackIORingFull),           CODE(1601),  SEP())  \
+    X(ID(StackProcRingFull),         CODE(1602),  SEP())  \
     X(ID(AddressNoRoom),             CODE(1700),  SEP())  \
     X(ID(LastCode),                  CODE(10000),)
 #endif

@@ -30,29 +30,26 @@ IMPLEMENT_DPL_FUNCTION_NOP
 template <typename Buffer>
 struct LoopbackT: ModuleT<Buffer> {
     using Module = ModuleT<Buffer>;
-    using DeferredProc = DeferredProcT<Buffer>;
     using Module::ops;
 
-    Result<DeferredProc> up(Buffer&& buffer) override {
-        cpm::dpl("LoopbackT::up|enter");
+    Result<Void> up(Buffer&& buffer) override {
+        cpm::dpl("LoopbackT::up|");
         return
         ops->lower(*this) >=
         [&] (Module* m) {
-            return ok(makeProc(std::move(buffer), *m, &Module::down));
+            return ops->deferProc(makeProc(std::move(buffer), *m, &Module::down));
         };
     }
 
-    Result<DeferredProc> down(Buffer&&) override {
-        cpm::dpl("LoopbackT::down|enter");
-        return fail<DeferredProc>(toError(ErrorCode::ModulePacketDropped));
+    Result<Void> down(Buffer&&) override {
+        cpm::dpl("LoopbackT::down|");
+        return { toError(ErrorCode::ModulePacketDropped) };
     }
 };
 
 using Driver = UartT<Buffer, DRIVER_RX_RING_CAPACITY, DRIVER_TX_RING_CAPACITY>;
-using Stack = StackT<Buffer, STACK_RING_CAPACITY>;
+using Stack = StackT<Buffer, STACK_IO_RING_CAPACITY, STACK_PROC_RING_CAPACITY>;
 using Loopback = LoopbackT<Buffer>;
-// using EndpointService = EndpointServiceT<Buffer>;
-// using EndpointHandle = EndpointHandleT<Buffer, EndpointService>;
 using Endpoint = EndpointT<Buffer>;
 using Address = AddressT<Buffer>;
 using Multistack = MultistackT<Buffer, Address, 2>;
@@ -63,6 +60,8 @@ int main(void) {
 
     chprintf(&rttStream, "RTT ready\r\n");
     chprintf(&rttStream, "Buffer::maxSize(): %d\r\n", Buffer::maxSize());
+    chprintf(&rttStream, "sizeof(Buffer): %d\r\n", sizeof(Buffer));
+    chprintf(&rttStream, "sizeof(DeferredProc): %d\r\n", sizeof(DeferredProcT<Buffer>));
 
     Driver driver(UARTD1);
     Stack stack(driver);

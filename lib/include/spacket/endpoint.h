@@ -38,33 +38,38 @@ struct EndpointT: ModuleT<Buffer> {
     
     BufferBoxT<Buffer> readBox;
 
-    Result<DeferredProc> up(Buffer&& b_) override {
+    Result<Void> up(Buffer&& b_) override {
+        cpm::dpl("EndpointT::up|");
         Buffer b = std::move(b_);
         if (!readBox.put(b)) {
             return { toError(ErrorCode::ModulePacketDropped) };
         }
-        return { toError(ErrorCode::ModulePacketConsumed) };
+        return ok();
     }
     
-    Result<DeferredProc> down(Buffer&& b) override {
+    Result<Void> down(Buffer&& b) override {
+        cpm::dpl("EndpointT::down|");
         return
         ops->lower(*this) >=
         [&] (Module* m) {
-            return ok(makeProc(std::move(b), *m, &Module::down));
+            return ops->deferProc(makeProc(std::move(b), *m, &Module::down));
         };
     }
 
     Result<Buffer> read() {
-        if (readBox.buffer) { return ok(extract(readBox.buffer)); }
+        if (readBox.buffer) {
+            cpm::dpb("EndpointT::read|", &*readBox.buffer);
+            return ok(extract(readBox.buffer));
+        }
         return { toError(ErrorCode::Timeout) };
     }
 
     Result<Void> write(Buffer b) {
+        cpm::dpb("EndpointT::write|", &b);
         return
         ops->lower(*this) >=
         [&] (Module* m) {
-            auto dp = makeProc(std::move(b), *m, &Module::down);
-            return ops->defer(dp);
+            return ops->deferIO(makeProc(std::move(b), *m, &Module::down));
         };
     }
 };

@@ -15,38 +15,38 @@ struct DriverServiceT: ModuleT<Buffer> {
 
     DriverServiceT(Driver& driver): driver(driver) {}
 
-    Result<DeferredProc> up(Buffer&& buffer) override {
+    Result<Void> up(Buffer&& buffer) override {
         cpm::dpb("DriverServiceT::up|", &buffer);
-        auto r =
+        return
         ops->upper(*this) >=
         [&] (Module* m) {
-            return ok(makeProc(std::move(buffer), *m, &Module::up));
+            return ops->deferProc(makeProc(std::move(buffer), *m, &Module::up));
         };
-        return r;
     }
 
-    Result<DeferredProc> down(Buffer&& buffer) override {
+    Result<Void> down(Buffer&& buffer) override {
         cpm::dpb("DriverServiceT::down|", &buffer);
         {
             auto guard = makeGuard([&]() { driver.lock(); }, [&]() { driver.unlock(); });
             if (driver.txRequestQueue().put(buffer)) {
-                return fail<DeferredProc>(toError(ErrorCode::ModulePacketConsumed));
+                return ok();
             }
         }
-        return fail<DeferredProc>(toError(ErrorCode::ModuleTxQueueFull));
+        return { toError(ErrorCode::ModuleTxQueueFull) };
     }
 };
 
-template <typename Buffer, std::size_t RingCapacity>
+template <typename Buffer, std::size_t IORingCapacity, std::size_t ProcessRingCapacity>
 class StackT: ModuleOpsT<Buffer> {
     using Driver = DriverT<Buffer>;
-    using Stack = StackT<Buffer, RingCapacity>;
+    using Stack = StackT<Buffer, IORingCapacity, ProcessRingCapacity>;
     using DriverService = DriverServiceT<Buffer>;
     using ModuleList = ModuleListT<Buffer>;
     using Module = ModuleT<Buffer>;
     using DeferredProc = DeferredProcT<Buffer>;
     using Queue = QueueT<Buffer>;
-    using Ring = RingT<DeferredProc, RingCapacity>;
+    using IORing = RingT<DeferredProc, IORingCapacity>;
+    using ProcessRing = RingT<DeferredProc, ProcessRingCapacity>;
 
     struct RxCompleteQueue: public Queue {
         Stack& stack;
@@ -56,7 +56,7 @@ class StackT: ModuleOpsT<Buffer> {
         void operator delete(void*, std::size_t) {}
 
         bool canPut() const override {
-            return stack.ring.canPut();
+            return stack.ioRing.canPut();
         }
 
         bool put(Buffer& b) { return stack.rxCompletePut(b); }
@@ -70,7 +70,7 @@ class StackT: ModuleOpsT<Buffer> {
         void operator delete(void*, std::size_t) {}
 
         bool canPut() const override {
-            return stack.ring.canPut();
+            return stack.ioRing.canPut();
         }
 
         bool put(Buffer& b) { return stack.txCompletePut(b); }
@@ -78,7 +78,8 @@ class StackT: ModuleOpsT<Buffer> {
     
 private:
     ModuleList moduleList;
-    Ring ring;
+    IORing ioRing;
+    ProcessRing processRing;
     RxCompleteQueue rxCompleteQueue;
     TxCompleteQueue txCompleteQueue;
     Driver& driver;
@@ -110,30 +111,22 @@ public:
     void tick() {
         allocateRxBuffers();
         auto guard = driverGuard();
-        if (ring.empty()) { return; }
-        DeferredProc dp = std::move(ring.tail());
-        ring.eraseTail();
+        if (ioRing.empty()) { return; }
+        DeferredProc dp = std::move(ioRing.tail());
+        ioRing.eraseTail();
         guard.unlock();
-        exec(dp);
+        if (!processRing.put(dp)) { FATAL_ERROR("tick"); }
+        process();
     }
 
 private:
-    void exec(DeferredProc& p) {
-        cpm::dpl("StackT::exec|");
-        Result<DeferredProc> r = ok(std::move(p));
-        while (isOk(r)) {
-            r = getOkUnsafe(std::move(r))();
+    void process() {
+        cpm::dpl("StackT::process|");
+        while (!processRing.empty()) {
+            DeferredProc dp = std::move(processRing.tail());
+            processRing.eraseTail();
+            dp() <= threadErrorReport;
         }
-
-        std::move(r) >
-        []() { return ok(); } <= // it is here just to convert the success type, never executed
-        [&] (Error e) {
-            if (e == toError(ErrorCode::ModulePacketConsumed)) {
-                return ok();
-            }
-            return fail(e);
-        } <=
-        threadErrorReport;
     }
 
     auto driverGuard() {
@@ -156,15 +149,20 @@ private:
         return ok(&(*it));
     }    
 
-    Result<Void> defer(DeferredProc& dp) override {
+    Result<Void> deferIO(DeferredProc&& dp) override {
         auto guard = driverGuard();
 
-        if (ring.full()) return { toError(ErrorCode::StackRingFull) };
+        if (ioRing.full()) return {toError(ErrorCode::StackIORingFull) };
 
-        if (!ring.put(dp)) {
+        if (!ioRing.put(dp)) {
             FATAL_ERROR("StackT::defer|");
         }
         
+        return ok();
+    }
+
+    Result<Void> deferProc(DeferredProc&& dp) override {
+        if (!processRing.put(dp)) return { toError(ErrorCode::StackProcRingFull)};
         return ok();
     }
 
@@ -172,7 +170,7 @@ private:
     bool rxCompletePut(Buffer& b) {
         cpm::dpl("StackT::rxCompletePut|%X", b.id());
 
-        if (ring.full()) { return false; }
+        if (ioRing.full()) { return false; }
         
         DeferredProc dp(
             [&,buffer=std::move(b),module=&moduleList.front()] () mutable {
@@ -180,7 +178,7 @@ private:
                 return module->up(std::move(buffer));
             });
         
-        if (!ring.put(dp)) {
+        if (!ioRing.put(dp)) {
             FATAL_ERROR("rxCompletePut");
         }
         
@@ -191,16 +189,16 @@ private:
     bool txCompletePut(Buffer& b) {
         cpm::dpl("StackT::txCompletePut|%X", b.id());
 
-        if (ring.full()) { return false; }
+        if (ioRing.full()) { return false; }
         
         DeferredProc dp(
-            [&,buffer=std::move(b)] () mutable {
+            [&,buffer=std::move(b)] () mutable -> Result<Void> {
                 cpm::dpl("StackT::txCompletePut|lambda|%X", buffer.id());
                 Buffer tmp = std::move(buffer);
-                return fail<DeferredProc>(toError(ErrorCode::ModulePacketConsumed));
+                return ok();
             });
         
-        if (!ring.put(dp)) {
+        if (!ioRing.put(dp)) {
             FATAL_ERROR("txCompletePut");
         }
         

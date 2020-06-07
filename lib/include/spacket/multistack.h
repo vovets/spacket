@@ -72,11 +72,15 @@ class MultistackT: public ModuleT<Buffer> {
             return ok(&(*it));
         }
         
-        Result<Void> defer(DeferredProc& dp) override {
-            return lowerStack->ops->defer(dp);
+        Result<Void> deferIO(DeferredProc&& dp) override {
+            return lowerStack->ops->deferIO(std::move(dp));
         }
 
-        Result<DeferredProc> up(Buffer&& b) override {
+        Result<Void> deferProc(DeferredProc&& dp) override {
+            return lowerStack->ops->deferProc(std::move(dp));
+        }
+
+        Result<Void> up(Buffer&& b) override {
             cpm::dpb("UpperStack::up|", &b);
             cpm::dpl("UpperStack::up|channel %d", address.channel);
             return
@@ -85,12 +89,12 @@ class MultistackT: public ModuleT<Buffer> {
                 return
                 ops->upper(*this) >=
                 [&] (Module* m) {
-                    return ok(makeProc(std::move(stripped), *m, &Module::up));
+                    return ops->deferProc(makeProc(std::move(stripped), *m, &Module::up));
                 };
             };
         }
         
-        Result<DeferredProc> down(Buffer&& b) override {
+        Result<Void> down(Buffer&& b) override {
             cpm::dpb("UpperStack::down|", &b);
             cpm::dpl("UpperStack::down|channel %d", address.channel);
             return
@@ -99,7 +103,7 @@ class MultistackT: public ModuleT<Buffer> {
                 return
                 ops->lower(*this) >=
                 [&] (Module* m) {
-                    return ok(makeProc(std::move(withHeader), *m, &Module::down));
+                    return ops->deferProc(makeProc(std::move(withHeader), *m, &Module::down));
                 };
             };
         }
@@ -133,29 +137,29 @@ public:
         us.push(module);
     }
     
-    Result<DeferredProc> up(Buffer&& b) override {
+    Result<Void> up(Buffer&& b) override {
         cpm::dpb("MultistackT::up|", &b);
         for (std::size_t i = 0; i < firstFree; ++i) {
             UpperStack& us = at(i);
             if (us.address.matches(b)) {
                 cpm::dpl("MultistackT::up|matched channel %d", us.address.channel);
-                return ok(makeProc(std::move(b), us, &Module::up));
+                return ops->deferProc(makeProc(std::move(b), us, &Module::up));
             }
         }
         cpm::dpl("MultistackT::up|not matched");
         return
         ops->upper(*this) >=
         [&] (Module* m) {
-            return ok(makeProc(std::move(b), *m, &Module::up));
+            return ops->deferProc(makeProc(std::move(b), *m, &Module::up));
         };
     }
 
-    Result<DeferredProc> down(Buffer&& b) override {
+    Result<Void> down(Buffer&& b) override {
         cpm::dpb("MultistackT::down|", &b);
         return
         ops->lower(*this) >=
         [&] (Module* m) {
-            return ok(makeProc(std::move(b), *m, &Module::down));
+            return ops->deferProc(makeProc(std::move(b), *m, &Module::down));
         };
     }
 };

@@ -37,7 +37,7 @@ template <typename Buffer>
 auto makeProc(
     Buffer&& b,
     ModuleT<Buffer>& m,
-    Result<DeferredProcT<Buffer>> (ModuleT<Buffer>::*f)(Buffer&&))
+    Result<Void> (ModuleT<Buffer>::*f)(Buffer&&))
 {
     return DeferredProcT<Buffer>(
         [buffer=std::move(b), module=&m, func=f]() mutable {
@@ -52,7 +52,8 @@ struct ModuleOpsT {
 
     virtual Result<Module*> lower(Module& m) = 0;
     virtual Result<Module*> upper(Module& m) = 0;
-    virtual Result<Void> defer(DeferredProc& dp) = 0;
+    virtual Result<Void> deferIO(DeferredProc&& dp) = 0;
+    virtual Result<Void> deferProc(DeferredProc&& dp) = 0;
 };
 
 template <typename Buffer>
@@ -67,6 +68,6 @@ struct ModuleT: bi::list_base_hook<bi::link_mode<bi::normal_link>> {
 
     ModuleOps* ops = nullptr;
     
-    virtual Result<DeferredProc> up(Buffer&& b) = 0;
-    virtual Result<DeferredProc> down(Buffer&& b) = 0;
+    virtual Result<Void> up(Buffer&& b) = 0;
+    virtual Result<Void> down(Buffer&& b) = 0;
 };
