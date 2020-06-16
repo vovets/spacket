@@ -19,6 +19,7 @@ struct Header {
     uint16_t size;
     uint8_t refCnt;
     // TODO: proper alignment
+    uint8_t aligner;
 
     Header(uint16_t size): size(size), refCnt(0) {}
 

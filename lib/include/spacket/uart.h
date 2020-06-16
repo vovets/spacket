@@ -16,6 +16,19 @@ struct UartT: DriverT<Buffer> {
     using RxRing = RingT<Buffer, RxRingCapacity>;
     using TxRing = RingT<Buffer, TxRingCapacity>;
 
+    enum class Parity {
+        Even,
+        Odd,
+        None
+    };
+
+    enum class StopBits {
+        B_0_5 = 0x1U,
+        B_1 = 0x0U,
+        B_1_5 = 0x3U,
+        B_2 = 0x2U
+    };
+
     struct UARTConfigExt: UARTConfig {
         Uart& uart;
 
@@ -86,10 +99,39 @@ public:
         uartConfig.cr1 = USART_CR1_IDLEIE;
     }
 
+    void setBaud(std::uint32_t baud) {
+        uartConfig.speed = baud;
+    }
+
+    void setParity(Parity parity) {
+        switch (parity) {
+            case Parity::Even:
+                uartConfig.cr1 &= ~USART_CR1_PS;
+                uartConfig.cr1 |= USART_CR1_PCE | USART_CR1_M;
+                break;
+            case Parity::Odd:
+                uartConfig.cr1 |= USART_CR1_PS;
+                uartConfig.cr1 |= USART_CR1_PCE | USART_CR1_M;
+                break;
+            case Parity::None:
+                uartConfig.cr1 &= ~(USART_CR1_PCE | USART_CR1_M);
+        }
+    }
+
+    void setStopBits(StopBits stopBits) {
+        uartConfig.cr2 = static_cast<uint16_t>(
+            (uartConfig.cr2 & ~USART_CR2_STOP_Msk) |
+            (static_cast<unsigned>(stopBits) << USART_CR2_STOP_Pos));
+    }
+
+    void start() {
+        uartStart(&driver, &uartConfig);
+    }
+
     void start(Queue& rxCompleteQueue_, Queue& txCompleteQueue_) override {
         rxCompleteQueue = &rxCompleteQueue_;
         txCompleteQueue = &txCompleteQueue_;
-        uartStart(&driver, &uartConfig);
+        start();
     }
 
     Queue& rxRequestQueue() override { return rxRequestQueue_; }
@@ -246,9 +288,21 @@ private:
         rxFinishI();
     }
         
-    void rxErrorI(uartflags_t) {
+    void rxErrorI(uartflags_t flags) {
         // TODO: log error
-        cpm::dpl("UartT::rxErrorI|");
+        cpm::dpl("UartT::rxErrorI|flags=0x%X", flags);
+//        debugPrintStart();
+//        debugPrint("UartT::rxErrorI|");
+//        if (flags & UART_PARITY_ERROR)   debugPrint("PAR "); else debugPrint("    ");
+//        if (flags & UART_FRAMING_ERROR)  debugPrint("FRM "); else debugPrint("    ");
+//        if (flags & UART_OVERRUN_ERROR)  debugPrint("OVR "); else debugPrint("    ");
+//        if (flags & UART_NOISE_ERROR)    debugPrint("NSE "); else debugPrint("    ");
+//        if (flags & UART_BREAK_DETECTED) debugPrint("BRK");  else debugPrint("   ");
+//        debugPrintFinish();
+
+        // ignore break detection
+        // why USART_SR_LBD gets set if USART_CR2_LINEN is 0 ?
+        if (flags & UART_BREAK_DETECTED) return;
         rxFinishI();
     }
     

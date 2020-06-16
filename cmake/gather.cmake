@@ -26,6 +26,13 @@ function(gt_add_sources)
   target_sources(${target} PRIVATE ${result})
 endfunction()
 
+function(gt_set_source_file_properties path property value)
+  unset(result)
+  gt_absolutize("${path}")
+  message("set_source_files_properties|${property} ${value}")
+  set_source_files_properties(${result} PROPERTIES ${property} ${value})
+endfunction()
+
 function(gt_add_include_directories)
   unset(result)
   gt_absolutize("${ARGV}")

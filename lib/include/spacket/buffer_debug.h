@@ -56,15 +56,17 @@ void debugPrintBuffer(const char* fmt, const Buffer* b, ...) {
 }
 
 #define IMPLEMENT_DPB_FUNCTION                          \
-    void dpb(const char* fmt, const Buffer* b, ...) {    \
-        std::va_list args;                                   \
+    template <typename Buffer>                          \
+    void dpb(const char* fmt, const Buffer* b, ...) {   \
+        std::va_list args;                              \
         va_start(args, b);                              \
-        debugPrintBuffer_(fmt, *b, args);                   \
-        va_end(args);                                    \
+        debugPrintBuffer_(fmt, *b, args);               \
+        va_end(args);                                   \
     }
 
 
-#define IMPLEMENT_DPB_FUNCTION_NOP                      \
+#define IMPLEMENT_DPB_FUNCTION_NOP                  \
+    template <typename Buffer>                      \
     void dpb(const char*, const Buffer*, ...) {}
 
 #define DPB(VAR_NAME) dpb(#VAR_NAME ": ", &VAR_NAME)

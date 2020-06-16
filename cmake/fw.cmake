@@ -49,6 +49,19 @@ function(fw_add_flash_target fw_project)
   add_dependencies(${target} ${fw_project})
 endfunction()
 
+function(fw_add_flash_target_to_exe fw_executable)
+  get_target_property(dir ${fw_executable} BINARY_DIR)
+  set(jlink_flash_hex "${dir}/${fw_executable}.hex")
+  set(jlink_flash_commandfile "${dir}/flash.jlink")
+  configure_file("${SPACKET_ROOT}/misc/flash.jlink.in" "${jlink_flash_commandfile}")
+  set(target "${fw_executable}-flash")
+  add_custom_target(${target}
+    ${JLINK_EXE} ${JLINK_CONNECT_OPTIONS} ${JLINK_FLASH_OPTIONS} -commandfile ${jlink_flash_commandfile}
+    VERBATIM
+    )
+  add_dependencies(${target} ${fw_executable}.hex)
+endfunction()
+
 # As one cannot have two different compilers in one cmake tree,
 # this is used to add fw project via ExternalProject machinery to host project.
 #

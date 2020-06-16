@@ -1,0 +1,11 @@
+#!/bin/sh -ex
+
+build_dir=build
+source_dir=$(pwd)
+spacket_dir=${source_dir}/../..
+
+mkdir -p ${build_dir}
+
+cd ${build_dir}
+
+cmake -G 'Ninja' -DCMAKE_BUILD_TYPE=Debug -DCMAKE_VERBOSE_MAKEFILE=OFF -DCMAKE_TOOLCHAIN_FILE=${spacket_dir}/cmake/toolchain_gcc_arm-none-eabi.cmake -DSPACKET_ROOT=${spacket_dir} ${source_dir}

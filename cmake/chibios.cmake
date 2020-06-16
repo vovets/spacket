@@ -17,6 +17,12 @@ function(ch_add_sources)
   gt_add_sources(${result})
 endfunction()
 
+function(ch_set_source_file_properties path property value)
+  unset(result)
+  ch_absolutize("${path}")
+  gt_set_source_file_properties(${result} ${property} ${value})
+endfunction()
+
 function(ch_add_include_directories)
   unset(result)
   ch_absolutize("${ARGV}")

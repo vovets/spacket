@@ -1,4 +1,4 @@
-build/**
+**/build
 spacket_build/**
 eclipse/**
 external/boost_1_66_0/**
