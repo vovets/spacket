@@ -2,7 +2,8 @@ set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_PROCESSOR ARM)
 
 set(TRIPLE arm-none-eabi)
-set(TOOLCHAIN_PREFIX /usr)
+#set(TOOLCHAIN_PREFIX /usr)
+set(TOOLCHAIN_PREFIX /home/vovka/opt/gcc-arm-none-eabi-9-2020-q2-update)
 set(TOOLCHAIN_BIN ${TOOLCHAIN_PREFIX}/bin)
 
 # Without that flag CMake is not able to pass test compilation check

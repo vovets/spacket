@@ -3,9 +3,7 @@
 #include <spacket/result.h>
 
 
-template <typename Buffer>
-struct DeferredProcT {
-    using DeferredProc = DeferredProcT<Buffer>;
+struct DeferredProc {
     using Retval = Result<Void>;
     using Storage = std::aligned_storage_t<sizeof(void*) * 5, alignof(void*)>;
 
@@ -44,30 +42,30 @@ struct DeferredProcT {
     FuncBase* func;
 
     template <typename Closure>
-    DeferredProcT(Closure&& c)
+    DeferredProc(Closure&& c)
         : func(::new (&storage) Func<Closure>(std::forward<Closure>(c)))
     {
         static_assert(sizeof(storage) >= sizeof(Func<Closure>));
     }
 
-    ~DeferredProcT() {
+    ~DeferredProc() {
         if (func != nullptr) {
             func->destroy();
             func = nullptr;
         }
     }
     
-    DeferredProcT(const DeferredProcT&) = delete;
+    DeferredProc(const DeferredProc&) = delete;
     
-    DeferredProcT(DeferredProcT&& from)
+    DeferredProc(DeferredProc&& from)
         : func(from.func ? from.func->moveTo(this->storage) : nullptr)
     {
         from.func = nullptr;
     }
     
-    DeferredProcT& operator=(DeferredProcT&& from) {
-        this->~DeferredProcT();
-        ::new (this) DeferredProcT(std::move(from));
+    DeferredProc& operator=(DeferredProc&& from) {
+        this->~DeferredProc();
+        ::new (this) DeferredProc(std::move(from));
         return *this;
     }
 

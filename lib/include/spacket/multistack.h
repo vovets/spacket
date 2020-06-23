@@ -3,15 +3,14 @@
 #include <spacket/module.h>
 
 
-template <typename Buffer>
-struct AddressT {
+struct Address {
     std::uint8_t channel;
 
     bool matches(const Buffer& buffer) {
         return buffer.size() != 0 && buffer.begin()[0] == channel;
     }
 
-    bool operator==(const AddressT& other) {
+    bool operator==(const Address& other) {
         return channel == other.channel;
     }
 
@@ -20,7 +19,7 @@ struct AddressT {
     }
 
     Result<Buffer> addHeader(Buffer&& buffer) {
-        if (buffer.size() == Buffer::maxSize()) {
+        if (buffer.size() == buffer.maxSize()) {
             return { toError(ErrorCode::AddressNoRoom) };
         }
         auto s = buffer.size();
@@ -31,16 +30,13 @@ struct AddressT {
     }
 };
 
-template <typename Buffer, typename Address, std::size_t MAX_STACKS>
-class MultistackT: public ModuleT<Buffer> {
-    using This = MultistackT<Buffer, Address, MAX_STACKS>;
-    using DeferredProc = DeferredProcT<Buffer>;
-    using Module = ModuleT<Buffer>;
-    using ModuleList = ModuleListT<Buffer>;
+template <typename Address, std::size_t MAX_STACKS>
+class MultistackT: public Module {
+    using This = MultistackT<Address, MAX_STACKS>;
 
     using Module::ops;
 
-    struct UpperStack: ModuleOpsT<Buffer>, ModuleT<Buffer>  {
+    struct UpperStack: ModuleOps, Module  {
         This* lowerStack;
         Address address;
         ModuleList moduleList;

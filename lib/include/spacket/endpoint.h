@@ -29,17 +29,14 @@ struct BufferBoxT: public QueueT<Buffer> {
     }
 };
 
-template <typename Buffer>
-struct EndpointT: ModuleT<Buffer> {
+struct Endpoint: Module {
     using Queue = QueueT<Buffer>;
-    using Module = ModuleT<Buffer>;
-    using DeferredProc = DeferredProcT<Buffer>;
     using Module::ops;
     
     BufferBoxT<Buffer> readBox;
 
     Result<Void> up(Buffer&& b_) override {
-        cpm::dpl("EndpointT::up|");
+        cpm::dpl("Endpoint::up|");
         Buffer b = std::move(b_);
         if (!readBox.put(b)) {
             return { toError(ErrorCode::ModulePacketDropped) };
@@ -48,7 +45,7 @@ struct EndpointT: ModuleT<Buffer> {
     }
     
     Result<Void> down(Buffer&& b) override {
-        cpm::dpl("EndpointT::down|");
+        cpm::dpl("Endpoint::down|");
         return
         ops->lower(*this) >=
         [&] (Module* m) {
@@ -58,14 +55,14 @@ struct EndpointT: ModuleT<Buffer> {
 
     Result<Buffer> read() {
         if (readBox.buffer) {
-            cpm::dpb("EndpointT::read|", &*readBox.buffer);
+            cpm::dpb("Endpoint::read|", &*readBox.buffer);
             return ok(extract(readBox.buffer));
         }
         return { toError(ErrorCode::Timeout) };
     }
 
     Result<Void> write(Buffer b) {
-        cpm::dpb("EndpointT::write|", &b);
+        cpm::dpb("Endpoint::write|", &b);
         return
         ops->lower(*this) >=
         [&] (Module* m) {

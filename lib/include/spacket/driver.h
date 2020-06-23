@@ -3,8 +3,7 @@
 #include <spacket/queue.h>
 
 
-template <typename Buffer>
-struct DriverT {
+struct Driver {
     using Queue = QueueT<Buffer>;
 
     virtual void start(Queue& rxCompleteQueue, Queue& txCompleteQueue) = 0;

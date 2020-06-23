@@ -9,9 +9,9 @@
 // of the actual transmission of all the bits from the shift register
 // (use txend2 callback)
 
-template <typename Buffer, std::size_t RxRingCapacity, std::size_t TxRingCapacity>
-struct UartT: DriverT<Buffer> {
-    using Uart = UartT<Buffer, RxRingCapacity, TxRingCapacity>;
+template <std::size_t RxRingCapacity, std::size_t TxRingCapacity>
+struct UartT: Driver {
+    using Uart = UartT<RxRingCapacity, TxRingCapacity>;
     using Queue = QueueT<Buffer>;
     using RxRing = RingT<Buffer, RxRingCapacity>;
     using TxRing = RingT<Buffer, TxRingCapacity>;

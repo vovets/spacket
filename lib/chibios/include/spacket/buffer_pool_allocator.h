@@ -2,20 +2,18 @@
 
 #include <spacket/result.h>
 #include <spacket/errors.h>
+#include <spacket/allocator.h>
 
 template <typename Pool>
-class PoolAllocatorT {
+class PoolAllocatorT: public alloc::Allocator {
 public:
-    Result<void*> allocate(std::size_t size) {
-        if (size > Pool::objectSize()) {
-            return fail<void*>(toError(ErrorCode::PoolAllocatorObjectTooBig));
-        }
+    Result<void*> allocate() override {
         return Pool::instance().allocate();
     }
 
-    void deallocate(void* ptr) {
+    void deallocate(void* ptr) override {
         Pool::instance().deallocate(ptr);
     }
 
-    static constexpr size_t maxSize() { return Pool::objectSize(); }
+    size_t maxSize() const override { return Pool::objectSize(); }
 };

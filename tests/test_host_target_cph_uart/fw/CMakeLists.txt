@@ -20,6 +20,8 @@ set(CH_ROOT_DIR [[${EXTERNAL}/chibios]])
 set(debug_optimization_flags -Os)
 set(CH_PROCESS_STACK_SIZE 0x500)
 # set(CH_MAIN_STACK_SIZE 0x1000)
+#set(cxx_features_flags -fno-exceptions -fno-rtti -fno-unwind-tables -fno-threadsafe-statics)
+set(cxx_features_flags -fno-exceptions -fno-rtti -fno-unwind-tables)
 
 fw_vars_set()
 fw_add_executable(fw)
@@ -31,7 +33,7 @@ fw_compile_definitions(fw
   -DNDEBUG
   -DSPACKET_ENABLE_THREAD_CHECK_STACK
   # -DENABLE_DEBUG_PRINT
-  # -DCPH_ENABLE_DEBUG_PRINT
+#  -DCPH_ENABLE_DEBUG_PRINT
   -DDEBUG_PRINT_BUFFER_FIRST_ONLY
   # -DDEBUG_PRINT_BUFFER_FULL
   -DDEBUG_PRINT_BUFFER_ASCII
@@ -46,6 +48,9 @@ ch_include(fw
   /os/hal/lib/streams/streams.cmake
   /os/rt/rt.cmake
   )
+
+ch_set_source_file_properties(/os/hal/ports/STM32/LLD/TIMv1/hal_pwm_lld.c COMPILE_FLAGS -Wno-implicit-fallthrough)
+ch_set_source_file_properties(/os/rt/src/chschd.c COMPILE_FLAGS -Wno-implicit-fallthrough)
 
 gt_include(fw
   "${SPACKET_ROOT}/tests/target_boards/STM32F103C8_MINIMAL/sources.cmake"
@@ -68,3 +73,29 @@ fw_sources(fw
   system_halt_hook.cpp
   rtt_stream.cpp
   )
+
+set(JLINK_EXE
+  /opt/SEGGER/JLink/JLinkExe
+  CACHE
+  FILEPATH
+  "Path to JLinkExe binary on host system"
+  )
+
+set(JLINK_DEVICE_NAME
+  STM32F103C8
+  CACHE
+  STRING
+  "Device name that is recognized by j-link for -device option"
+  )
+
+set(JLINK_CONNECT_OPTIONS
+  -device ${JLINK_DEVICE_NAME}
+  -if SWD
+  -speed 9000
+  )
+
+include(util)
+
+util_join_cl(JLINK_CONNECT_OPTIONS_STR "" ${JLINK_CONNECT_OPTIONS})
+
+fw_add_flash_target_to_exe(fw)

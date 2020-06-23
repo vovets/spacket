@@ -4,19 +4,15 @@
 #include <spacket/util/thread_error_report.h>
 
 
-template <typename Buffer>
-struct DriverServiceT: ModuleT<Buffer> {
-    using Driver = DriverT<Buffer>;
-    using Module = ModuleT<Buffer>;
-    using DeferredProc = DeferredProcT<Buffer>;
+struct DriverService: Module {
     using Module::ops;
 
     Driver& driver;
 
-    DriverServiceT(Driver& driver): driver(driver) {}
+    DriverService(Driver& driver): driver(driver) {}
 
     Result<Void> up(Buffer&& buffer) override {
-        cpm::dpb("DriverServiceT::up|", &buffer);
+        cpm::dpb("DriverService::up|", &buffer);
         return
         ops->upper(*this) >=
         [&] (Module* m) {
@@ -25,7 +21,7 @@ struct DriverServiceT: ModuleT<Buffer> {
     }
 
     Result<Void> down(Buffer&& buffer) override {
-        cpm::dpb("DriverServiceT::down|", &buffer);
+        cpm::dpb("DriverService::down|", &buffer);
         {
             auto guard = makeGuard([&]() { driver.lock(); }, [&]() { driver.unlock(); });
             if (driver.txRequestQueue().put(buffer)) {
@@ -36,15 +32,10 @@ struct DriverServiceT: ModuleT<Buffer> {
     }
 };
 
-template <typename Buffer, std::size_t IORingCapacity, std::size_t ProcessRingCapacity>
-class StackT: ModuleOpsT<Buffer> {
-    using Driver = DriverT<Buffer>;
-    using Stack = StackT<Buffer, IORingCapacity, ProcessRingCapacity>;
-    using DriverService = DriverServiceT<Buffer>;
-    using ModuleList = ModuleListT<Buffer>;
-    using Module = ModuleT<Buffer>;
-    using DeferredProc = DeferredProcT<Buffer>;
+template <std::size_t IORingCapacity, std::size_t ProcessRingCapacity>
+class StackT: ModuleOps {
     using Queue = QueueT<Buffer>;
+    using Stack = StackT<IORingCapacity, ProcessRingCapacity>;
     using IORing = RingT<DeferredProc, IORingCapacity>;
     using ProcessRing = RingT<DeferredProc, ProcessRingCapacity>;
 
@@ -209,7 +200,7 @@ private:
         Result<Void> r = ok();
         while (isOk(r)) {
             r =
-            Buffer::create(Buffer::maxSize()) >=
+            Buffer::create() >=
             [&](Buffer&& b) {
                 auto guard = driverGuard();
                 if (driver.rxRequestQueue().put(b)) {

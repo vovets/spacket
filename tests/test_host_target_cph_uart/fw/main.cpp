@@ -27,13 +27,11 @@ IMPLEMENT_DPL_FUNCTION_NOP
 } // namespace
 
 
-template <typename Buffer>
-struct LoopbackT: ModuleT<Buffer> {
-    using Module = ModuleT<Buffer>;
+struct Loopback: Module {
     using Module::ops;
 
     Result<Void> up(Buffer&& buffer) override {
-        cpm::dpl("LoopbackT::up|");
+        cpm::dpl("Loopback::up|");
         return
         ops->lower(*this) >=
         [&] (Module* m) {
@@ -42,28 +40,34 @@ struct LoopbackT: ModuleT<Buffer> {
     }
 
     Result<Void> down(Buffer&&) override {
-        cpm::dpl("LoopbackT::down|");
+        cpm::dpl("Loopback::down|");
         return { toError(ErrorCode::ModulePacketDropped) };
     }
 };
 
-using Driver = UartT<Buffer, DRIVER_RX_RING_CAPACITY, DRIVER_TX_RING_CAPACITY>;
-using Stack = StackT<Buffer, STACK_IO_RING_CAPACITY, STACK_PROC_RING_CAPACITY>;
-using Loopback = LoopbackT<Buffer>;
-using Endpoint = EndpointT<Buffer>;
-using Address = AddressT<Buffer>;
-using Multistack = MultistackT<Buffer, Address, 2>;
+using Driver_ = UartT<DRIVER_RX_RING_CAPACITY, DRIVER_TX_RING_CAPACITY>;
+using Stack = StackT<STACK_IO_RING_CAPACITY, STACK_PROC_RING_CAPACITY>;
+using Multistack = MultistackT<Address, 2>;
+
+namespace alloc {
+
+Allocator& defaultAllocator() {
+    static DefaultAllocator allocator;
+    return allocator;
+}
+
+} // alloc
 
 int main(void) {
     halInit();
     chSysInit();
 
     chprintf(&rttStream, "RTT ready\r\n");
-    chprintf(&rttStream, "Buffer::maxSize(): %d\r\n", Buffer::maxSize());
+    chprintf(&rttStream, "Allocator::maxSize(): %d\r\n", alloc::defaultAllocator().maxSize());
     chprintf(&rttStream, "sizeof(Buffer): %d\r\n", sizeof(Buffer));
-    chprintf(&rttStream, "sizeof(DeferredProc): %d\r\n", sizeof(DeferredProcT<Buffer>));
+    chprintf(&rttStream, "sizeof(DeferredProc): %d\r\n", sizeof(DeferredProc));
 
-    Driver driver(UARTD1);
+    Driver_ driver(UARTD1);
     Stack stack(driver);
     Loopback loopback;
     Multistack multistack;
@@ -102,4 +106,8 @@ int main(void) {
             return fail(e);
         };
     }
+}
+
+extern "C" void __cxa_pure_virtual() {
+    FATAL_ERROR("__cxa_pure_virtual");
 }

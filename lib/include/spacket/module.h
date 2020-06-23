@@ -14,58 +14,29 @@
 
 namespace bi = boost::intrusive;
 
-namespace cpm {
+struct Module;
 
-#ifdef CPH_ENABLE_DEBUG_PRINT
-
-    IMPLEMENT_DPL_FUNCTION
-    IMPLEMENT_DPB_FUNCTION
-
-#else
-
-    IMPLEMENT_DPL_FUNCTION_NOP
-    IMPLEMENT_DPB_FUNCTION_NOP
-
-#endif
-
-}
-
-template <typename Buffer>
-struct ModuleT;
-
-template <typename Buffer>
 auto makeProc(
     Buffer&& b,
-    ModuleT<Buffer>& m,
-    Result<Void> (ModuleT<Buffer>::*f)(Buffer&&))
+    Module& m,
+    Result<Void> (Module::*f)(Buffer&&))
 {
-    return DeferredProcT<Buffer>(
+    return DeferredProc(
         [buffer=std::move(b), module=&m, func=f]() mutable {
             return (module->*func)(std::move(buffer));
         });
 }
 
-template <typename Buffer>
-struct ModuleOpsT {
-    using Module = ModuleT<Buffer>;
-    using DeferredProc = DeferredProcT<Buffer>;
-
+struct ModuleOps {
     virtual Result<Module*> lower(Module& m) = 0;
     virtual Result<Module*> upper(Module& m) = 0;
     virtual Result<Void> deferIO(DeferredProc&& dp) = 0;
     virtual Result<Void> deferProc(DeferredProc&& dp) = 0;
 };
 
-template <typename Buffer>
-using ModuleListT = boost::intrusive::list<ModuleT<Buffer>>;
+using ModuleList = boost::intrusive::list<Module>;
 
-template <typename Buffer>
-struct ModuleT: bi::list_base_hook<bi::link_mode<bi::normal_link>> {
-    using Module = ModuleT<Buffer>;
-    using DeferredProc = DeferredProcT<Buffer>;
-    using ModuleList = ModuleListT<Buffer>;
-    using ModuleOps = ModuleOpsT<Buffer>;
-
+struct Module: bi::list_base_hook<bi::link_mode<bi::normal_link>> {
     ModuleOps* ops = nullptr;
     
     virtual Result<Void> up(Buffer&& b) = 0;

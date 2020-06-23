@@ -50,14 +50,23 @@ void process(const Buffer& buffer) {
     pwmEnableChannel(pwmDriver, pwmChannel, width);
 }
 
+namespace alloc {
+
+Allocator& defaultAllocator() {
+    static DefaultAllocator allocator;
+    return allocator;
+}
+
+} // alloc
+
 int main() {
     halInit();
     chSysInit();
 
     chprintf(&rttStream, "RTT ready\r\n");
-    chprintf(&rttStream, "Buffer::maxSize(): %d\r\n", Buffer::maxSize());
+    chprintf(&rttStream, "Allocator::maxSize(): %d\r\n", alloc::defaultAllocator().maxSize());
     chprintf(&rttStream, "sizeof(Buffer): %d\r\n", sizeof(Buffer));
-    chprintf(&rttStream, "sizeof(DeferredProc): %d\r\n", sizeof(DeferredProcT<Buffer>));
+    chprintf(&rttStream, "sizeof(DeferredProc): %d\r\n", sizeof(DeferredProc));
     chprintf(&rttStream, "sizeof(Packet): %d\r\n", sizeof(sbus::Packet));
 
     Uart uart(UARTD1);
