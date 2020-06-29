@@ -7,7 +7,6 @@
 
 namespace multiplexer_impl_base {
 
-template <typename Buffer>
 struct Debug {
 
 #define PREFIX()
@@ -30,11 +29,11 @@ struct Debug {
 
 } // multiplexer_impl_base
 
-template <typename Buffer, typename LowerLevel, std::uint8_t NUM_CHANNELS>
-class MultiplexerImplBaseT: public multiplexer_impl_base::Debug<Buffer> {
+template <typename LowerLevel, std::uint8_t NUM_CHANNELS>
+class MultiplexerImplBaseT: public multiplexer_impl_base::Debug {
     using Mailbox = MailboxImplT<Result<Buffer>>;
     using Mailboxes = std::array<Mailbox, NUM_CHANNELS>;
-    using Dbg = multiplexer_impl_base::Debug<Buffer>;
+    using Dbg = multiplexer_impl_base::Debug;
 
     static constexpr Timeout stopCheckPeriod = std::chrono::milliseconds(10);
 
@@ -42,7 +41,7 @@ protected:
     using Dbg::dpl;
     using Dbg::dpb;
 
-    MultiplexerImplBaseT(LowerLevel& lowerLevel, ThreadParams p);
+    MultiplexerImplBaseT(alloc::Allocator& allocator, LowerLevel& lowerLevel, ThreadParams p);
     virtual ~MultiplexerImplBaseT();
     
     MultiplexerImplBaseT(MultiplexerImplBaseT&&) = delete;
@@ -60,41 +59,44 @@ private:
     virtual Result<Void> reportError(Error e) = 0;
 
 private:
+    alloc::Allocator& allocator;
     LowerLevel& lowerLevel;
     Mailboxes readMailboxes;
     ThreadParams readThreadParams;
     Thread readThread;
 };
 
-template <typename Buffer, typename LowerLevel, std::uint8_t NUM_CHANNELS>
-constexpr Timeout MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>::stopCheckPeriod;
+template <typename LowerLevel, std::uint8_t NUM_CHANNELS>
+constexpr Timeout MultiplexerImplBaseT<LowerLevel, NUM_CHANNELS>::stopCheckPeriod;
 
-template <typename Buffer, typename LowerLevel, std::uint8_t NUM_CHANNELS>
-MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>::MultiplexerImplBaseT(
+template <typename LowerLevel, std::uint8_t NUM_CHANNELS>
+MultiplexerImplBaseT<LowerLevel, NUM_CHANNELS>::MultiplexerImplBaseT(
+    alloc::Allocator& allocator,
     LowerLevel& lowerLevel,
     ThreadParams p)
-    : lowerLevel(lowerLevel)
+    : allocator(allocator)
+    , lowerLevel(lowerLevel)
     , readThreadParams(p)
 {
 }
 
-template <typename Buffer, typename LowerLevel, std::uint8_t NUM_CHANNELS>
-void MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>::start() {
+template <typename LowerLevel, std::uint8_t NUM_CHANNELS>
+void MultiplexerImplBaseT<LowerLevel, NUM_CHANNELS>::start() {
     readThread = Thread::create(readThreadParams, [&] { this->readThreadFunction(); });
 }
 
-template <typename Buffer, typename LowerLevel, std::uint8_t NUM_CHANNELS>
-void MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>::wait() {
+template <typename LowerLevel, std::uint8_t NUM_CHANNELS>
+void MultiplexerImplBaseT<LowerLevel, NUM_CHANNELS>::wait() {
     readThread.requestStop();
     readThread.wait();
 }
 
-template <typename Buffer, typename LowerLevel, std::uint8_t NUM_CHANNELS>
-MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>::~MultiplexerImplBaseT() {
+template <typename LowerLevel, std::uint8_t NUM_CHANNELS>
+MultiplexerImplBaseT<LowerLevel, NUM_CHANNELS>::~MultiplexerImplBaseT() {
 }
 
-template <typename Buffer, typename LowerLevel, std::uint8_t NUM_CHANNELS>
-Result<Buffer> MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>::read(std::uint8_t c, Timeout t) {
+template <typename LowerLevel, std::uint8_t NUM_CHANNELS>
+Result<Buffer> MultiplexerImplBaseT<LowerLevel, NUM_CHANNELS>::read(std::uint8_t c, Timeout t) {
     dpl("mib::read|started|channel %d|timeout %d ms", c, toMs(t).count());
     if (c >= NUM_CHANNELS) {
         return fail<Buffer>(toError(ErrorCode::MultiplexerBadChannel));
@@ -115,16 +117,16 @@ Result<Buffer> MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>::read(std:
     };
 }
 
-template <typename Buffer, typename LowerLevel, std::uint8_t NUM_CHANNELS>
-Result<Void> MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>::write(std::uint8_t c, Buffer b) {
+template <typename LowerLevel, std::uint8_t NUM_CHANNELS>
+Result<Void> MultiplexerImplBaseT<LowerLevel, NUM_CHANNELS>::write(std::uint8_t c, Buffer b) {
     if (c >= NUM_CHANNELS) {
         return fail(toError(ErrorCode::MultiplexerBadChannel));
     }
-    if (b.size() > Buffer::maxSize() - 1) {
+    if (b.size() > Buffer::maxSize(allocator) - 1) {
         return fail(toError(ErrorCode::MultiplexerBufferTooBig));
     }
     return
-    Buffer::create(Buffer::maxSize()) >=
+    Buffer::create(allocator) >=
     [&] (Buffer&& newBuffer) {
         dpb("mib::write|channel %d|", &b, c);
         newBuffer.begin()[0] = c;
@@ -136,8 +138,8 @@ Result<Void> MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>::write(std::
     };
 }
 
-template <typename Buffer, typename LowerLevel, std::uint8_t NUM_CHANNELS>
-void MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>::readThreadFunction() {
+template <typename LowerLevel, std::uint8_t NUM_CHANNELS>
+void MultiplexerImplBaseT<LowerLevel, NUM_CHANNELS>::readThreadFunction() {
     Thread::setName("mx");
     dpl("mib::readThreadFunction|started");
     while (!Thread::shouldStop()) {
@@ -154,7 +156,7 @@ void MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>::readThreadFunction(
                 return fail(toError(ErrorCode::MultiplexerBadChannel));
             }
             return
-            Buffer::create(Buffer::maxSize()) >=
+            Buffer::create(allocator) >=
             [&] (Buffer&& newBuffer) {
                 std::memcpy(newBuffer.begin(), b.begin() + 1, b.size() - 1);
                 newBuffer.resize(b.size() -1);

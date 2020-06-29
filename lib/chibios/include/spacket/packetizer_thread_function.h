@@ -12,19 +12,20 @@ namespace packetizer_thread_function {
 #ifdef PACKETIZER_THREAD_FUNCTION_ENABLE_DEBUG_PRINT
 IMPLEMENT_DPL_FUNCTION
 IMPLEMENT_DPX_FUNCTIONS
+IMPLEMENT_DPB_FUNCTION
 #else
 IMPLEMENT_DPL_FUNCTION_NOP
 IMPLEMENT_DPX_FUNCTIONS_NOP
+IMPLEMENT_DPB_FUNCTION_NOP
 #endif
 #undef PREFIX
 
 } // packetizer_thread_function
 
-template <typename Buffer, typename Mailbox, typename ErrorReportF>
-void packetizerThreadFunctionT(Mailbox& in, Mailbox& out, ErrorReportF reportError) {
+template <typename Mailbox, typename ErrorReportF>
+void packetizerThreadFunctionT(alloc::Allocator& allocator, Mailbox& in, Mailbox& out, ErrorReportF reportError) {
     using namespace packetizer_thread_function;
-    using Packetizer = PacketizerT<Buffer>;
-    Packetizer::create(PacketizerNeedSync::Yes) >=
+    Packetizer::create(allocator, PacketizerNeedSync::Yes) >=
     [&](Packetizer pktz) {
         for (;;) {
             dpl("tick");
@@ -35,7 +36,7 @@ void packetizerThreadFunctionT(Mailbox& in, Mailbox& out, ErrorReportF reportErr
                     auto r = pktz.consume(c);
                     switch (r) {
                         case Packetizer::Overflow:
-                            Packetizer::create(PacketizerNeedSync::Yes) <=
+                            Packetizer::create(allocator, PacketizerNeedSync::Yes) <=
                             fatal<Packetizer> >=
                             [&](Packetizer&& p) {
                                 pktz = std::move(p);
@@ -57,7 +58,7 @@ void packetizerThreadFunctionT(Mailbox& in, Mailbox& out, ErrorReportF reportErr
                                 // ATTN: in real application there may be no need to demand sync here
                                 // because packets may be separated by single zero byte
                                 return
-                                Packetizer::create(PacketizerNeedSync::Yes) <=
+                                Packetizer::create(allocator, PacketizerNeedSync::Yes) <=
 								fatal<Packetizer> >=
                                 [&](Packetizer&& p) {
                                     pktz = std::move(p);

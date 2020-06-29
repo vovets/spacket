@@ -21,11 +21,12 @@
 
 ThreadStorageT<512> echoThreadStorage;
 
-using SerialDevice = SerialDeviceT<Buffer>;
-using PacketDevice = PacketDeviceT<Buffer, SerialDevice>;
+using PacketDevice = PacketDeviceT<SerialDevice>;
 
 constexpr tprio_t SD_THREAD_PRIORITY = NORMALPRIO + 2;
 constexpr tprio_t PD_THREAD_PRIORITY = NORMALPRIO + 1;
+
+Allocator allocator;
 
 namespace {
 
@@ -41,10 +42,10 @@ class Globals {
 public:
     static Result<StaticPtr<Globals>> init(void* storage) {
         return
-        SerialDevice::open(&UARTD1, SD_THREAD_PRIORITY) >=
+        SerialDevice::open(allocator, UARTD1, SD_THREAD_PRIORITY) >=
         [&](SerialDevice sd) {
             return
-            Buffer::create(Buffer::maxSize()) >=
+            Buffer::create(allocator) >=
             [&] (Buffer&& pdBuffer) {
                 return ok(makeStatic<Globals>(storage, std::move(sd), std::move(pdBuffer)));
             };
@@ -103,7 +104,7 @@ int main(void) {
     chSysInit();
 
     chprintf(&rttStream, "RTT ready\r\n");
-    chprintf(&rttStream, "Buffer::maxSize(): %d\r\n", Buffer::maxSize());
+    chprintf(&rttStream, "Allocator::maxSize(): %d\r\n", allocator.maxSize());
 
     auto globals = std::move(getOkUnsafe(Globals::init(&globalsStorage) <= fatal<StaticPtr<Globals>>));
 

@@ -1,5 +1,6 @@
 #include "namespaces.h"
 #include "utils.h"
+#include "buf.h"
 #include "build_config.h"
 #include <spacket/port_config.h>
 #include <spacket/config_utils.h>
@@ -24,10 +25,7 @@ std::vector<Baud> bauds = {Baud::B_921600};
 const size_t REPETITIONS = 10;
 const size_t BYTE_TIMEOUT_US = 0;
 
-using Buffer = BufferT<NewAllocator>;
-using SerialDevice = SerialDeviceT<Buffer>;
-
-Buffer buffer(size_t size) { return std::move(throwOnFail(Buffer::create(size))); }
+Buffer buffer(size_t size) { return std::move(throwOnFail(Buffer::create(defaultAllocator(), size))); }
 
 template<typename Test>
 void runTest(Test test) {
@@ -49,9 +47,9 @@ TEST_CASE("read prefix", "[loopback]") {
         pc.byteTimeout_us = BYTE_TIMEOUT_US;
 
         auto result =
-        SerialDevice::open(pc) >=
+        SerialDevice::open(defaultAllocator(), pc) >=
         [&](SerialDevice&& sd) {
-            auto wb = createTestBuffer<Buffer>(size);
+            auto wb = createTestBuffer(size);
             return
             sd.write(wb) >=
             [&](Void&&) {
@@ -77,9 +75,9 @@ TEST_CASE("read whole", "[loopback]") {
         pc.byteTimeout_us = BYTE_TIMEOUT_US;
 
         auto result =
-        SerialDevice::open(pc) >=
+        SerialDevice::open(defaultAllocator(), pc) >=
         [&](SerialDevice&& sd) {
-            auto wb = createTestBuffer<Buffer>(size);
+            auto wb = createTestBuffer(size);
             return
             sd.write(wb) >=
             [&](Void&&) {
@@ -93,7 +91,7 @@ TEST_CASE("read whole", "[loopback]") {
                     if (!rb.size()) {
                         REQUIRE(isPrefix(tmp, wb));
                     }
-                    returnOnFailT(sum, Void, rb + tmp);
+                    returnOnFailT(sum, Void, cat__(rb, tmp));
                     rb = std::move(sum);
                 }
                 REQUIRE_THAT(rb, isEqualTo(wb));
@@ -114,9 +112,9 @@ TEST_CASE("timeout", "[loopback]") {
         pc.byteTimeout_us = BYTE_TIMEOUT_US;
 
         auto result =
-        SerialDevice::open(pc) >=
+        SerialDevice::open(defaultAllocator(), pc) >=
         [&](SerialDevice&& sd) {
-            auto wb = createTestBuffer<Buffer>(size);
+            auto wb = createTestBuffer(size);
             return
             sd.write(wb) >=
             [&](Void&&) {
@@ -130,7 +128,7 @@ TEST_CASE("timeout", "[loopback]") {
                     if (!rb.size()) {
                         REQUIRE(isPrefix(tmp, wb));
                     }
-                    returnOnFailT(sum, Void, rb + tmp);
+                    returnOnFailT(sum, Void, cat__(rb, tmp));
                     rb = std::move(sum);
                 }
                 REQUIRE_THAT(rb, isEqualTo(wb));

@@ -18,15 +18,11 @@
 #include <thread>
 #include <future>
 
-using Buffer = BufferT<NewAllocator>;
 using Buffers = std::vector<Buffer>;
-using SerialDevice = SerialDeviceT<Buffer>;
 
 namespace c = std::chrono;
 
 namespace Catch {
-template<> struct StringMaker<Buffer>: public StringMakerBufferBase<Buffer> {}; 
-template<> struct StringMaker<Result<Buffer>>: public StringMakerResultBase<Result<Buffer>> {};
 template<> struct StringMaker<Result<Buffers>>: public StringMakerResultBase<Result<Buffers>> {};
 }
 
@@ -84,7 +80,7 @@ Result<Void> send(SerialDevice& sd, Timeout holdOffTime, std::vector<Buffer> v) 
 }
 
 Result<std::vector<Buffer>> receive(SerialDevice& sd, std::promise<void>& launched) {
-    Source<Buffer> source =
+    Source source =
     [&](Timeout t, size_t maxRead) {
         return
         sd.read(t) >=
@@ -105,8 +101,8 @@ Result<std::vector<Buffer>> receive(SerialDevice& sd, std::promise<void>& launch
     Buffer prefix = buf(0);
     launched.set_value();
     while (!finished) {
-        readPacket(source, std::move(prefix), BUFFER_MAX_SIZE, readPacketTimeout) >=
-        [&](ReadResult<Buffer>&& readResult) {
+        readPacket(defaultAllocator(), source, std::move(prefix), BUFFER_MAX_SIZE, readPacketTimeout) >=
+        [&](ReadResult&& readResult) {
             prefix = std::move(readResult.suffix);
             return
             cobs::unstuff(std::move(readResult.packet)) >=
@@ -132,7 +128,7 @@ Result<std::vector<Buffer>> receive(SerialDevice& sd, std::promise<void>& launch
 }
 
 void runCaseOnce(const PortConfig& pc, TestCase c) {
-    SerialDevice::open(pc) >=
+    SerialDevice::open(defaultAllocator(), pc) >=
     [&](SerialDevice&& sd) {
         std::promise<void> launched;
         auto future = std::async(std::launch::async, receive, std::ref(sd), std::ref(launched));

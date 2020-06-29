@@ -1,13 +1,15 @@
 #pragma once
 
+#include "utils.h"
+
 #include <boost/optional.hpp>
 
 inline
-Buffer buf(size_t size) { return std::move(throwOnFail(Buffer::create(size))); }
+Buffer buf(size_t size) { return std::move(throwOnFail(Buffer::create(defaultAllocator(), size))); }
 
 inline
 Buffer buf(size_t size, uint8_t fill) {
-    Buffer b = throwOnFail(Buffer::create(size));
+    Buffer b = throwOnFail(Buffer::create(defaultAllocator(), size));
     for (auto& c: b) {
         c = fill;
     }
@@ -16,12 +18,12 @@ Buffer buf(size_t size, uint8_t fill) {
 
 inline
 Buffer buf(std::initializer_list<uint8_t> l) {
-    return throwOnFail(Buffer::create(l));
+    return throwOnFail(Buffer::create(defaultAllocator(), l));
 }
 
 inline
 Buffer buf(std::string s) {
-    return throwOnFail(Buffer::create(std::vector<std::uint8_t>(s.begin(), s.end())));
+    return throwOnFail(Buffer::create(defaultAllocator(), std::vector<std::uint8_t>(s.begin(), s.end())));
 }
 
 inline
@@ -30,14 +32,22 @@ Buffer cob(Buffer b) {
 }
 
 inline
-Buffer wz(std::size_t size) { return createTestBuffer<Buffer>(size); }
+Buffer wz(std::size_t size) { return createTestBuffer(size); }
 
 inline
-Buffer nz(std::size_t size) { return createTestBufferNoZero<Buffer>(size); }
+Buffer nz(std::size_t size) { return createTestBufferNoZero(size); }
+
+inline
+Result<Buffer> cat__(const Buffer& lhs, const Buffer& rhs) {
+    returnOnFail(result, Buffer::create(defaultAllocator(), lhs.size() + rhs.size()));
+    std::memcpy(result.begin(), lhs.begin(), lhs.size());
+    std::memcpy(result.begin() + lhs.size(), rhs.begin(), rhs.size());
+    return ok(std::move(result));
+}
 
 inline
 Buffer cat_(const Buffer& l, const Buffer& r) {
-    return throwOnFail(l + r);
+    return throwOnFail(cat__(l, r));
 }
 
 template <typename Arg1, typename Arg2, typename ...Args>

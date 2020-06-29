@@ -3,17 +3,17 @@
 #include <spacket/impl/multiplexer_impl.h>
 
 
-template <typename Buffer, typename LowerLevel, std::uint8_t NUM_CHANNELS>
-class MultiplexerT: private MultiplexerImplT<Buffer, LowerLevel, NUM_CHANNELS> {
-    using Impl = MultiplexerImplT<Buffer, LowerLevel, NUM_CHANNELS>;
+template <typename LowerLevel, std::uint8_t NUM_CHANNELS>
+class MultiplexerT: private MultiplexerImplT<LowerLevel, NUM_CHANNELS> {
+    using Impl = MultiplexerImplT<LowerLevel, NUM_CHANNELS>;
 
 public:
     static constexpr std::size_t maxSize() { return LowerLevel::maxSize() - 1; }
 
 public:
     template <typename ...U>
-    MultiplexerT(LowerLevel& lowerLevel, U&&... u)
-        : Impl(lowerLevel, std::forward<U>(u)...) {
+    MultiplexerT(alloc::Allocator& allocator, LowerLevel& lowerLevel, U&&... u)
+        : Impl(allocator, lowerLevel, std::forward<U>(u)...) {
     }
 
     virtual ~MultiplexerT() {}

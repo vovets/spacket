@@ -1,13 +1,24 @@
 #pragma once
 
 #include <spacket/constants.h>
-#include <spacket/cpm_debug.h>
 #include <spacket/memory_utils.h>
+#include <spacket/debug_print.h>
+#include <spacket/bind.h>
 
 #include <limits>
 
 
 namespace alloc {
+
+#ifdef ALLOC_ENABLE_DEBUG_PRINT
+
+IMPLEMENT_DPL_FUNCTION
+
+#else
+
+IMPLEMENT_DPL_FUNCTION_NOP
+
+#endif
 
 using AllocatorId = std::uint8_t;
 
@@ -52,14 +63,14 @@ class Registry {
 
 public:
     Registry() {
-        cpm::dpl("Registry::Registry|");
+        dpl("Registry::Registry|");
     }
 
     AllocatorId registerAllocator(Allocator& pool) {
         if (firstFree == array.size()) { FATAL_ERROR("registerPool"); }
         auto id = firstFree++;
         array[id] = &pool;
-        cpm::dpl("Registry::registerAllocator|registered id=%d", id);
+        dpl("Registry::registerAllocator|registered id=%d", id);
         return static_cast<AllocatorId>(id);
     }
 
@@ -92,9 +103,7 @@ Registry& registry() {
 
 inline
 Allocator::Allocator(): id(registry().registerAllocator(*this)) {
-    cpm::dpl("Allocator::Allocator|");
+    dpl("Allocator::Allocator|");
 }
-
-Allocator& defaultAllocator();
 
 } // alloc

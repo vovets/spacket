@@ -15,14 +15,6 @@
 #include <thread>
 #include <future>
 
-using Buffer = BufferT<NewAllocator>;
-using SerialDevice = SerialDeviceT<Buffer>;
-
-namespace Catch {
-template<> struct StringMaker<Buffer>: public StringMakerBufferBase<Buffer> {}; 
-template<> struct StringMaker<Result<Buffer>>: public StringMakerResultBase<Result<Buffer>> {}; 
-}
-
 
 constexpr size_t BYTE_TIMEOUT_US = 0;
 constexpr Baud BAUD = Baud::B_921600;
@@ -58,7 +50,7 @@ Result<Buffer> readFull(SerialDevice& sd, Timeout timeout, std::promise<void>& l
             return
             std::move(result) >=
             [&](Buffer&& result_) {
-                result = result_ + read;
+                result = cat__(result_, read);
                 return ok();
             };
         } <=
@@ -75,7 +67,7 @@ Result<Buffer> readFull(SerialDevice& sd, Timeout timeout, std::promise<void>& l
 }
 
 void runCaseOnce(const PortConfig& pc, TestCase c) {
-    SerialDevice::open(pc) >=
+    SerialDevice::open(defaultAllocator(), pc) >=
     [&](SerialDevice&& sd) {
         std::promise<void> launched;
         auto future = std::async(
@@ -124,7 +116,7 @@ TEST_CASE("sync") {
 }
 
 TEST_CASE("overflow") {
-    Buffer expected = createTestBufferNoZero<Buffer>(BUFFER_MAX_SIZE);
+    Buffer expected = createTestBufferNoZero(BUFFER_MAX_SIZE);
     runCase(
         {
             vec({
@@ -140,12 +132,12 @@ TEST_CASE("overflow") {
         {
             vec({
                     buf({0}),
-                    createTestBufferNoZero<Buffer>(BUFFER_MAX_SIZE),
-                    createTestBufferNoZero<Buffer>(1),
+                    createTestBufferNoZero(BUFFER_MAX_SIZE),
+                    createTestBufferNoZero(1),
                     buf({0}),
                     // this is to bring the target to known state
-                    createTestBufferNoZero<Buffer>(BUFFER_MAX_SIZE),
-                    createTestBufferNoZero<Buffer>(1)
+                    createTestBufferNoZero(BUFFER_MAX_SIZE),
+                    createTestBufferNoZero(1)
                 }),
             ok(buf(0))
         },

@@ -49,34 +49,25 @@ using Driver_ = UartT<DRIVER_RX_RING_CAPACITY, DRIVER_TX_RING_CAPACITY>;
 using Stack = StackT<STACK_IO_RING_CAPACITY, STACK_PROC_RING_CAPACITY>;
 using Multistack = MultistackT<Address, 2>;
 
-namespace alloc {
-
-Allocator& defaultAllocator() {
-    static DefaultAllocator allocator;
-    return allocator;
-}
-
-} // alloc
+Allocator allocator;
+Driver_ driver(UARTD1);
+Stack stack(allocator, driver);
+Loopback loopback;
+Multistack multistack;
+Address addressA{'A'};
+Address addressB{'B'};
+Endpoint endpointA;
+Endpoint endpointB;
 
 int main(void) {
     halInit();
     chSysInit();
 
     chprintf(&rttStream, "RTT ready\r\n");
-    chprintf(&rttStream, "Allocator::maxSize(): %d\r\n", alloc::defaultAllocator().maxSize());
+    chprintf(&rttStream, "Allocator::maxSize(): %d\r\n", allocator.maxSize());
     chprintf(&rttStream, "sizeof(Buffer): %d\r\n", sizeof(Buffer));
     chprintf(&rttStream, "sizeof(DeferredProc): %d\r\n", sizeof(DeferredProc));
 
-    Driver_ driver(UARTD1);
-    Stack stack(driver);
-    Loopback loopback;
-    Multistack multistack;
-    Address addressA{'A'};
-    Address addressB{'B'};
-    Endpoint endpointA;
-    Endpoint endpointB;
-    
-    
     stack.push(multistack);
     stack.push(loopback);
     multistack.push(addressA, endpointA);

@@ -7,4 +7,4 @@
 #include <spacket/util/guarded_memory_pool.h>
 
 using Pool = GuardedMemoryPoolT<buffer_impl::allocSize(BUFFER_MAX_SIZE), POOL_NUM_BUFFERS>;
-using DefaultAllocator = PoolAllocatorT<Pool>;
+using Allocator = PoolAllocatorT<Pool>;

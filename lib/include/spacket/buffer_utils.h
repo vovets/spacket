@@ -41,17 +41,6 @@ operator<<(std::ostream& os, Hr<Vector> h) {
 template<typename Buffer>
 typename std::enable_if_t<
     std::is_same<typename Buffer::TypeId, buffer_impl::TypeId>::value,
-    Result<Buffer>>
-operator+(const Buffer& lhs, const Buffer& rhs) {
-    returnOnFail(result, Buffer::create(lhs.size() + rhs.size()));
-    std::memcpy(result.begin(), lhs.begin(), lhs.size());
-    std::memcpy(result.begin() + lhs.size(), rhs.begin(), rhs.size());
-    return ok(std::move(result));
-}
-
-template<typename Buffer>
-typename std::enable_if_t<
-    std::is_same<typename Buffer::TypeId, buffer_impl::TypeId>::value,
     bool>
 operator==(const Buffer& lhs, const Buffer& rhs) {
     return lhs.size() == rhs.size() && (0 == memcmp(lhs.begin(), rhs.begin(), lhs.size()));

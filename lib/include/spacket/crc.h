@@ -16,12 +16,11 @@ Result<Buffer> check(Buffer b) {
     return ok(std::move(b));
 }
 
-template <typename Buffer>
 Result<Buffer> append(Buffer b) {
     if (b.size() == 0) {
         return fail<Buffer>(toError(ErrorCode::CrcAppendZeroSizeBuffer));
     }
-    if (Buffer::maxSize() - b.size() < 4) {
+    if (b.maxSize() - b.size() < 4) {
         return fail<Buffer>(toError(ErrorCode::CrcAppendBufferTooBig));
     }
     std::uint32_t crc = crc::crc(b.begin(), b.size());

@@ -19,12 +19,13 @@ constexpr size_t maxPayloadSizeDelimited(size_t stuffedAndDelimitedSize) {
     return (stuffedAndDelimitedSize - 2 - 1) * 254 / 255;
 }
 
-template<typename Buffer>
+inline
 Result<Buffer> stuff(Buffer source_) {
     // Lifetime of arguments may extend to the end of expression containing
     // function call. Here we ensure that source buffer released at exit of this function
     Buffer source(std::move(source_));
-    returnOnFail(result, Buffer::create(maxStuffedSize(source.size())));
+    alloc::Allocator& allocator = source.allocator();
+    returnOnFail(result, Buffer::create(allocator, maxStuffedSize(source.size())));
     auto r = ::stuff(
         source.begin(),
         source.size(),
@@ -33,10 +34,11 @@ Result<Buffer> stuff(Buffer source_) {
     return ok(std::move(result));
 }
 
-template<typename Buffer>
+inline
 Result<Buffer> stuffAndDelim(Buffer source_) {
     Buffer source(std::move(source_));
-    returnOnFail(result, Buffer::create(maxStuffedAndDelimitedSize(source.size())));
+    alloc::Allocator& allocator = source.allocator();
+    returnOnFail(result, Buffer::create(allocator, maxStuffedAndDelimitedSize(source.size())));
     auto r = ::stuff(
         source.begin(),
         source.size(),
@@ -47,10 +49,11 @@ Result<Buffer> stuffAndDelim(Buffer source_) {
     return ok(std::move(result));
 }
 
-template<typename Buffer>
+inline
 Result<Buffer> unstuff(Buffer source_) {
     Buffer source(std::move(source_));
-    returnOnFail(result, Buffer::create(source.size()));
+    alloc::Allocator& allocator = source.allocator();
+    returnOnFail(result, Buffer::create(allocator, source.size()));
     auto r = ::unstuff(source.begin(), source.size(), result.begin());
     if (!r) { return fail<Buffer>(toError(ErrorCode::CobsBadEncoding)); }
     result.resize(r);

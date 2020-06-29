@@ -4,6 +4,7 @@
 
 #include <spacket/time_utils.h>
 #include <spacket/result.h>
+#include <spacket/result_utils_base.h>
 
 inline
 Error toError(msg_t msg) {
@@ -65,7 +66,7 @@ Result<Void> QueueT<Message, SIZE>::post(Message& msg, Timeout timeout) {
     chSysLock();
     auto result = postS(msg, timeout);
     chSysUnlock();
-    return std::move(result);
+    return result;
 }
 
 template <typename Message, size_t SIZE>
@@ -137,7 +138,7 @@ Result<Message> QueueT<Message, SIZE>::fetch(Timeout timeout) {
     chSysLock();
     auto result = fetchS(timeout);
     chSysUnlock();
-    return std::move(result);
+    return result;
 }
 
 template <typename Message, size_t SIZE>

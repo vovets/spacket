@@ -12,13 +12,12 @@
 
 constexpr tprio_t SD_THREAD_PRIORITY = NORMALPRIO + 1;
 
-using SerialDevice = SerialDeviceT<Buffer>;
-
 ThreadStorageT<256> echoThreadStorage;
+Allocator allocator;
 
 static __attribute__((noreturn)) void echoThreadFunction() {
     chRegSetThreadName("echo");
-    SerialDevice::open(&UARTD1, SD_THREAD_PRIORITY) >=
+    SerialDevice::open(allocator, UARTD1, SD_THREAD_PRIORITY) >=
     [&](SerialDevice&& sd) {
         auto writeBuffer =
         [&](Buffer&& b) {

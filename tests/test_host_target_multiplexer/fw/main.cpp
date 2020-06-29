@@ -22,10 +22,10 @@
 
 ThreadStorageT<256> echoThreadStorage[MULTIPLEXER_NUM_CHANNELS];
 const char* echoThreadNames[MULTIPLEXER_NUM_CHANNELS] = { "echo 0", "echo 1"};
+Allocator allocator;
 
-using SerialDevice = SerialDeviceT<Buffer>;
-using PacketDevice = PacketDeviceT<Buffer, SerialDevice>;
-using Multiplexer = MultiplexerT<Buffer, PacketDevice, MULTIPLEXER_NUM_CHANNELS>;
+using PacketDevice = PacketDeviceT<SerialDevice>;
+using Multiplexer = MultiplexerT<PacketDevice, MULTIPLEXER_NUM_CHANNELS>;
 
 constexpr tprio_t SD_THREAD_PRIORITY = NORMALPRIO + 3;
 constexpr tprio_t PD_THREAD_PRIORITY = NORMALPRIO + 2;
@@ -45,10 +45,10 @@ class Globals {
 public:
     static Result<StaticPtr<Globals>> init(void* storage) {
         return
-            SerialDevice::open(&UARTD1, SD_THREAD_PRIORITY) >=
+            SerialDevice::open(allocator, UARTD1, SD_THREAD_PRIORITY) >=
             [&](SerialDevice sd) {
                 return
-                    Buffer::create(Buffer::maxSize()) >=
+                    Buffer::create(allocator) >=
                     [&] (Buffer&& pdBuffer) {
                         return ok(makeStatic<Globals>(storage, std::move(sd), std::move(pdBuffer)));
                     };
@@ -60,7 +60,7 @@ public:
     Globals(SerialDevice&&sd, Buffer&& pdBuffer)
         : sd_(std::move(sd))
         , pd_(new (&pdStorage) PacketDevice(sd_, std::move(pdBuffer), PD_THREAD_PRIORITY))
-        , mx_(new (&mxStorage) Multiplexer(*pd_, MX_THREAD_PRIORITY))
+        , mx_(new (&mxStorage) Multiplexer(allocator, *pd_, MX_THREAD_PRIORITY))
     {}
 
 private:
@@ -102,7 +102,7 @@ int main(void) {
     chSysInit();
 
     chprintf(&rttStream, "RTT ready\r\n");
-    chprintf(&rttStream, "Buffer::maxSize(): %d\r\n", Buffer::maxSize());
+    chprintf(&rttStream, "Buffer::maxSize(): %d\r\n", Buffer::maxSize(allocator));
 
     auto globals = std::move(getOkUnsafe(Globals::init(&globalsStorage) <= fatal<StaticPtr<Globals>>));
 

@@ -2,14 +2,14 @@
 
 #include <spacket/impl/multiplexer_impl_base.h>
 
-template <typename Buffer, typename LowerLevel, std::uint8_t NUM_CHANNELS>
-struct MultiplexerImplT: MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>
+template <typename LowerLevel, std::uint8_t NUM_CHANNELS>
+struct MultiplexerImplT: MultiplexerImplBaseT<LowerLevel, NUM_CHANNELS>
 {
-    using This = MultiplexerImplT<Buffer, LowerLevel, NUM_CHANNELS>;
-    using Base = MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>;
+    using This = MultiplexerImplT<LowerLevel, NUM_CHANNELS>;
+    using Base = MultiplexerImplBaseT<LowerLevel, NUM_CHANNELS>;
     using ThreadStorage = ThreadStorageT<332>;
 
-    MultiplexerImplT(LowerLevel& lowerLevel, tprio_t threadPriority);
+    MultiplexerImplT(alloc::Allocator& allocator, LowerLevel& lowerLevel, tprio_t threadPriority);
     virtual ~MultiplexerImplT();
 
     using Base::start;
@@ -20,23 +20,25 @@ struct MultiplexerImplT: MultiplexerImplBaseT<Buffer, LowerLevel, NUM_CHANNELS>
     ThreadStorage threadStorage;
 };
 
-template <typename Buffer, typename LowerLevel, std::uint8_t NUM_CHANNELS>
-MultiplexerImplT<Buffer, LowerLevel, NUM_CHANNELS>::MultiplexerImplT(
+template <typename LowerLevel, std::uint8_t NUM_CHANNELS>
+MultiplexerImplT<LowerLevel, NUM_CHANNELS>::MultiplexerImplT(
+    alloc::Allocator& allocator,
     LowerLevel& lowerLevel,
     tprio_t threadPriority)
     : Base(
+        allocator,
         lowerLevel,
         Thread::params(threadStorage, threadPriority))
 {
     start();
 }
 
-template <typename Buffer, typename LowerLevel, std::uint8_t NUM_CHANNELS>
-MultiplexerImplT<Buffer, LowerLevel, NUM_CHANNELS>::~MultiplexerImplT() {
+template <typename LowerLevel, std::uint8_t NUM_CHANNELS>
+MultiplexerImplT<LowerLevel, NUM_CHANNELS>::~MultiplexerImplT() {
     wait();
 }
 
-template <typename Buffer, typename LowerLevel, std::uint8_t NUM_CHANNELS>
-Result<Void> MultiplexerImplT<Buffer, LowerLevel, NUM_CHANNELS>::reportError(Error e) {
+template <typename LowerLevel, std::uint8_t NUM_CHANNELS>
+Result<Void> MultiplexerImplT<LowerLevel, NUM_CHANNELS>::reportError(Error e) {
     return threadErrorReport(e);
 }

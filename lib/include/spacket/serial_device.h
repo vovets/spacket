@@ -10,25 +10,24 @@
 #include <memory>
 #include <utility>
 
-template <typename Buffer>
-class SerialDeviceT: private SerialDeviceImpl<Buffer> {
-    friend class SerialDeviceImpl<Buffer>;
+class SerialDevice: private SerialDeviceImpl {
+    friend class SerialDeviceImpl;
 
 public:
-    using Impl = SerialDeviceImpl<Buffer>;
+    using Impl = SerialDeviceImpl;
 
-    static constexpr std::size_t maxSize() { return Buffer::maxSize(); }
+//    static constexpr std::size_t maxSize() { return Buffer::maxSize(); }
 
 public:
     template <typename... U>
-    static Result<SerialDeviceT> open(U&&... u) {
-        return Impl::template open<SerialDeviceT<Buffer>>(std::forward<U>(u)...);
+    static Result<SerialDevice> open(U&&... u) {
+        return Impl::template open<SerialDevice>(std::forward<U>(u)...);
     }
     
-    SerialDeviceT(SerialDeviceT&& src) noexcept : Impl(std::move(src)) {}
+    SerialDevice(SerialDevice&& src) noexcept : Impl(std::move(src)) {}
         
-    SerialDeviceT& operator=(SerialDeviceT&& src) noexcept {
-        static_cast<Impl>(*this) = src;
+    SerialDevice& operator=(SerialDevice&& src) noexcept {
+        static_cast<Impl&>(*this) = std::move(src);
         return *this;
     }
 
@@ -42,14 +41,14 @@ public:
 
     // not every platform supports write with timeout
     // so there may be static assert error here
-    Result<Void> write(const Buffer& b, Timeout t) {
-        return Impl::write(b.begin(), b.size(), t);
-    }
+//    Result<Void> write(const Buffer& b, Timeout t) {
+//        return Impl::write(b.begin(), b.size(), t);
+//    }
 
-    ~SerialDeviceT() {}
+    ~SerialDevice() {}
 
 private:
-    SerialDeviceT(Impl&& impl)
+    SerialDevice(Impl&& impl)
         : Impl(std::move(impl))
     {
     }

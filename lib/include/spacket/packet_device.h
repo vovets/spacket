@@ -3,11 +3,11 @@
 #include <spacket/impl/packet_device_impl.h>
 
 
-template <typename Buffer, typename LowerLevel>
-class PacketDeviceT: private PacketDeviceImpl<Buffer, LowerLevel> {
+template <typename LowerLevel>
+class PacketDeviceT: private PacketDeviceImpl<LowerLevel> {
 public:
-    using Impl = PacketDeviceImpl<Buffer, LowerLevel>;
-    using Dbg = packet_device_impl_base::Debug<Buffer>;
+    using Impl = PacketDeviceImpl<LowerLevel>;
+    using Dbg = packet_device_impl_base::Debug;
     using Dbg::dpl;
 
     static constexpr std::size_t maxSize() { return LowerLevel::maxSize() - 4 /*crc*/ - 1 /*cobs*/ - 2 /*delim*/; }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <spacket/allocator.h>
 #include <spacket/driver.h>
 #include <spacket/util/thread_error_report.h>
 
@@ -68,6 +69,7 @@ class StackT: ModuleOps {
     };
     
 private:
+    alloc::Allocator& allocator;
     ModuleList moduleList;
     IORing ioRing;
     ProcessRing processRing;
@@ -77,8 +79,9 @@ private:
     DriverService driverService;
 
 public:
-    StackT(Driver& driver)
-        : rxCompleteQueue(*this)
+    StackT(alloc::Allocator& allocator, Driver& driver)
+        : allocator(allocator)
+        , rxCompleteQueue(*this)
         , txCompleteQueue(*this)
         , driver(driver)
         , driverService(driver)
@@ -200,7 +203,7 @@ private:
         Result<Void> r = ok();
         while (isOk(r)) {
             r =
-            Buffer::create() >=
+            Buffer::create(allocator) >=
             [&](Buffer&& b) {
                 auto guard = driverGuard();
                 if (driver.rxRequestQueue().put(b)) {

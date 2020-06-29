@@ -7,17 +7,13 @@
 
 #include <catch.hpp>
 
-using Buffer = BufferT<NewAllocator>;
 constexpr size_t maxPayload = cobs::maxPayloadSize(2048);
 
 #include "buf.h"
 
-namespace Catch {
-template<> struct StringMaker<Buffer>: public StringMakerBufferBase<Buffer> {}; 
-}
 
 Buffer fill(uint8_t byte, size_t size) {
-    Buffer result = throwOnFail(Buffer::create(size));
+    Buffer result = throwOnFail(Buffer::create(defaultAllocator(), size));
     std::memset(result.begin(), byte, size);
     return std::move(result);
 }

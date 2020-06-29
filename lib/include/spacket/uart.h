@@ -3,6 +3,7 @@
 #include <spacket/guard_utils.h>
 #include <spacket/ring.h>
 #include <spacket/driver.h>
+#include <spacket/cpm_debug.h>
 
 
 // TODO: design mechanism that allows for client to wait for completion

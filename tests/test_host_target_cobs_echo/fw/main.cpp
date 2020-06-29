@@ -21,11 +21,11 @@ ThreadStorageT<256> rxThreadStorage;
 ThreadStorageT<512> txThreadStorage;
 
 using BufferMailbox = MailboxT<Buffer>;
-using SerialDevice = SerialDeviceT<Buffer>;
 
 constexpr tprio_t SD_THREAD_PRIORITY = NORMALPRIO + 2;
 
 BufferMailbox receivedMb;
+Allocator allocator;
 
 #define PREFIX()
 #ifdef ENABLE_DEBUG_PRINT
@@ -41,7 +41,7 @@ class Globals {
 public:
     static Result<Globals> init() {
         return
-        SerialDevice::open(&UARTD1, SD_THREAD_PRIORITY) >=
+        SerialDevice::open(allocator, UARTD1, SD_THREAD_PRIORITY) >=
         [&](SerialDevice&& sd) {
             return ok(Globals(std::move(sd)));
         };
@@ -96,10 +96,9 @@ static __attribute__((noreturn)) THD_FUNCTION(rxThreadFunction, arg) {
 }
 
 static __attribute__((noreturn)) THD_FUNCTION(txThreadFunction, arg) {
-    using Packetizer = PacketizerT<Buffer>;
     chRegSetThreadName("tx");
     Globals& g = *static_cast<Globals*>(arg);
-    Packetizer::create(PacketizerNeedSync::Yes) <=
+    Packetizer::create(allocator, PacketizerNeedSync::Yes) <=
     fatal<Packetizer> >=
     [&](Packetizer&& packetizer) {
         ProcessIncomingResult result{ 0, boost::none };
@@ -128,7 +127,7 @@ static __attribute__((noreturn)) THD_FUNCTION(txThreadFunction, arg) {
                     threadErrorReport >
                     [&]() {
                         return
-                        Packetizer::create(PacketizerNeedSync::Yes) <=
+                        Packetizer::create(allocator, PacketizerNeedSync::Yes) <=
                         fatal<Packetizer> >=
                         [&](Packetizer&& p) {
                             packetizer = std::move(p);
@@ -150,7 +149,7 @@ int main(void) {
     chSysInit();
 
     chprintf(&rttStream, "RTT ready\r\n");
-    chprintf(&rttStream, "Buffer::maxSize(): %d\r\n", Buffer::maxSize());
+//    chprintf(&rttStream, "Buffer::maxSize(): %d\r\n", Buffer::maxSize());
 
     auto globals = std::move(getOkUnsafe(Globals::init() <= fatal<Globals>));
 

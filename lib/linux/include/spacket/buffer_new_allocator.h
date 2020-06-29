@@ -1,19 +1,20 @@
 #pragma once
 
 #include <spacket/result.h>
+#include <spacket/allocator.h>
 
 #include <cstdint>
 
 
-class NewAllocator {
+class NewAllocator: public alloc::Allocator {
 public:
-    static constexpr size_t maxSize() { return 1024 * 1024; }
+    std::size_t maxSize() const override { return 65536; }
     
-    Result<void*> allocate(std::size_t count) {
-        return ok(::operator new[](count));
+    Result<void*> allocate() override {
+        return ok(::operator new[](maxSize()));
     }
 
-    void deallocate(void* ptr) {
+    void deallocate(void* ptr) override {
         ::operator delete[](ptr);
     }
 };

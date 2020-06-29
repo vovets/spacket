@@ -13,7 +13,7 @@ include(fw_vars)
 set(CH_CPU cortex-m3)
 set(CH_MCU_NAME STM32F103x8)
 set(CH_ROOT_DIR [[${EXTERNAL}/chibios]])
-set(debug_optimization_flags -Og)
+set(debug_optimization_flags -Os)
 
 fw_vars_set()
 fw_add_executable(fw)

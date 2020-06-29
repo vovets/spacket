@@ -13,7 +13,6 @@
 #include <spacket/packetizer_thread_function.h>
 
 using BufferMailbox = MailboxT<Buffer>;
-using SerialDevice = SerialDeviceT<Buffer>;
 
 constexpr tprio_t SD_THREAD_PRIORITY = NORMALPRIO + 3;
 
@@ -36,11 +35,13 @@ IMPLEMENT_DPB_FUNCTION_NOP
 #endif
 #undef PREFIX
 
+Allocator allocator;
+
 class Globals {
 public:
     static Result<Globals> init() {
         return
-        SerialDevice::open(&UARTD1, SD_THREAD_PRIORITY) >=
+        SerialDevice::open(allocator, UARTD1, SD_THREAD_PRIORITY) >=
         [&](SerialDevice&& sd) {
             return ok(Globals(std::move(sd)));
         };
@@ -98,7 +99,7 @@ static __attribute__((noreturn)) THD_FUNCTION(txThreadFunction, arg) {
 static __attribute__((noreturn)) THD_FUNCTION(packetizerThreadFunction, arg) {
     (void)arg;
     chRegSetThreadName("packetizer");
-    packetizerThreadFunctionT<Buffer>(packetizerIn, packetizerOut, threadErrorReport);
+    packetizerThreadFunctionT(allocator, packetizerIn, packetizerOut, threadErrorReport);
     for (;;);
 }
 
@@ -107,7 +108,7 @@ int main(void) {
     chSysInit();
 
     chprintf(&rttStream, "RTT ready\r\n");
-    chprintf(&rttStream, "Buffer::maxSize(): %d\r\n", Buffer::maxSize());
+    chprintf(&rttStream, "Allocator::maxSize(): %d\r\n", allocator.maxSize());
 
     auto globals = std::move(getOkUnsafe(Globals::init() <= fatal<Globals>));
 

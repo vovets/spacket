@@ -1,10 +1,11 @@
 #pragma once
 
 #include <spacket/debug_print.h>
+#include <spacket/buffer.h>
 
 #include <cstdarg>
 
-template <typename Buffer>
+inline
 void debugPrintBuffer(const Buffer& b) {
     debugPrint("%X %d:[", b.id(), b.size());
 
@@ -39,7 +40,7 @@ void debugPrintBuffer(const Buffer& b) {
     debugPrint("]");
 }
 
-template <typename Buffer>
+inline
 void debugPrintBuffer_(const char* fmt, const Buffer& b, std::va_list args) {
     debugPrintStart();
     debugPrint_(fmt, args);
@@ -47,7 +48,7 @@ void debugPrintBuffer_(const char* fmt, const Buffer& b, std::va_list args) {
     debugPrintFinish();
 }
 
-template <typename Buffer>
+inline
 void debugPrintBuffer(const char* fmt, const Buffer* b, ...) {
     va_list args;
     va_start(args, b);
@@ -56,7 +57,6 @@ void debugPrintBuffer(const char* fmt, const Buffer* b, ...) {
 }
 
 #define IMPLEMENT_DPB_FUNCTION                          \
-    template <typename Buffer>                          \
     void dpb(const char* fmt, const Buffer* b, ...) {   \
         std::va_list args;                              \
         va_start(args, b);                              \
@@ -66,7 +66,6 @@ void debugPrintBuffer(const char* fmt, const Buffer* b, ...) {
 
 
 #define IMPLEMENT_DPB_FUNCTION_NOP                  \
-    template <typename Buffer>                      \
     void dpb(const char*, const Buffer*, ...) {}
 
 #define DPB(VAR_NAME) dpb(#VAR_NAME ": ", &VAR_NAME)

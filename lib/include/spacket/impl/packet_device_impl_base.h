@@ -10,7 +10,6 @@
 
 namespace packet_device_impl_base {
 
-template <typename Buffer>
 struct Debug {
 
 #define PREFIX()
@@ -33,12 +32,11 @@ IMPLEMENT_DPB_FUNCTION_NOP
 
 } // packet_device_impl_base
 
-template <typename Buffer, typename LowerLevel>
-class PacketDeviceImplBase: public packet_device_impl_base::Debug<Buffer>
+template <typename LowerLevel>
+class PacketDeviceImplBase: public packet_device_impl_base::Debug
 {
-    using This = PacketDeviceImplBase<Buffer, LowerLevel>;
-    using Dbg = packet_device_impl_base::Debug<Buffer>;
-    using PacketDecodeFSM = PacketDecodeFSMT<Buffer>;
+    using This = PacketDeviceImplBase<LowerLevel>;
+    using Dbg = packet_device_impl_base::Debug;
     using Mailbox = MailboxImplT<Result<Buffer>>;
 
     static constexpr Timeout stopCheckPeriod = std::chrono::milliseconds(10);
@@ -75,11 +73,11 @@ private:
     Thread readThread;
 };
 
-template <typename Buffer, typename LowerLevel>
-constexpr Timeout PacketDeviceImplBase<Buffer, LowerLevel>::stopCheckPeriod;
+template <typename LowerLevel>
+constexpr Timeout PacketDeviceImplBase<LowerLevel>::stopCheckPeriod;
 
-template <typename Buffer, typename LowerLevel>
-PacketDeviceImplBase<Buffer, LowerLevel>::PacketDeviceImplBase(
+template <typename LowerLevel>
+PacketDeviceImplBase<LowerLevel>::PacketDeviceImplBase(
 LowerLevel& lowerLevel,
 Buffer&& buffer,
 ThreadParams p)
@@ -92,23 +90,23 @@ ThreadParams p)
 {
 }
 
-template <typename Buffer, typename LowerLevel>
-PacketDeviceImplBase<Buffer, LowerLevel>::~PacketDeviceImplBase() {
+template <typename LowerLevel>
+PacketDeviceImplBase<LowerLevel>::~PacketDeviceImplBase() {
 }
 
-template <typename Buffer, typename LowerLevel>
-void PacketDeviceImplBase<Buffer, LowerLevel>::start() {
+template <typename LowerLevel>
+void PacketDeviceImplBase<LowerLevel>::start() {
     readThread = Thread::create(readThreadParams, [&] { this->readThreadFunction(); });
 }
 
-template <typename Buffer, typename LowerLevel>
-void PacketDeviceImplBase<Buffer, LowerLevel>::wait() {
+template <typename LowerLevel>
+void PacketDeviceImplBase<LowerLevel>::wait() {
     readThread.requestStop();
     readThread.wait();
 }
 
-template <typename Buffer, typename LowerLevel>
-void PacketDeviceImplBase<Buffer, LowerLevel>::readThreadFunction() {
+template <typename LowerLevel>
+void PacketDeviceImplBase<LowerLevel>::readThreadFunction() {
     Thread::setName("pd");
     dpl("pdib::readThreadFunction|started");
     while (!Thread::shouldStop()) {
@@ -136,11 +134,12 @@ void PacketDeviceImplBase<Buffer, LowerLevel>::readThreadFunction() {
     dpl("pdib::readThreadFunction|finished");
 }
 
-template <typename Buffer, typename LowerLevel>
-Result<Void> PacketDeviceImplBase<Buffer, LowerLevel>::packetFinished(Buffer& buffer) {
+template <typename LowerLevel>
+Result<Void> PacketDeviceImplBase<LowerLevel>::packetFinished(Buffer& buffer) {
     dpb("pdib::packetFinished|", &buffer);
+    alloc::Allocator& allocator = buffer.allocator();
     return
-    Buffer::create(Buffer::maxSize()) >=
+    Buffer::create(allocator) >=
     [&] (Buffer&& newBuffer) {
         auto message = ok(std::move(buffer));
         return
@@ -153,8 +152,8 @@ Result<Void> PacketDeviceImplBase<Buffer, LowerLevel>::packetFinished(Buffer& bu
     };
 }
 
-template <typename Buffer, typename LowerLevel>
-Result<Buffer> PacketDeviceImplBase<Buffer, LowerLevel>::read(Timeout t) {
+template <typename LowerLevel>
+Result<Buffer> PacketDeviceImplBase<LowerLevel>::read(Timeout t) {
     dpl("pdib::read|started, timeout %d ms", toMs(t).count());
     return
     readMailbox.fetch(t) >=
@@ -162,7 +161,7 @@ Result<Buffer> PacketDeviceImplBase<Buffer, LowerLevel>::read(Timeout t) {
         if (isOk(r)) {
             dpb("pdib::read|fetched ", &getOkUnsafe(r));
         }
-        return std::move(r);
+        return r;
     } <=
     [&] (Error e) {
         if (e == toError(ErrorCode::Timeout)) {
@@ -172,8 +171,8 @@ Result<Buffer> PacketDeviceImplBase<Buffer, LowerLevel>::read(Timeout t) {
     };
 }
 
-template <typename Buffer, typename LowerLevel>
-Result<Void> PacketDeviceImplBase<Buffer, LowerLevel>::write(Buffer b) {
+template <typename LowerLevel>
+Result<Void> PacketDeviceImplBase<LowerLevel>::write(Buffer b) {
     return
     cobs::stuffAndDelim(std::move(b)) >=
     [&](Buffer&& stuffed) {

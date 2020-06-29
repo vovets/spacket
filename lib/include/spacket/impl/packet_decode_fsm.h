@@ -4,13 +4,13 @@
 
 #include <functional>
 
-template <typename Buffer>
-struct PacketDecodeFSMT {
-    using This = PacketDecodeFSMT<Buffer>;
+
+struct PacketDecodeFSM {
+    using This = PacketDecodeFSM;
     using PacketFinishedCallback = std::function<Result<Void>(Buffer&)>;
     using State = Result<Void> (This::*)(std::uint8_t byte);
 
-    PacketDecodeFSMT(
+    PacketDecodeFSM(
         PacketFinishedCallback packetFinishedCallback,
         Buffer&& buffer)
         : packetFinishedCallback(packetFinishedCallback)
@@ -47,8 +47,7 @@ struct PacketDecodeFSMT {
     bool blockAppendZero;
 };
 
-template <typename Buffer>
-Result<Void> PacketDecodeFSMT<Buffer>::delimiter(std::uint8_t byte) {
+Result<Void> PacketDecodeFSM::delimiter(std::uint8_t byte) {
     switch (byte) {
         case 0:
             transit(&This::start);
@@ -58,8 +57,7 @@ Result<Void> PacketDecodeFSMT<Buffer>::delimiter(std::uint8_t byte) {
     return ok();
 }
 
-template <typename Buffer>
-Result<Void> PacketDecodeFSMT<Buffer>::start(std::uint8_t byte) {
+Result<Void> PacketDecodeFSM::start(std::uint8_t byte) {
     switch (byte) {
         case 0:
             break;
@@ -77,8 +75,7 @@ Result<Void> PacketDecodeFSMT<Buffer>::start(std::uint8_t byte) {
     return ok();
 }
             
-template <typename Buffer>
-Result<Void> PacketDecodeFSMT<Buffer>::block(std::uint8_t byte) {
+Result<Void> PacketDecodeFSM::block(std::uint8_t byte) {
     switch (byte) {
         case 0:
             transit(&This::delimiter);
@@ -99,8 +96,7 @@ Result<Void> PacketDecodeFSMT<Buffer>::block(std::uint8_t byte) {
     return ok();
 }
 
-template <typename Buffer>
-Result<Void> PacketDecodeFSMT<Buffer>::nextBlock(std::uint8_t byte) {
+Result<Void> PacketDecodeFSM::nextBlock(std::uint8_t byte) {
     switch (byte) {
         case 0:
             return
@@ -118,22 +114,19 @@ Result<Void> PacketDecodeFSMT<Buffer>::nextBlock(std::uint8_t byte) {
     return ok();
 }
 
-template <typename Buffer>
-void PacketDecodeFSMT<Buffer>::startBlock(std::uint8_t code) {
+void PacketDecodeFSM::startBlock(std::uint8_t code) {
     blockBytesLeft = code - 1;
     blockAppendZero = code != 255;
 }
 
-template <typename Buffer>
-Result<Void> PacketDecodeFSMT<Buffer>::finishBlock() {
+Result<Void> PacketDecodeFSM::finishBlock() {
     if (blockAppendZero) {
         return append(0);
     }
     return ok();
 }
 
-template <typename Buffer>
-Result<Void> PacketDecodeFSMT<Buffer>::append(std::uint8_t byte) {
+Result<Void> PacketDecodeFSM::append(std::uint8_t byte) {
     if (bytesRead >= buffer.maxSize()) {
         return fail(toError(ErrorCode::PacketTooBig));
     }
@@ -142,8 +135,7 @@ Result<Void> PacketDecodeFSMT<Buffer>::append(std::uint8_t byte) {
     return ok();
 }
 
-template <typename Buffer>
-Result<Void> PacketDecodeFSMT<Buffer>::finishPacket() {
+Result<Void> PacketDecodeFSM::finishPacket() {
     if (buffer.begin()[bytesRead - 1] == 0) { --bytesRead; }
     if (bytesRead == 0) {
         return fail(toError(ErrorCode::CobsBadEncoding));

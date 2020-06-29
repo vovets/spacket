@@ -4,21 +4,21 @@
 
 namespace impl {
 
-template<typename Buffer>
-Result<ReadResult<Buffer>> readPacket(
-    Source<Buffer> source,
+inline
+Result<ReadResult> readPacket(
+    alloc::Allocator& allocator,
+    Source source,
     Buffer prefix,
     size_t maxRead,
     PacketizerNeedSync needSync,
     Timeout t)
 {
-    using SType = ReadResult<Buffer>;
-    using Packetizer = PacketizerT<Buffer>;
+    using SType = ReadResult;
 
     auto deadline = Clock::now() + t;
-    returnOnFailT(packet, SType, Buffer::create(Buffer::maxSize()));
+    returnOnFailT(packet, SType, Buffer::create(allocator));
     auto lastResult = Packetizer::Continue;
-    returnOnFailT(pktz, SType, Packetizer::create(needSync));
+    returnOnFailT(pktz, SType, Packetizer::create(allocator, needSync));
 
     for (uint8_t* ptr = prefix.begin(); ptr < prefix.end(); ++ptr) {
         auto r = pktz.consume(*ptr);
@@ -67,15 +67,17 @@ Result<ReadResult<Buffer>> readPacket(
 }
 
 // this function skips until synced
-template<typename Buffer>
-Result<ReadResult<Buffer>> readPacket(
-    Source<Buffer> s,
+inline
+Result<ReadResult> readPacket(
+    alloc::Allocator& allocator,
+    Source s,
     size_t maxRead,
     Timeout t) {
     return
-    Buffer::create(0) >=
+    Buffer::create(allocator, 0) >=
     [&](Buffer&& prefix) {
         return impl::readPacket(
+            allocator,
             std::move(s),
             std::move(prefix),
             maxRead,
@@ -86,14 +88,15 @@ Result<ReadResult<Buffer>> readPacket(
         
 
 // this function assumes that stream is synced (as presense of "prefix" suggests)
-template<typename Buffer>
-Result<ReadResult<Buffer>> readPacket(
-    Source<Buffer> s,
+Result<ReadResult> readPacket(
+    alloc::Allocator& allocator,
+    Source s,
     Buffer prefix,
     size_t maxRead,
     Timeout t) {
     return
     impl::readPacket(
+        allocator,
         std::move(s),
         std::move(prefix),
         maxRead,

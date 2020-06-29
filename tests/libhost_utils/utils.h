@@ -7,12 +7,19 @@
 #include <spacket/port_config.h>
 #include <spacket/cobs.h>
 #include <spacket/error_to_string.h>
+#include <spacket/allocator.h>
+#include <spacket/buffer_new_allocator.h>
 
 #include <catch.hpp>
 
 PortConfig fromJson(const std::string& path);
 
-template<typename Buffer>
+inline
+alloc::Allocator& defaultAllocator() {
+    static NewAllocator allocator;
+    return allocator;
+};
+
 class Equals: public Catch::MatcherBase<Buffer> {
 public:
     Equals(const Buffer& reference): reference(reference) {}
@@ -31,10 +38,9 @@ private:
     const Buffer& reference;
 };
 
-template<typename Buffer>
-Equals<Buffer> isEqualTo(const Buffer& reference) { return Equals<Buffer>(reference); }
+inline
+Equals isEqualTo(const Buffer& reference) { return Equals(reference); }
 
-template<typename Buffer>
 struct StringMakerBufferBase {
     static std::string convert( Buffer const& value ) {
         std::ostringstream ss;
@@ -56,17 +62,18 @@ struct StringMakerResultBase {
     }
 };
 
-// make this specialization(s) for concrete buffer and result types available to compiler for Catch to be
-// able to print buffers contents from asserions
-//
-// namespace Catch {
-// template<> struct StringMaker<ConcreteBuffer>: public StringMakerBufferBase<ConcreteBuffer> {}; 
-// template<> struct StringMaker<ConcreteResult>: public StringMakerResultBase<ConcreteResult> {}; 
-// }
+namespace Catch {
+template<> struct StringMaker<Buffer>: public StringMakerBufferBase {};
 
-template<typename Buffer>
+// make this specialization(s) for concrete result type available to compiler for Catch to be
+// able to print buffers contents from asserions
+
+template<> struct StringMaker<Result<Buffer>>: public StringMakerResultBase<Result<Buffer>> {};
+} // Catch
+
+inline
 Buffer createTestBuffer(size_t size) {
-    Buffer buffer = throwOnFail(Buffer::create(size));
+    Buffer buffer = throwOnFail(Buffer::create(defaultAllocator(), size));
     auto c = buffer.begin();
     for (size_t i = 0; i < size; ++i, ++c) {
         *c = i % 256;
@@ -74,9 +81,9 @@ Buffer createTestBuffer(size_t size) {
     return std::move(buffer);
 }
 
-template<typename Buffer>
+inline
 Buffer createTestBufferNoZero(size_t size) {
-    Buffer buffer = throwOnFail(Buffer::create(size));
+    Buffer buffer = throwOnFail(Buffer::create(defaultAllocator(), size));
     auto c = buffer.begin();
     for (size_t i = 0; i < size; ++i, ++c) {
         *c = i % 255 + 1;
@@ -91,10 +98,9 @@ Result<Success> fatalT(Error e) {
     throw std::runtime_error(ss.str());
 }
 
-template<typename Buffer>
-class TestSourceT {
+class TestSource {
 public:
-    TestSourceT(std::vector<std::vector<uint8_t>> bs)
+    TestSource(std::vector<std::vector<uint8_t>> bs)
         : buffers(init(std::move(bs)))
         , index(0) {
     }
@@ -102,7 +108,7 @@ public:
     static std::vector<Buffer> init(std::vector<std::vector<uint8_t>> bs) {
         std::vector<Buffer> result;
         for (auto& v: bs) {
-            result.push_back(throwOnFail(Buffer::create(std::move(v))));
+            result.push_back(throwOnFail(Buffer::create(defaultAllocator(), std::move(v))));
         }
         return std::move(result);
     }

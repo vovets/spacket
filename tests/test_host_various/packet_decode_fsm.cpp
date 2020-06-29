@@ -7,14 +7,10 @@
 
 #include <catch.hpp>
 
-using Buffer = BufferT<NewAllocator>;
-using PacketDecodeFSM = PacketDecodeFSMT<Buffer>;
-
 #include "buf.h"
 
 namespace Catch {
-template<> struct StringMaker<Buffer>: public StringMakerBufferBase<Buffer> {};
-template<> struct StringMaker<Result<Void>>: public StringMakerBufferBase<Result<Void>> {};
+template<> struct StringMaker<Result<Void>>: public StringMakerResultBase<Result<Void>> {};
 }
 
 constexpr Error::Source ERROR_SOURCE = 10;
@@ -38,13 +34,13 @@ DecodeResult decode(Buffer b) {
     [&] (Buffer& b) {
         retval.decoded.emplace_back(std::move(b));
         return
-        Buffer::create(Buffer::maxSize()) >=
+        Buffer::create(defaultAllocator()) >=
         [&] (Buffer&& newBuffer) {
             b = std::move(newBuffer);
             return ok();
         };
     };
-    auto decoder = PacketDecodeFSM(callback, throwOnFail(Buffer::create(Buffer::maxSize())));
+    auto decoder = PacketDecodeFSM(callback, throwOnFail(Buffer::create(defaultAllocator())));
     retval.result = ok();
     for (auto byte: b) {
         retval.result = decoder.consume(byte);

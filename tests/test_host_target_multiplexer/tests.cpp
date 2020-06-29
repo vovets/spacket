@@ -22,16 +22,12 @@
 #include <future>
 
 
-using Buffer = BufferT<NewAllocator>;
 using Buffers = std::vector<Buffer>;
-using SerialDevice = SerialDeviceT<Buffer>;
-using PacketDevice = PacketDeviceT<Buffer, SerialDevice>;
-using Multiplexer = MultiplexerT<Buffer, PacketDevice, MULTIPLEXER_NUM_CHANNELS>;
+using PacketDevice = PacketDeviceT<SerialDevice>;
+using Multiplexer = MultiplexerT<PacketDevice, MULTIPLEXER_NUM_CHANNELS>;
 namespace c = std::chrono;
 
 namespace Catch {
-template<> struct StringMaker<Buffer>: public StringMakerBufferBase<Buffer> {}; 
-template<> struct StringMaker<Result<Buffer>>: public StringMakerResultBase<Result<Buffer>> {};
 template<> struct StringMaker<Result<Buffers>>: public StringMakerResultBase<Result<Buffers>> {};
 }
 
@@ -68,13 +64,13 @@ struct TestCase {
 std::uint8_t toChannel(std::uint8_t rep) { return rep % MULTIPLEXER_NUM_CHANNELS; }
 
 void runCase(const PortConfig& pc, TestCase c) {
-    SerialDevice::open(pc) >=
+    SerialDevice::open(defaultAllocator(), pc) >=
     [&](SerialDevice sd) {
         return
-        Buffer::create(Buffer::maxSize()) >=
+        Buffer::create(defaultAllocator()) >=
         [&](Buffer&& pdBuffer) {
             PacketDevice pd(sd, std::move(pdBuffer));
-            Multiplexer mx(pd);
+            Multiplexer mx(defaultAllocator(), pd);
             for (std::size_t rep = 0; rep < REP; ++rep) {
                 std::promise<void> launched;
                 auto receive = [&] (std::promise<void> launched) {

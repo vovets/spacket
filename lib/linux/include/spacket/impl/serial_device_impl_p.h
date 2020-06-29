@@ -4,6 +4,8 @@
 #include <spacket/result_utils.h>
 #include <spacket/port_config.h>
 #include <spacket/time_utils.h>
+#include <spacket/allocator.h>
+#include <spacket/buffer.h>
 
 #include <memory>
 
@@ -31,20 +33,19 @@ private:
     ImplPtr impl;
 };
 
-template <typename Buffer>
 class SerialDeviceImpl {
 public:
     template <typename SerialDevice>
-    static Result<SerialDevice> open(PortConfig portConfig) {
+    static Result<SerialDevice> open(alloc::Allocator& allocator, PortConfig portConfig) {
         return
         NativeDevice::doOpen(portConfig) >=
         [&](NativeDevice nativeDevice) {
-            return ok(SerialDevice(SerialDeviceImpl(std::move(nativeDevice))));
+            return ok(SerialDevice(SerialDeviceImpl(allocator, std::move(nativeDevice))));
         };
     }
 
     SerialDeviceImpl(SerialDeviceImpl&& r) noexcept
-        : nativeDevice(std::move(r.nativeDevice)) {
+        : allocator(r.allocator), nativeDevice(std::move(r.nativeDevice)) {
     }
 
     SerialDeviceImpl& operator=(SerialDeviceImpl&& src) noexcept {
@@ -53,10 +54,10 @@ public:
     
     Result<Buffer> read(Timeout t) {
         return
-        Buffer::create(Buffer::maxSize()) >=
+        Buffer::create(allocator) >=
         [&] (Buffer buffer) {
             return
-            nativeDevice.read(buffer.begin(), Buffer::maxSize(), t) >=
+            nativeDevice.read(buffer.begin(), buffer.maxSize(), t) >=
             [&] (std::size_t bytesRead) {
                 buffer.resize(bytesRead);
                 return ok(std::move(buffer));
@@ -69,8 +70,9 @@ public:
     }
 
 private:
-    SerialDeviceImpl(NativeDevice&& nativeDevice): nativeDevice(std::move(nativeDevice)) {}
+    SerialDeviceImpl(alloc::Allocator& allocator, NativeDevice&& nativeDevice): allocator(allocator), nativeDevice(std::move(nativeDevice)) {}
 
 private:
     NativeDevice nativeDevice;
+    alloc::Allocator& allocator;
 };

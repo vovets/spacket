@@ -5,8 +5,7 @@
 
 enum class PacketizerNeedSync { Yes, No };
 
-template <typename Buffer>
-class PacketizerT {
+class Packetizer {
 public:
     enum Result { Continue, Finished, Overflow };
 
@@ -14,17 +13,17 @@ private:
     enum State { Sync, SkipDelim, Within };
     
 public:
-    static ::Result<PacketizerT<Buffer>> create(PacketizerNeedSync needSync) {
+    static ::Result<Packetizer> create(alloc::Allocator& allocator, PacketizerNeedSync needSync) {
         return
-        Buffer::create(Buffer::maxSize()) >=
+        Buffer::create(allocator) >=
         [&](Buffer&& b) {
-            return ok(PacketizerT<Buffer>(std::move(b), needSync));
+            return ok(Packetizer(std::move(b), needSync));
         };
     }
 
-    PacketizerT(const PacketizerT&) = delete;
+    Packetizer(const Packetizer&) = delete;
 
-    PacketizerT(PacketizerT&& src)
+    Packetizer(Packetizer&& src)
         : state(src.state)
         , out(std::move(src.out))
         , next(out.begin())
@@ -32,7 +31,7 @@ public:
         src.next = nullptr;
     }
 
-    PacketizerT& operator=(PacketizerT&& src) noexcept {
+    Packetizer& operator=(Packetizer&& src) noexcept {
         state = src.state;
         out = std::move(src.out);
         next = out.begin();
@@ -56,7 +55,7 @@ public:
     }
 
 private:
-    PacketizerT(Buffer&& b, PacketizerNeedSync needSync)
+    Packetizer(Buffer&& b, PacketizerNeedSync needSync)
         : state(needSync == PacketizerNeedSync::Yes ? Sync : SkipDelim)
         , out(std::move(b))
         , next(out.begin())

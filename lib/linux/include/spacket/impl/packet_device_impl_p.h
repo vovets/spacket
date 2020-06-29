@@ -9,11 +9,11 @@
 #include <thread>
 
 
-template <typename Buffer, typename LowerLevel>
-struct PacketDeviceImpl: PacketDeviceImplBase<Buffer, LowerLevel>
+template <typename LowerLevel>
+struct PacketDeviceImpl: PacketDeviceImplBase<LowerLevel>
 {
-    using This = PacketDeviceImpl<Buffer, LowerLevel>;
-    using Base = PacketDeviceImplBase<Buffer, LowerLevel>;
+    using This = PacketDeviceImpl<LowerLevel>;
+    using Base = PacketDeviceImplBase<LowerLevel>;
 
     using Base::start;
     using Base::wait;
@@ -24,8 +24,8 @@ struct PacketDeviceImpl: PacketDeviceImplBase<Buffer, LowerLevel>
     Result<Void> reportError(Error e) override;
 };
 
-template <typename Buffer, typename LowerLevel>
-PacketDeviceImpl<Buffer, LowerLevel>::PacketDeviceImpl(
+template <typename LowerLevel>
+PacketDeviceImpl<LowerLevel>::PacketDeviceImpl(
 LowerLevel& serialDevice,
 Buffer&& buffer)
     : Base(
@@ -36,12 +36,12 @@ Buffer&& buffer)
     start();
 }
 
-template <typename Buffer, typename LowerLevel>
-PacketDeviceImpl<Buffer, LowerLevel>::~PacketDeviceImpl() {
+template <typename LowerLevel>
+PacketDeviceImpl<LowerLevel>::~PacketDeviceImpl() {
     wait();
 }
 
-template <typename Buffer, typename LowerLevel>
- Result<Void> PacketDeviceImpl<Buffer, LowerLevel>::reportError(Error e) {
+template <typename LowerLevel>
+ Result<Void> PacketDeviceImpl<LowerLevel>::reportError(Error e) {
     return fail(e);
 }

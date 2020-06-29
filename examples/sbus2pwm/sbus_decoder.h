@@ -10,7 +10,8 @@ static constexpr Error::Source errorSource = 1;
 enum class ErrorCode: Error::Code {
     PacketSizeMismatch   = 0,
     PacketHeaderMismatch = 1,
-    PacketFooterMismatch = 2
+    PacketFooterMismatch = 2,
+    DestBufferTooSmall   = 3
 };
 
 Error toError(ErrorCode e) {
@@ -60,38 +61,44 @@ void decode(const std::uint8_t* data, std::uint16_t* channels) {
     channels[7] = decodeA(data + 9, 5);
 }
 
-Result<Buffer> decode(const Buffer& buffer) {
-    if (buffer.size() != 25) { return { toError(ErrorCode::PacketSizeMismatch) }; }
-    const RawPacket* rp = reinterpret_cast<const RawPacket*>(buffer.begin());
+Result<Buffer> decode(const Buffer& source, Buffer dest) {
+    if (source.size() != 25) { return { toError(ErrorCode::PacketSizeMismatch) }; }
+    const RawPacket* rp = reinterpret_cast<const RawPacket*>(source.begin());
     if (rp->header != 0x0f) { return { toError(ErrorCode::PacketHeaderMismatch) }; }
     if (rp->footer != 0x00) { return { toError(ErrorCode::PacketFooterMismatch) }; }
-    return
-    Buffer::create(sizeof(Packet)) >=
-    [&] (Buffer&& b) {
-        Packet* p = reinterpret_cast<Packet*>(b.begin());
-        const std::uint8_t* data = &rp->data[0];
-        std::uint16_t* channels = p->channels;
-        decode(data, channels);
-        decode(data + 11, channels + 8);
-        channels[16] = rp->flags & 0x01 ? Packet::channelMax : 0;
-        channels[17] = rp->flags & 0x02 ? Packet::channelMax : 0;
-        p->frameLost = rp->flags & 0x04;
-        p->failsafe  = rp->flags & 0x08;
-        return ok(std::move(b));
-    };
+    dest.resize(sizeof(Packet));
+    if (dest.size() != sizeof(Packet)) { return toError(ErrorCode::DestBufferTooSmall); }
+    Packet* p = reinterpret_cast<Packet*>(dest.begin());
+    const std::uint8_t* data = &rp->data[0];
+    std::uint16_t* channels = p->channels;
+    decode(data, channels);
+    decode(data + 11, channels + 8);
+    channels[16] = rp->flags & 0x01 ? Packet::channelMax : 0;
+    channels[17] = rp->flags & 0x02 ? Packet::channelMax : 0;
+    p->frameLost = rp->flags & 0x04;
+    p->failsafe  = rp->flags & 0x08;
+    return ok(std::move(dest));
 }
 
 struct Decoder: Module {
+    alloc::Allocator& allocator;
+
+    explicit Decoder(alloc::Allocator& allocator): allocator(allocator) {}
+    
     Result<Void> up(Buffer&& buffer) override {
         cpm::dpl("SbusDecoder::up|");
         return
         ops->upper(*this) >=
         [&] (Module* m) {
             return
-            decode(buffer) >=
-            [&] (Buffer&& b) {
+            Buffer::create(allocator, sizeof(Packet)) >=
+            [&] (Buffer&& dest) {
                 return
-                ops->deferProc(makeProc(std::move(b), *m, &Module::up));
+                decode(buffer, std::move(dest)) >=
+                [&] (Buffer&& decoded) {
+                    return
+                    ops->deferProc(makeProc(std::move(decoded), *m, &Module::up));
+                };
             };
         };
     }

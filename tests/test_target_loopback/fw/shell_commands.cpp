@@ -16,12 +16,12 @@
 
 #include <chrono>
 
-using SerialDevice = SerialDeviceT<Buffer>;
 
 namespace {
 
-auto uartDriver = &UARTD1;
+auto& uartDriver = UARTD1;
 tprio_t serialDeviceThreadPriority = NORMALPRIO + 2;
+Allocator allocator;
 
 #if 0
 IMPLEMENT_DPL_FUNCTION
@@ -39,7 +39,7 @@ std::uint32_t toMs(rtcnt_t counter) {
     return to<std::chrono::milliseconds, STM32_SYSCLK>(counter);
 }
 
-}
+} // namespace
 
 template <typename Buffer>
 void print(BaseSequentialStream* stream, const Buffer& b) {
@@ -56,15 +56,15 @@ static void cmd_reset(BaseSequentialStream *stream, int, char*[]) {
 
 static void cmd_test_create(BaseSequentialStream *stream, int, char*[]) {
     {
-        auto sd = SerialDevice::open(uartDriver, serialDeviceThreadPriority);
+        auto sd = SerialDevice::open(allocator, uartDriver, serialDeviceThreadPriority);
         CHECK(isOk(sd));
     }
-    CHECK(uartDriver->state == UART_STOP);
+    CHECK(uartDriver.state == UART_STOP);
 }
 
 static void cmd_test_rx_timeout(BaseSequentialStream *stream, int, char*[]) {
     auto result =
-    SerialDevice::open(uartDriver, serialDeviceThreadPriority) >=
+    SerialDevice::open(allocator, uartDriver, serialDeviceThreadPriority) >=
     [&](SerialDevice&& sd) {
         return
         sd.read(std::chrono::milliseconds(100)) >=
@@ -90,7 +90,7 @@ static MailboxT<Result<Buffer>> rxOutMailbox;
 
 static Result<Buffer> testBuffer(size_t size) {
     return
-    Buffer::create(size) >=
+    Buffer::create(allocator, size) >=
     [&](Buffer&& b) {
         size_t i = 0;
         for (auto& c: b) {
@@ -150,7 +150,7 @@ static Result<bool> test_loopback(SerialDevice& sd, size_t packetSize, Timeout r
 }
 
 static void test_loopback_loop(BaseSequentialStream *stream, size_t packetSize, size_t repetitions, Timeout rxTimeout) {
-    SerialDevice::open(uartDriver, serialDeviceThreadPriority) >=
+    SerialDevice::open(allocator, uartDriver, serialDeviceThreadPriority) >=
     [&](SerialDevice&& sd) {
         bool passed = false;
         TimeMeasurement tm;

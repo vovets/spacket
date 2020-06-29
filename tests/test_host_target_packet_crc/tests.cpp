@@ -21,15 +21,11 @@
 #include <future>
 
 
-using Buffer = BufferT<NewAllocator>;
 using Buffers = std::vector<Buffer>;
-using SerialDevice = SerialDeviceT<Buffer>;
-using PacketDevice = PacketDeviceT<Buffer, SerialDevice>;
+using PacketDevice = PacketDeviceT<SerialDevice>;
 namespace c = std::chrono;
 
 namespace Catch {
-template<> struct StringMaker<Buffer>: public StringMakerBufferBase<Buffer> {}; 
-template<> struct StringMaker<Result<Buffer>>: public StringMakerResultBase<Result<Buffer>> {};
 template<> struct StringMaker<Result<Buffers>>: public StringMakerResultBase<Result<Buffers>> {};
 }
 
@@ -63,10 +59,10 @@ struct TestCase2 {
 };
 
 void runCaseOnce(const PortConfig& pc, TestCase2 c) {
-    SerialDevice::open(pc) >=
+    SerialDevice::open(defaultAllocator(), pc) >=
     [&](SerialDevice sd) {
         return
-        Buffer::create(Buffer::maxSize()) >=
+        Buffer::create(defaultAllocator()) >=
         [&](Buffer&& pdBuffer) {
             PacketDevice pd(sd, std::move(pdBuffer));
             std::promise<void> launched;

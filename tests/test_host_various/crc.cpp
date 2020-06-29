@@ -8,13 +8,10 @@
 
 #include <catch.hpp>
 
-using Buffer = BufferT<NewAllocator>;
-
 #include "buf.h"
 
 namespace Catch {
-template<> struct StringMaker<Buffer>: public StringMakerBufferBase<Buffer> {};
-template<> struct StringMaker<Result<Void>>: public StringMakerBufferBase<Result<Void>> {};
+template<> struct StringMaker<Result<Void>>: public StringMakerResultBase<Result<Void>> {};
 }
 
 #ifdef ENABLE_DEBUG_PRINT
@@ -28,7 +25,7 @@ IMPLEMENT_DPB_FUNCTION_NOP
 #endif
 
 Buffer toBufBE(std::uint32_t c) {
-    Buffer retval = throwOnFail(Buffer::create(4));
+    Buffer retval = throwOnFail(Buffer::create(defaultAllocator(), 4));
     for (std::size_t i = 0; i < 4; ++i) {
         retval.begin()[3 - i] = c & 0x000000ff;
         c >>= 8;
