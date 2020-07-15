@@ -35,7 +35,6 @@ public:
         return { p, f };
     }
 
-    static void checkStack() {}
     static void setName(const char* name) { thread_impl::Name::value = name; }
     static const char* getName() { return thread_impl::Name::value; }
 

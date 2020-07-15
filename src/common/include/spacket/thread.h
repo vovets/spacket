@@ -2,12 +2,6 @@
 
 #include <spacket/impl/thread_impl_p.h>
 
-#ifdef SPACKET_ENABLE_THREAD_CHECK_STACK
-#define SPACKET_THREAD_CHECK_STACK() Thread::checkStack()
-#else
-#define SPACKET_THREAD_CHECK_STACK() do {} while (false)
-#endif
-
 struct ThreadParams;
 
 class Thread: public ThreadImpl {
@@ -21,7 +15,6 @@ public:
         return { ThreadImpl::create(p, f) };
     }
 
-    static void checkStack() { Impl::checkStack(); }
     static void setName(const char* name) { Impl::setName(name); }
     static const char* getName() { return Impl::getName(); }
 

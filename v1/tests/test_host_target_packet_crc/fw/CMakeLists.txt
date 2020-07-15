@@ -52,6 +52,8 @@ gt_include(fw
   )
 
 fw_include_directories(fw
+  ${SPACKET_ROOT}/src/common/include
+  ${SPACKET_ROOT}/src/chibios/include
   conf
   .
   ${CH_ROOT_DIR}/os/license

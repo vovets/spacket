@@ -1,6 +1,5 @@
 gt_add_sources(
   config.cpp
-  errors.cpp
   cobs/cobs.c
   )
 

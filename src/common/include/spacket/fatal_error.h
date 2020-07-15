@@ -1,6 +1,6 @@
 #pragma once
 
-#include <spacket/errors.h>
+#include <spacket/impl/fatal_error_p.h>
 
 void fatalError(const char* reason, const char* file, int line);
 

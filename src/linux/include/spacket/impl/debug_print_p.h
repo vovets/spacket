@@ -1,8 +1,3 @@
-#include <spacket/debug_print.h>
-#include <spacket/thread.h>
-
-#include <thread>
-
 #include <cstdio>
 #include <cstdarg>
 #include <sstream>
@@ -13,10 +8,14 @@ const auto debugPrintStream = stderr;
 
 } // namespace
 
+void debugPrint(const char *fmt, ...);
+
+inline
 void debugPrint_(const char *fmt, std::va_list args) {
     vfprintf(debugPrintStream, fmt, args);
 }
 
+inline
 void debugPrintFinish() {
     debugPrint("\n");
 }

@@ -2,7 +2,7 @@
 
 #include <boost/preprocessor/stringize.hpp>
 
-
+inline
 const char* toString(ErrorCode e) {
     switch (e) {
 #define X(ID, CODE, SEP) case ErrorCode::ID: return STR(ID);

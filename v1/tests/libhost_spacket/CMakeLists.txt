@@ -14,6 +14,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_library(spacket "")
 
 target_include_directories(spacket PUBLIC ${SPACKET_ROOT}/external/boost_1_66_0)
+target_include_directories(spacket PUBLIC ${SPACKET_ROOT}/src/common/include)
+target_include_directories(spacket PUBLIC ${SPACKET_ROOT}/src/linux/include)
 #target_compile_definitions(spacket PUBLIC -DSPACKET_ENABLE_TRACE)
 #target_compile_options(spacket PUBLIC -fsanitize=address)
 target_link_libraries(spacket crc)

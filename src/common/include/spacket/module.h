@@ -2,13 +2,8 @@
 
 // Composable Protocol Modules
 
-#include <spacket/time_utils.h>
-#include <spacket/memory_utils.h>
-#include <spacket/guard_utils.h>
-#include <spacket/buffer_debug.h>
 #include <spacket/deferred_proc.h>
 
-#include <boost/optional.hpp>
 #include <boost/intrusive/list.hpp>
 
 

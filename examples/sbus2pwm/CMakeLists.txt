@@ -54,18 +54,14 @@ ch_include(sbus2pwm_fw
 ch_set_source_file_properties(/os/hal/ports/STM32/LLD/TIMv1/hal_pwm_lld.c COMPILE_FLAGS -Wno-implicit-fallthrough)
 ch_set_source_file_properties(/os/rt/src/chschd.c COMPILE_FLAGS -Wno-implicit-fallthrough)
 
-gt_include(sbus2pwm_fw
-  "${SPACKET_ROOT}/lib/sources.cmake"
-  "${SPACKET_ROOT}/lib/chibios/sources.cmake"
-  "${SPACKET_ROOT}/lib/stm32/crc_v1/sources.cmake"
-  )
-
 fw_include_directories(sbus2pwm_fw
+  ${SPACKET_ROOT}/src/common/include
+  ${SPACKET_ROOT}/src/chibios/include
   conf
   .
   ${CH_ROOT_DIR}/os/license
-  "${EXTERNAL}/SEGGER_RTT_V614c/RTT"
-  "${EXTERNAL}/boost_1_66_0"
+  ${EXTERNAL}/SEGGER_RTT_V614c/RTT
+  ${EXTERNAL}/boost_1_66_0
   )
 
 fw_sources(sbus2pwm_fw

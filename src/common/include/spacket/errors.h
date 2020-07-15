@@ -99,3 +99,5 @@ template <typename Array>
 const char* toString(Error e, Array& a) {
     return toString(e, a.data(), a.size());
 }
+
+#include <spacket/impl/errors_p.h>

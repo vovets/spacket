@@ -1,6 +1,6 @@
 #pragma once
 
-#include <spacket/debug_print_impl.h>
+#include <spacket/impl/debug_print_p.h>
 #include <spacket/thread.h>
 
 #include <utility>
