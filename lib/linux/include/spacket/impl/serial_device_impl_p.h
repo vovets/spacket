@@ -50,6 +50,7 @@ public:
 
     SerialDeviceImpl& operator=(SerialDeviceImpl&& src) noexcept {
         nativeDevice = std::move(src.nativeDevice);
+        return *this;
     }
     
     Result<Buffer> read(Timeout t) {

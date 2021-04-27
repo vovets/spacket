@@ -9,7 +9,7 @@
 #ifdef ERROR_LIST
 #error "ERROR_LIST macro should not be defined here"
 #else
-#define ERROR_LIST(ID, CODE, SEP)                       \
+#define ERROR_LIST(ID, CODE, SEP)                         \
     X(ID(Timeout),                   CODE(100),   SEP())  \
     X(ID(GuardedPoolOutOfMem),       CODE(200),   SEP())  \
     X(ID(ConfigNoDevSpecified),      CODE(300),   SEP())  \
@@ -48,6 +48,7 @@
     X(ID(StackIORingFull),           CODE(1601),  SEP())  \
     X(ID(StackProcRingFull),         CODE(1602),  SEP())  \
     X(ID(AddressNoRoom),             CODE(1700),  SEP())  \
+    X(ID(MallocAllocatorOutOfMem),   CODE(1800),  SEP())  \
     X(ID(LastCode),                  CODE(10000),)
 #endif
 

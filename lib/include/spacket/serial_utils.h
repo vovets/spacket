@@ -9,7 +9,7 @@ constexpr Timeout packetTime64(uint32_t baudRate, size_t numBytes) {
     constexpr uint32_t bitsInByte = 10;
     constexpr uint64_t nanoInS = 1000000000;
     return
-    ceil<Timeout>(
+    std::chrono::ceil<Timeout>(
         std::chrono::nanoseconds(
             nanoInS * bitsInByte * numBytes / baudRate));
 }
@@ -22,7 +22,7 @@ constexpr Timeout packetTime(uint32_t baudRate, size_t numBytes) {
     constexpr uint32_t bitsInByte = 10;
     constexpr uint32_t microInS = 1000000;
     return
-    ceil<Timeout>(
+    std::chrono::ceil<Timeout>(
         std::chrono::microseconds(
             // here we want extending toward ceiling
             (microInS * bitsInByte * numBytes + baudRate - 1) / baudRate));

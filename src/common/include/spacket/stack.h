@@ -2,7 +2,10 @@
 
 #include <spacket/allocator.h>
 #include <spacket/driver.h>
-#include <spacket/util/thread_error_report.h>
+#include <spacket/module.h>
+#include <spacket/log_error.h>
+#include <spacket/cpm_debug.h>
+#include <spacket/guard_utils.h>
 
 
 struct DriverService: Module {
@@ -119,7 +122,7 @@ private:
         while (!processRing.empty()) {
             DeferredProc dp = std::move(processRing.tail());
             processRing.eraseTail();
-            dp() <= threadErrorReport;
+            dp() <= logError;
         }
     }
 
@@ -216,7 +219,7 @@ private:
                 || e == toError(ErrorCode::GuardedPoolOutOfMem)) {
                     return fail(e);
                 }
-                return threadErrorReport(e);
+                return logError(e);
             };
         }
     }

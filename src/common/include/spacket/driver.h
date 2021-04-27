@@ -1,7 +1,7 @@
 #pragma once
 
 #include <spacket/queue.h>
-
+#include <spacket/buffer.h>
 
 struct Driver {
     using Queue = QueueT<Buffer>;

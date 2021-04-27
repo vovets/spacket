@@ -16,7 +16,7 @@ macro(fw_vars_default var)
 endmacro()
 
 macro(fw_vars_set)
-    set(CMAKE_CXX_STANDARD 14)
+    set(CMAKE_CXX_STANDARD 17)
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
     set(CMAKE_C_STANDARD 99)
     set(CMAKE_C_STANDARD_REQUIRED)
@@ -37,8 +37,8 @@ macro(fw_vars_set)
     fw_vars_default(fpu_flags -mfloat-abi=${CH_FLOAT_ABI} -mfpu=fpv4-sp-d16 -fsingle-precision-constant)
     fw_vars_default(debug_flags -ggdb)
     fw_vars_default(c_warn_flags -Wall -Wextra -Wundef -Wstrict-prototypes)
-    fw_vars_default(cxx_warn_flags -Wall -Wextra -Wundef -Wno-literal-suffix)
-    fw_vars_default(cxx_features_flags -fno-exceptions -fno-rtti -fno-unwind-tables) # "list of cxx features flags like -fno-exceptions"
+    fw_vars_default(cxx_warn_flags -Wall -Wextra -Wundef -Wno-literal-suffix -Wno-register)
+    fw_vars_default(cxx_features_flags -fno-exceptions -fno-rtti -fno-unwind-tables -fno-use-cxa-atexit) # "list of cxx features flags like -fno-exceptions"
     fw_vars_default(debug_optimization_flags -Og) # "Optimization flags for debug build"
     fw_vars_default(release_optimization_flags -Os) # CACHE STRING "Optimization flags for release build"
     set(linker_flags

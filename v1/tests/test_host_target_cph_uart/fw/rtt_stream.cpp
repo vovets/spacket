@@ -1,5 +1,5 @@
 #include "rtt_stream.h"
 
 RTTStream rttStream{};
-BaseSequentialStream* errorReportStream = &rttStream;
+BaseSequentialStream* errorStream = &rttStream;
 BaseSequentialStream* debugPrintStream = &rttStream;

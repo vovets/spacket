@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.5)
 
 enable_testing()
 
-set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
 
@@ -15,6 +14,7 @@ set(EXTERNAL ${SPACKET_ROOT}/external)
 list(APPEND CMAKE_MODULE_PATH ${SPACKET_ROOT}/cmake)
 
 include(build_type)
+include(cpp_standard)
 include(util)
 
 add_compile_options(-Wno-unused-comparison)

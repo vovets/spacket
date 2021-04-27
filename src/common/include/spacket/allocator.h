@@ -33,6 +33,8 @@ protected:
     Allocator();
 
 public:
+    virtual ~Allocator() {}
+    
     Result<Object*> allocateObject() {
         return
         allocate() >=
@@ -67,7 +69,7 @@ public:
     }
 
     AllocatorId registerAllocator(Allocator& pool) {
-        if (firstFree == array.size()) { FATAL_ERROR("registerPool"); }
+        if (firstFree == array.size()) { FATAL_ERROR("registerAllocator"); }
         auto id = firstFree++;
         array[id] = &pool;
         dpl("Registry::registerAllocator|registered id=%d", id);

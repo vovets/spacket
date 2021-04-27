@@ -6,9 +6,9 @@ endif()
 
 list(APPEND CMAKE_MODULE_PATH "${SPACKET_ROOT}/cmake")
 
+include(cpp_standard)
 include(fw_tests)
 
-set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
 

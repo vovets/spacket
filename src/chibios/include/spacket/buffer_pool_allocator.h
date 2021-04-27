@@ -6,7 +6,7 @@
 
 template <typename Pool>
 class PoolAllocatorT: public alloc::Allocator {
-public:
+private:
     Result<void*> allocate() override {
         return Pool::instance().allocate();
     }
@@ -14,6 +14,7 @@ public:
     void deallocate(void* ptr) override {
         Pool::instance().deallocate(ptr);
     }
-
+    
+public:
     size_t maxSize() const override { return Pool::objectSize(); }
 };

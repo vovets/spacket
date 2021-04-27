@@ -82,7 +82,7 @@ int main(void) {
         } <=
         [] (Error e) {
             if (e != toError(ErrorCode::Timeout)) {
-                return threadErrorReport(e);
+                return logError(e);
             }
             return fail(e);
         };
@@ -92,7 +92,7 @@ int main(void) {
         } <=
         [] (Error e) {
             if (e != toError(ErrorCode::Timeout)) {
-                return threadErrorReport(e);
+                return logError(e);
             }
             return fail(e);
         };

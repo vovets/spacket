@@ -236,7 +236,7 @@ private:
         }
         
         rxRing.tail().resize(bytesReceived);
-        if (!rxCompleteQueue->put(rxRing.tail())) { FATAL_ERROR("UartT::txFinishI|rxRing full"); }
+        if (!rxCompleteQueue->put(rxRing.tail())) { FATAL_ERROR("UartT::rxFinishI|rxRing full"); }
         rxRing.eraseTail();
         
         if (!rxRing.empty()) {

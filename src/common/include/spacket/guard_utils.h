@@ -73,10 +73,12 @@ void osalSysUnlock();
 void osalSysLockFromISR();
 void osalSysUnlockFromISR();
 
+inline
 auto makeOsalSysLockGuard() {
     return makeGuard([]() { osalSysLock(); }, []() { osalSysUnlock(); });
 }
 
+inline
 auto makeOsalSysLockFromISRGuard() {
     return makeGuard([]() { osalSysLockFromISR(); }, []() { osalSysUnlockFromISR(); });
 }
