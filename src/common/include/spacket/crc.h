@@ -4,7 +4,7 @@
 
 namespace crc {
 
-template <typename Buffer>
+inline
 Result<Buffer> check(Buffer b) {
     if (b.size() < 5) {
         return fail<Buffer>(toError(ErrorCode::CrcCheckBufferTooSmall));

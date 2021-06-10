@@ -21,8 +21,10 @@ include(fw_vars)
 set(CH_CPU cortex-m3)
 set(CH_MCU_NAME STM32F103x8)
 set(CH_ROOT_DIR [[${EXTERNAL}/chibios]])
-set(debug_optimization_flags -Os)
-set(CH_PROCESS_STACK_SIZE 0x500)
+set(debug_optimization_flags -Os -finline-small-functions -findirect-inlining)
+# set(debug_optimization_flags -O0)
+set(CH_PROCESS_STACK_SIZE 0x200)
+# set(CH_PROCESS_STACK_SIZE 0x1000)
 # set(CH_MAIN_STACK_SIZE 0x1000)
 
 fw_vars_set()
@@ -34,7 +36,7 @@ fw_compile_definitions(sbus2pwm_fw
   -DBOOST_DISABLE_ASSERTS
   -DNDEBUG
   -DSPACKET_ENABLE_THREAD_CHECK_STACK
-  -DENABLE_DEBUG_PRINT
+#  -DENABLE_DEBUG_PRINT
 #  -DCPH_ENABLE_DEBUG_PRINT
 #  -DDEBUG_PRINT_BUFFER_FIRST_ONLY
   -DDEBUG_PRINT_BUFFER_FULL
@@ -97,3 +99,4 @@ include(util)
 util_join_cl(JLINK_CONNECT_OPTIONS_STR "" ${JLINK_CONNECT_OPTIONS})
 
 fw_add_flash_target_to_exe(sbus2pwm_fw)
+fw_add_jlink_connect()

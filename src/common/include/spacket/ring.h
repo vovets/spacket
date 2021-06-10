@@ -10,7 +10,7 @@ template <typename T, std::size_t Capacity>
 class RingT: public QueueT<T> {
 private:
     using Element = boost::optional<T>;
-    using Array = std::array<Element, Capacity>;
+    using Array = std::array<Element, Capacity + 1>;
 
 private:
     Array array;
@@ -59,6 +59,6 @@ public:
 
 private:
     std::size_t next(std::size_t current) const {
-        return (current + 1) % Capacity;
+        return (current + 1) % array.size();
     }
 };

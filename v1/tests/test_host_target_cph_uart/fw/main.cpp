@@ -3,15 +3,18 @@
 #include "chprintf.h"
 
 #include "rtt_stream.h"
-#include "buffer.h"
+#include "typedefs.h"
 #include "constants.h"
 
 #include <spacket/module.h>
-#include <spacket/uart.h>
 #include <spacket/stack.h>
 #include <spacket/buffer_debug.h>
 #include <spacket/endpoint.h>
 #include <spacket/multistack.h>
+#include <spacket/bottom_module.h>
+#include <spacket/packetizer_module.h>
+#include <spacket/cobs_module.h>
+#include <spacket/crc_module.h>
 
 
 namespace {
@@ -28,15 +31,9 @@ IMPLEMENT_DPL_FUNCTION_NOP
 
 
 struct Loopback: Module {
-    using Module::ops;
-
     Result<Void> up(Buffer&& buffer) override {
         cpm::dpl("Loopback::up|");
-        return
-        ops->lower(*this) >=
-        [&] (Module* m) {
-            return ops->deferProc(makeProc(std::move(buffer), *m, &Module::down));
-        };
+        return deferDown(std::move(buffer));
     }
 
     Result<Void> down(Buffer&&) override {
@@ -45,57 +42,71 @@ struct Loopback: Module {
     }
 };
 
-using Driver_ = UartT<DRIVER_RX_RING_CAPACITY, DRIVER_TX_RING_CAPACITY>;
-using Stack = StackT<STACK_IO_RING_CAPACITY, STACK_PROC_RING_CAPACITY>;
+using Driver_ = Uart2;
 using Multistack = MultistackT<Address, 2>;
+using Executor = ExecutorT<1>;
 
 Allocator allocator;
-Driver_ driver(UARTD1);
-Stack stack(allocator, driver);
+Executor executor;
+Driver_ driver(allocator, UARTD1);
+Stack stack(executor);
+BottomModule bottom(driver);
 Loopback loopback;
 Multistack multistack;
-Address addressA{'A'};
-Address addressB{'B'};
-Endpoint endpointA;
-Endpoint endpointB;
+PacketizerModule packetizer(allocator);
+CobsModule cobsModule;
+CrcModule crcModule;
+Address address0{0};
+Address address1{1};
+Endpoint endpoint0;
+Endpoint endpoint1;
 
 int main(void) {
     halInit();
     chSysInit();
 
+    chprintf(&rttStream, "test_host_target_cph_uart_fw\r\n");
     chprintf(&rttStream, "RTT ready\r\n");
     chprintf(&rttStream, "Allocator::maxSize(): %d\r\n", allocator.maxSize());
     chprintf(&rttStream, "sizeof(Buffer): %d\r\n", sizeof(Buffer));
     chprintf(&rttStream, "sizeof(DeferredProc): %d\r\n", sizeof(DeferredProc));
 
+    stack.push(bottom);
+    stack.push(packetizer);
+    stack.push(cobsModule);
+    stack.push(crcModule);
     stack.push(multistack);
     stack.push(loopback);
-    multistack.push(addressA, endpointA);
-    multistack.push(addressB, endpointB);
+    multistack.push(address0, endpoint0);
+    multistack.push(address1, endpoint1);
+
+    driver.setBaud(921600);
+    driver.start();
 
     for (;;) {
-        stack.tick();
-        endpointA.read() >=
-        [&] (Buffer&& b) {
+        bottom.service() >
+        [&] { return endpoint0.read(); } >=
+            [&] (Buffer&& b) {
             return
-            endpointB.write(std::move(b));
+            endpoint1.write(std::move(b));
         } <=
-        [] (Error e) {
-            if (e != toError(ErrorCode::Timeout)) {
-                return logError(e);
+            [] (Error e) {
+            if (e == toError(ErrorCode::Timeout)) {
+                return ok();
             }
             return fail(e);
-        };
-        endpointB.read() >=
-        [&] (Buffer&& b) {
-            return endpointA.write(std::move(b));
+        } >
+            [&] { return endpoint1.read(); } >=
+            [&] (Buffer&& b) {
+            return endpoint0.write(std::move(b));
         } <=
         [] (Error e) {
-            if (e != toError(ErrorCode::Timeout)) {
-                return logError(e);
+            if (e == toError(ErrorCode::Timeout)) {
+                return ok();
             }
             return fail(e);
-        };
+        } <=
+        logError;
     }
 }
 

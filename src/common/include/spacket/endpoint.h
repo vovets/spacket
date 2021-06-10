@@ -4,7 +4,7 @@
 #include <spacket/module.h>
 
 
-template <typename Buffer>
+inline
 Buffer extract(boost::optional<Buffer>& opt) {
     if (!opt) { FATAL_ERROR("extract"); }
     Buffer tmp = std::move(*opt);
@@ -30,9 +30,6 @@ struct BufferBoxT: public QueueT<Buffer> {
 };
 
 struct Endpoint: Module {
-    using Queue = QueueT<Buffer>;
-    using Module::ops;
-    
     BufferBoxT<Buffer> readBox;
 
     Result<Void> up(Buffer&& b_) override {
@@ -46,11 +43,7 @@ struct Endpoint: Module {
     
     Result<Void> down(Buffer&& b) override {
         cpm::dpl("Endpoint::down|");
-        return
-        ops->lower(*this) >=
-        [&] (Module* m) {
-            return ops->deferProc(makeProc(std::move(b), *m, &Module::down));
-        };
+        return deferDown(std::move(b));
     }
 
     Result<Buffer> read() {
@@ -63,10 +56,6 @@ struct Endpoint: Module {
 
     Result<Void> write(Buffer b) {
         cpm::dpb("Endpoint::write|", &b);
-        return
-        ops->lower(*this) >=
-        [&] (Module* m) {
-            return ops->deferIO(makeProc(std::move(b), *m, &Module::down));
-        };
+        return deferDown(std::move(b));
     }
 };

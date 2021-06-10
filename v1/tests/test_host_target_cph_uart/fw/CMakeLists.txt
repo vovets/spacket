@@ -22,7 +22,8 @@ set(CH_CPU cortex-m3)
 set(CH_MCU_NAME STM32F103x8)
 set(CH_ROOT_DIR [[${EXTERNAL}/chibios]])
 set(debug_optimization_flags -Os)
-set(CH_PROCESS_STACK_SIZE 0x500)
+set(CH_PROCESS_STACK_SIZE 0x200)
+#set(CH_PROCESS_STACK_SIZE 0x1000)
 # set(CH_MAIN_STACK_SIZE 0x1000)
 #set(cxx_features_flags -fno-exceptions -fno-rtti -fno-unwind-tables -fno-threadsafe-statics)
 set(cxx_features_flags -fno-exceptions -fno-rtti -fno-unwind-tables)
@@ -36,7 +37,7 @@ fw_compile_definitions(fw
   -DBOOST_DISABLE_ASSERTS
   -DNDEBUG
   -DSPACKET_ENABLE_THREAD_CHECK_STACK
-  # -DENABLE_DEBUG_PRINT
+#  -DENABLE_DEBUG_PRINT
 #  -DCPH_ENABLE_DEBUG_PRINT
   -DDEBUG_PRINT_BUFFER_FIRST_ONLY
   # -DDEBUG_PRINT_BUFFER_FULL

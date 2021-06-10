@@ -145,6 +145,7 @@ void MultiplexerImplBaseT<LowerLevel, NUM_CHANNELS>::readThreadFunction() {
     while (!Thread::shouldStop()) {
         lowerLevel.read(stopCheckPeriod) >=
         [&] (Buffer&& b) {
+            dpb("mib::readThreadFunction|read ", &b);
             return crc::check(std::move(b));
         } >=
         [&] (Buffer&& b) {

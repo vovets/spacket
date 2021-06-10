@@ -88,17 +88,12 @@ struct Decoder: Module {
     Result<Void> up(Buffer&& buffer) override {
         cpm::dpl("SbusDecoder::up|");
         return
-        ops->upper(*this) >=
-        [&] (Module* m) {
+        Buffer::create(allocator, sizeof(Packet)) >=
+        [&] (Buffer&& dest) {
             return
-            Buffer::create(allocator, sizeof(Packet)) >=
-            [&] (Buffer&& dest) {
-                return
-                decode(buffer, std::move(dest)) >=
-                [&] (Buffer&& decoded) {
-                    return
-                    ops->deferProc(makeProc(std::move(decoded), *m, &Module::up));
-                };
+            decode(buffer, std::move(dest)) >=
+            [&] (Buffer&& decoded) {
+                return deferUp(std::move(decoded));
             };
         };
     }

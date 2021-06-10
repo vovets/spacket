@@ -32,130 +32,84 @@ struct Address {
 
 template <typename Address, std::size_t MAX_STACKS>
 class MultistackT: public Module {
-    using This = MultistackT<Address, MAX_STACKS>;
+    using Multistack = MultistackT<Address, MAX_STACKS>;
 
-    using Module::ops;
-
-    struct UpperStack: ModuleOps, Module  {
-        This* lowerStack;
+    struct Slot: Module {
+        Multistack& multistack;
+        Stack stack;
         Address address;
-        ModuleList moduleList;
-        using Module::ops;
 
-        UpperStack(This* lowerStack, const Address& address)
-            : lowerStack(lowerStack)
+        Slot(Multistack& multistack, const Address& address)
+            : multistack(multistack)
+            , stack(multistack.executor())
             , address(address)
-        {}
-
-        void push(Module& module) {
-            module.ops = this;
-            moduleList.push_back(module);
-        }
-        
-        Result<Module*> lower(Module& m) override {
-            auto it = typename ModuleList::reverse_iterator(moduleList.iterator_to(m));
-            if (it == moduleList.rend()) {
-                return ok<Module*>(lowerStack);
-            }
-            return ok(&(*it));
-        }
-        
-        Result<Module*> upper(Module& m) override {
-            auto it = ++moduleList.iterator_to(m);
-            if (it == moduleList.end()) {
-                return { toError(ErrorCode::ModuleNoUpper) };
-            }
-            return ok(&(*it));
-        }
-        
-        Result<Void> deferIO(DeferredProc&& dp) override {
-            return lowerStack->ops->deferIO(std::move(dp));
-        }
-
-        Result<Void> deferProc(DeferredProc&& dp) override {
-            return lowerStack->ops->deferProc(std::move(dp));
+        {
+            stack.push(*this);
         }
 
         Result<Void> up(Buffer&& b) override {
-            cpm::dpb("UpperStack::up|", &b);
-            cpm::dpl("UpperStack::up|channel %d", address.channel);
+            cpm::dpb("Slot::up|", &b);
+            cpm::dpl("Slot::up|channel %d", address.channel);
             return
             address.stripHeader(std::move(b)) >=
             [&] (Buffer&& stripped) {
-                return
-                ops->upper(*this) >=
-                [&] (Module* m) {
-                    return ops->deferProc(makeProc(std::move(stripped), *m, &Module::up));
-                };
+                return deferUp(std::move(stripped));
             };
         }
         
         Result<Void> down(Buffer&& b) override {
-            cpm::dpb("UpperStack::down|", &b);
-            cpm::dpl("UpperStack::down|channel %d", address.channel);
+            cpm::dpb("Slot::down|", &b);
+            cpm::dpl("Slot::down|channel %d", address.channel);
             return
             address.addHeader(std::move(b)) >=
             [&] (Buffer&& withHeader) {
-                return
-                ops->lower(*this) >=
-                [&] (Module* m) {
-                    return ops->deferProc(makeProc(std::move(withHeader), *m, &Module::down));
-                };
+                return multistack.down(std::move(withHeader));
             };
         }
     };
     
-    using UpperStacksStorage = std::array<Storage<UpperStack>, MAX_STACKS>;
-    UpperStacksStorage upperStacksStorage;
+    using SlotsStorage = std::array<Storage<Slot>, MAX_STACKS>;
+    
+    SlotsStorage slotsStorage;
     std::size_t firstFree = 0;
 
-    UpperStack& at(std::size_t index) {
-        return *reinterpret_cast<UpperStack*>(&upperStacksStorage[index]);
+    Slot& at(std::size_t index) {
+        return *reinterpret_cast<Slot*>(&slotsStorage[index]);
     }
 
-    UpperStack& findOrCreate(const Address& address) {
-        if (firstFree >= upperStacksStorage.size()) {
+    Slot& findOrCreate(const Address& address) {
+        if (firstFree >= slotsStorage.size()) {
             FATAL_ERROR("MultistackT::findOrCreate");
         }
         for (std::size_t i = 0; i < firstFree; ++i) {
-            UpperStack& r = at(i);
+            Slot& r = at(i);
             if (r.address == address) { return r; }
         }
-        UpperStack* us = ::new (&upperStacksStorage[firstFree++]) UpperStack(this, address);
-        // UpperStack IS a Module and must be the lowest module in the stack
-        us->push(*us);
-        return *us;
+        Slot* slot = ::new (&slotsStorage[firstFree++]) Slot(*this, address);
+        return *slot;
     }
 
 public:
     void push(const Address& address, Module& module) {
-        UpperStack& us = findOrCreate(address);
-        us.push(module);
+        Slot& slot = findOrCreate(address);
+        slot.stack.push(module);
     }
     
     Result<Void> up(Buffer&& b) override {
         cpm::dpb("MultistackT::up|", &b);
         for (std::size_t i = 0; i < firstFree; ++i) {
-            UpperStack& us = at(i);
-            if (us.address.matches(b)) {
-                cpm::dpl("MultistackT::up|matched channel %d", us.address.channel);
-                return ops->deferProc(makeProc(std::move(b), us, &Module::up));
+            Slot& slot = at(i);
+            if (slot.address.matches(b)) {
+                cpm::dpl("MultistackT::up|matched channel %d", slot.address.channel);
+                return slot.up(std::move(b));
             }
         }
         cpm::dpl("MultistackT::up|not matched");
-        return
-        ops->upper(*this) >=
-        [&] (Module* m) {
-            return ops->deferProc(makeProc(std::move(b), *m, &Module::up));
-        };
+        return deferUp(std::move(b));
     }
 
     Result<Void> down(Buffer&& b) override {
         cpm::dpb("MultistackT::down|", &b);
-        return
-        ops->lower(*this) >=
-        [&] (Module* m) {
-            return ops->deferProc(makeProc(std::move(b), *m, &Module::down));
-        };
+        return deferDown(std::move(b));
     }
 };

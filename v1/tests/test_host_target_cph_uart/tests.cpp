@@ -16,6 +16,7 @@
 #include <spacket/packet_device.h>
 #include <spacket/multiplexer.h>
 #include <spacket/crc.h>
+#include <spacket/log_error.h>
 
 #include <chrono>
 #include <thread>
@@ -25,8 +26,19 @@ constexpr std::size_t MULTIPLEXER_NUM_CHANNELS = 2;
 
 using Buffers = std::vector<Buffer>;
 using PacketDevice = PacketDeviceT<SerialDevice>;
-using Multiplexer = MultiplexerT<PacketDevice, MULTIPLEXER_NUM_CHANNELS>;
+using Multiplexer_ = MultiplexerT<PacketDevice, MULTIPLEXER_NUM_CHANNELS>;
 namespace c = std::chrono;
+
+class Multiplexer: public Multiplexer_ {
+public:
+    template <typename ... Args>
+    Multiplexer(Args&& ... args): Multiplexer_(std::forward<Args>(args)...) {}
+
+private:
+    Result<Void> reportError(Error e) override {
+        return logError(e);
+    }
+};
 
 namespace Catch {
 template<> struct StringMaker<Result<Buffers>>: public StringMakerResultBase<Result<Buffers>> {};
@@ -36,7 +48,6 @@ template<> struct StringMaker<Result<Buffers>>: public StringMakerResultBase<Res
 constexpr size_t BYTE_TIMEOUT_US = 0;
 constexpr Baud BAUD = Baud::B_921600;
 constexpr size_t REP = 10;
-constexpr auto defaultHoldOff = c::milliseconds(2);
 constexpr auto readPacketTimeout = c::milliseconds(100);
 
 #include "buf.h"
@@ -77,7 +88,7 @@ void runCase(const PortConfig& pc, TestCase c) {
                 auto receive = [&] (std::promise<void> launched) {
                     launched.set_value();
                     return
-                        mx.read(toChannel(rep), readPacketTimeout);
+                        mx.read(toChannel(rep + 1), readPacketTimeout);
                 };
                 auto launchedFuture = launched.get_future();
                 auto future = std::async(std::launch::async, receive, std::move(launched));
@@ -85,7 +96,7 @@ void runCase(const PortConfig& pc, TestCase c) {
                 throwOnFail(mx.write(toChannel(rep), copy(c.send)));
                 auto r = future.get();
                 REQUIRE(r == c.expected);
-                std::this_thread::sleep_for(c.holdOffTime);
+//                std::this_thread::sleep_for(c.holdOffTime);
             }
             return ok();
         };
@@ -103,6 +114,17 @@ void runCaseWithPortConfig(TestCase c) {
     runCase(pc, std::move(c));
 }
 
+
+TEST_CASE("22.0") {
+    auto b = wz(10);
+    runCaseWithPortConfig(
+        {
+            copy(b),
+            ok(copy(b)),
+            c::milliseconds(1)
+        }
+    );
+}
 
 TEST_CASE("22.1") {
     for (std::size_t s = 1; s < 200; ++s) {

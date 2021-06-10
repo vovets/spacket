@@ -6,6 +6,7 @@ endif()
 
 list(APPEND CMAKE_MODULE_PATH "${SPACKET_ROOT}/cmake")
 
+include(fw)
 include(fw_tests)
 
 set(DEVICE_CONFIG_PATH "${CMAKE_CURRENT_SOURCE_DIR}/device_config.json")

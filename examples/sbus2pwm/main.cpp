@@ -7,6 +7,8 @@
 #include "sbus_decoder.h"
 
 #include <spacket/buffer_debug.h>
+#include <spacket/bottom_module.h>
+#include <spacket/uart2.h>
 
 
 namespace {
@@ -52,6 +54,19 @@ void process(const Buffer& buffer) {
 
 Allocator allocator;
 
+struct Top: Module {
+    Result<Void> up(Buffer&& b) override {
+        cpm::dpl("Bottom::up|");
+        process(b);
+        return ok();
+    }
+    
+    Result<Void> down(Buffer&&) override {
+        cpm::dpl("Top::down|");
+        return ok();
+    }
+};
+
 int main() {
     halInit();
     chSysInit();
@@ -62,17 +77,21 @@ int main() {
     chprintf(&rttStream, "sizeof(DeferredProc): %d\r\n", sizeof(DeferredProc));
     chprintf(&rttStream, "sizeof(Packet): %d\r\n", sizeof(sbus::Packet));
 
-    Uart uart(UARTD1);
+    Uart2 uart(allocator, UARTD1);
     uart.setBaud(100000);
-    uart.setParity(Uart::Parity::Even);
-    uart.setStopBits(Uart::StopBits::B_2);
+    uart.setParity(Uart2::Parity::Even);
+    uart.setStopBits(Uart2::StopBits::B_2);
+    uart.start();
 
-    Stack stack(allocator, uart);
+    Executor executor;
+    Stack stack(executor);
     sbus::Decoder decoder(allocator);
-    Endpoint endpoint;
-    
+    BottomModule bottom(uart);
+    Top top;
+
+    stack.push(bottom);
     stack.push(decoder);
-    stack.push(endpoint);
+    stack.push(top);
 
     PWMConfig pwmConfig = {};
     pwmConfig.frequency = 72000000;
@@ -82,17 +101,6 @@ int main() {
     pwmStart(&PWMD1, &pwmConfig);
 
     for (;;) {
-        stack.tick();
-        endpoint.read() >=
-        [&] (Buffer&& b) {
-            process(b);
-            return ok();
-        } <=
-        [] (Error e) {
-            if (e != toError(ErrorCode::Timeout)) {
-                return threadErrorReport(e);
-            }
-            return fail(e);
-        };
+        bottom.service() <= logError;
     }
 }

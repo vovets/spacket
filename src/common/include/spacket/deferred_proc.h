@@ -2,10 +2,10 @@
 
 #include <spacket/result.h>
 
-
-struct DeferredProc {
+template <std::size_t N>
+struct DeferredProcT {
     using Retval = Result<Void>;
-    using Storage = std::aligned_storage_t<sizeof(void*) * 5, alignof(void*)>;
+    using Storage = std::aligned_storage_t<sizeof(void*) * N, alignof(void*)>;
 
     struct FuncBase {
         virtual Retval operator()() = 0;
@@ -42,30 +42,30 @@ struct DeferredProc {
     FuncBase* func;
 
     template <typename Closure>
-    DeferredProc(Closure&& c)
+    DeferredProcT(Closure&& c)
         : func(::new (&storage) Func<Closure>(std::forward<Closure>(c)))
     {
         static_assert(sizeof(storage) >= sizeof(Func<Closure>));
     }
 
-    ~DeferredProc() {
+    ~DeferredProcT() {
         if (func != nullptr) {
             func->destroy();
             func = nullptr;
         }
     }
     
-    DeferredProc(const DeferredProc&) = delete;
+    DeferredProcT(const DeferredProcT&) = delete;
     
-    DeferredProc(DeferredProc&& from)
+    DeferredProcT(DeferredProcT&& from)
         : func(from.func ? from.func->moveTo(this->storage) : nullptr)
     {
         from.func = nullptr;
     }
     
-    DeferredProc& operator=(DeferredProc&& from) {
+    DeferredProcT& operator=(DeferredProcT&& from) {
         this->~DeferredProc();
-        ::new (this) DeferredProc(std::move(from));
+        ::new (this) DeferredProcT(std::move(from));
         return *this;
     }
 
@@ -73,3 +73,5 @@ struct DeferredProc {
         return func->operator()();
     }
 };
+
+using DeferredProc = DeferredProcT<3>;

@@ -6,7 +6,8 @@
  * Output must be at least length + length / 254 + 1 bytes long.
  *
  */
-size_t stuff(const uint8_t * restrict readPtr, size_t size, uint8_t * restrict output) {
+inline
+size_t stuff(const uint8_t * readPtr, size_t size, uint8_t * output) {
     size_t chunkRead = 0;
     uint8_t* writePtr = output;
     uint8_t* codePtr = output;
@@ -50,7 +51,8 @@ size_t stuff(const uint8_t * restrict readPtr, size_t size, uint8_t * restrict o
  * error unstuffing buffer.
  * No zero bytes allowed in buffer pointed to by "readPtr".
  */
-size_t unstuff(const uint8_t* restrict readPtr, size_t size, uint8_t* restrict output)
+inline
+size_t unstuff(const uint8_t* readPtr, size_t size, uint8_t* output)
 {
     const uint8_t* end = readPtr + size;
     uint8_t* writePtr = output;

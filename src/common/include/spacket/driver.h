@@ -1,20 +1,15 @@
 #pragma once
 
-#include <spacket/queue.h>
 #include <spacket/buffer.h>
 
-struct Driver {
-    using Queue = QueueT<Buffer>;
 
-    virtual void start(Queue& rxCompleteQueue, Queue& txCompleteQueue) = 0;
-
-    virtual Queue& rxRequestQueue() = 0;
-
-    virtual Queue& txRequestQueue() = 0;
-
-    virtual void stop() = 0;
-
-    virtual void lock() = 0;
-
-    virtual void unlock() = 0;
+struct Driver2 {
+    virtual ~Driver2() {}
+    virtual void start() = 0;
+    virtual Result<Void> serviceRx() = 0;
+    virtual bool rxReady() = 0;
+    virtual Result<Buffer> rx() = 0;
+    virtual Result<Void> serviceTx() = 0;
+    virtual bool txReady() = 0;
+    virtual Result<Void> tx(Buffer&& b) = 0;
 };
