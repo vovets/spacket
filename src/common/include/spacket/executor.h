@@ -7,8 +7,6 @@
 
 struct ExecutorI {
     virtual Result<Void> defer(DeferredProc&& dp) = 0;
-    // returns true if there are more to execute
-    virtual Result<bool> executeOne() = 0;
     virtual ~ExecutorI() {}
 };
 
@@ -18,8 +16,9 @@ class ExecutorT: public ExecutorI {
     
     Ring ring;
 
+public:
     // returns true if there are more to execute
-    Result<bool> executeOne() override {
+    Result<bool> executeOne() {
         if (!ring.empty()) {
             cpm::dpl("ExecutorT::executeOne|exec");
             DeferredProc dp = std::move(ring.tail());
@@ -30,6 +29,7 @@ class ExecutorT: public ExecutorI {
         return ok(false);
     }   
 
+private:
     Result<Void> defer(DeferredProc&& dp) override {
         if (!ring.put(dp)) {
             return {toError(ErrorCode::ExecutorRingFull)};

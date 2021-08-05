@@ -12,7 +12,8 @@ struct BottomModule: public Module {
     {
     }
 
-    Result<Void> service() {
+    template <typename Executor>
+    Result<Void> service(Executor& executor) {
         return
         driver.serviceRx() >
         [&]() {
@@ -27,7 +28,7 @@ struct BottomModule: public Module {
         } >
         [&]() {
             for (;;) {
-                auto r = executor().executeOne();
+                auto r = executor.executeOne();
                 if (isFail(r)) { return fail(getFailUnsafe(r)); }
                 bool thereAreMore = getOkUnsafe(r);
                 if (!thereAreMore) { return ok(); }

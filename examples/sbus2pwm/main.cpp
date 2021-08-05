@@ -101,6 +101,6 @@ int main() {
     pwmStart(&PWMD1, &pwmConfig);
 
     for (;;) {
-        bottom.service() <= logError;
+        bottom.service(executor) <= logError;
     }
 }

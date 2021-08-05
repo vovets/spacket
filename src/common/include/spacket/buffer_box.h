@@ -2,6 +2,8 @@
 
 #include <spacket/buffer.h>
 
+#include <boost/optional.hpp>
+
 using BufferBox = std::optional<Buffer>;
 
 Buffer extract(BufferBox& bb) {

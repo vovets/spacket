@@ -84,7 +84,7 @@ int main(void) {
     driver.start();
 
     for (;;) {
-        bottom.service() >
+        bottom.service(executor) >
         [&] { return endpoint0.read(); } >=
             [&] (Buffer&& b) {
             return
