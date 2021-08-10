@@ -86,7 +86,7 @@ struct Decoder: Module {
     explicit Decoder(alloc::Allocator& allocator): allocator(allocator) {}
     
     Result<Void> up(Buffer&& buffer) override {
-        cpm::dpl("SbusDecoder::up|");
+        cpm::dpb("SbusDecoder::up|", &buffer);
         return
         Buffer::create(allocator, sizeof(Packet)) >=
         [&] (Buffer&& dest) {

@@ -10,7 +10,10 @@ class NewAllocator: public alloc::Allocator {
 public:
     std::size_t maxSize() const override { return 65536; }
     
-    Result<void*> allocate() override {
+    Result<void*> allocate(std::size_t size, std::size_t /*align*/) override {
+        if (size > maxSize()) {
+            return fail<void*>(toError(ErrorCode::NewAllocatorTooBig));
+        }
         return ok(::operator new[](maxSize()));
     }
 

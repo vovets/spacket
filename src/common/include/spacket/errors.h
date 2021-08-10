@@ -22,7 +22,7 @@
     X(ID(SerialDeviceAlreadyOpened), CODE(405),   SEP())  \
     X(ID(BufferCreateTooBig),        CODE(500),   SEP())  \
     X(ID(CobsBadEncoding),           CODE(600),   SEP())  \
-    X(ID(PoolAllocatorObjectTooBig), CODE(700),   SEP())  \
+    X(ID(PoolAllocatorTooBig),       CODE(700),   SEP())  \
     X(ID(ChMsgTimeout),              CODE(800),   SEP())  \
     X(ID(ChMsgReset),                CODE(801),   SEP())  \
     X(ID(PacketizerOverflow),        CODE(900),   SEP())  \
@@ -49,6 +49,10 @@
     X(ID(Driver2RxNotReady),         CODE(1900),  SEP())  \
     X(ID(Driver2TxNotReady),         CODE(1901),  SEP())  \
     X(ID(ExecutorRingFull),          CODE(2000),  SEP())  \
+    X(ID(StaticPoolAllocatorTooBig), CODE(3000),  SEP())  \
+    X(ID(StaticPoolAllocatorBadAlign), CODE(3001),  SEP())  \
+    X(ID(StaticPoolAllocatorOutOfMem), CODE(3002),  SEP())  \
+    X(ID(NewAllocatorTooBig),        CODE(4000),  SEP())  \
     X(ID(LastCode),                  CODE(10000),)
 #endif
 

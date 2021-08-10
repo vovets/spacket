@@ -14,22 +14,6 @@ namespace buffer_impl {
 
 struct TypeId {};
 
-struct Header {
-    uint16_t size;
-    uint8_t refCnt;
-
-    Header(uint16_t size): size(size), refCnt(0) {}
-
-} __attribute__((packed));
-
-inline
-constexpr size_t headerSize() { return sizeof(Header) + sizeof(alloc::Object); }
-
-inline
-constexpr size_t allocSize(size_t dataSize) {
-    return dataSize + headerSize();
-}
-
 struct BufferDebug {
 
 #define PREFIX()
@@ -44,40 +28,49 @@ IMPLEMENT_DPX_FUNCTIONS_NOP
 
 };
 
+struct Data {
+    using SizeType = uint16_t;
+
+    alloc::Allocator& allocator;
+    SizeType size;
+};
+
+constexpr std::size_t dataSize = sizeof(Data);
+
+constexpr std::size_t allocSize(std::size_t bufferSize) {
+    return bufferSize + dataSize;
+}
+
 } // buffer_impl
 
-class Buffer: private buffer_impl::BufferDebug {
-private:
-    struct Storage: alloc::Object {
-        buffer_impl::Header header;
-        uint8_t buffer[];
-    };
 
+class Buffer: private buffer_impl::BufferDebug {
 public:
     using TypeId = buffer_impl::TypeId;
 
 private:
-    using StoragePtr = Storage*;
+    buffer_impl::Data* data;
 
-private:
-    StoragePtr storage;
+    std::uint8_t* buffer() { return reinterpret_cast<std::uint8_t*>(data) + buffer_impl::dataSize; }
+    const std::uint8_t* buffer() const {
+        return reinterpret_cast<const std::uint8_t*>(data) + buffer_impl::dataSize;
+    }
 
 public:
     static std::size_t maxSize(alloc::Allocator& allocator) {
         return
         std::min(
             allocator.maxSize(),
-            static_cast<std::size_t>(std::numeric_limits<decltype(buffer_impl::Header::size)>::max()))
-        - buffer_impl::headerSize();
+            static_cast<std::size_t>(std::numeric_limits<buffer_impl::Data::SizeType>::max()))
+        - buffer_impl::dataSize;
     }
 
     std::size_t maxSize() {
-        auto& allocator = alloc::registry().allocator(storage);
-        return maxSize(allocator);
+        return maxSize(data->allocator);
     }
 
     alloc::Allocator& allocator() {
-        return alloc::registry().allocator(storage);
+        return data->allocator;
     }
 
     static Result<Buffer> create(alloc::Allocator& allocator);
@@ -103,141 +96,133 @@ public:
     const uint8_t* begin() const;
     const uint8_t* end() const;
     size_t size() const;
-    void* id() const { return storage; }
+    void* id() const { return data; }
     
     Result<Buffer> prefix(size_t size) const;
     Result<Buffer> suffix(uint8_t* begin) const;
     Result<Buffer> copy() const { return prefix(size()); }
 
 private:
-    Buffer(StoragePtr&& data);
+    Buffer(buffer_impl::Data*& data);
 
     void deallocate() {
-        alloc::registry().allocator(storage).deallocateObject(storage);
-        storage = nullptr;
-    }
-
-    static auto toHeaderSize(size_t size) {
-        return static_cast<decltype(buffer_impl::Header::size)>(size);
+        data->allocator.deallocate(data);
+        data = nullptr;
     }
 };
 
 inline
-Buffer::Buffer(StoragePtr&& storage)
-    : storage(std::move(storage)) {
-    dpl("buffer: ctor: %p", this->storage);
+Buffer::Buffer(buffer_impl::Data*& src)
+    : data(src) {
+    src = nullptr;
+    dpl("buffer: ctor: %p", this->data);
 }
 
 inline
 Buffer::~Buffer() {
-    dpl("buffer: dtor: %p", this->storage);
-    if (storage != nullptr) {
+    dpl("buffer: dtor: %p", this->data);
+    if (data != nullptr) {
         deallocate();
     }
 }
 
 inline
 Result<Buffer> Buffer::create(alloc::Allocator& allocator) {
-    returnOnFailT(p, Buffer, allocator.allocateObject());
-    Storage* s = static_cast<Storage*>(p);
-    s->header = { toHeaderSize(allocator.maxSize() - buffer_impl::headerSize()) };
-    return ok(Buffer(StoragePtr(s)));
+    return create(allocator, Buffer::maxSize(allocator));
 }
 
 inline
-Result<Buffer> Buffer::create(alloc::Allocator& allocator, size_t size) {
-    if (size > (allocator.maxSize() - buffer_impl::headerSize())) {
+Result<Buffer> Buffer::create(alloc::Allocator& allocator, std::size_t size) {
+    if (size > maxSize(allocator)) {
         return fail<Buffer>(toError(ErrorCode::BufferCreateTooBig));
     }
-    returnOnFailT(p, Buffer, allocator.allocateObject());
-    Storage* s = static_cast<Storage*>(p);
-    s->header = { toHeaderSize(size) };
-    return ok(Buffer(StoragePtr(s)));
+    returnOnFailT(p, Buffer, alloc::allocate<buffer_impl::Data>(allocator, size));
+    buffer_impl::Data* s = new (p) buffer_impl::Data{allocator, static_cast<buffer_impl::Data::SizeType>(size)};
+    return ok(Buffer(s));
 }
 
 inline
 Result<Buffer> Buffer::create(alloc::Allocator& allocator, std::initializer_list<std::uint8_t> l) {
-    if (l.size() > (allocator.maxSize() - buffer_impl::headerSize())) {
+    if (l.size() > (maxSize(allocator))) {
         return fail<Buffer>(toError(ErrorCode::BufferCreateTooBig));
     }
-    returnOnFailT(p, Buffer, allocator.allocateObject());
-    Storage* s = static_cast<Storage*>(p);
-    s->header = { toHeaderSize(l.size()) };
-    Buffer r{StoragePtr(s)};
+    returnOnFailT(p, Buffer, alloc::allocate<buffer_impl::Data>(allocator, l.size()));
+    buffer_impl::Data* s = new (p) buffer_impl::Data{allocator, static_cast<buffer_impl::Data::SizeType>(l.size())};
+    Buffer r(s);
     std::memcpy(r.begin(), l.begin(), l.size());
     return ok(std::move(r));
 }
 
 inline
 Result<Buffer> Buffer::create(alloc::Allocator& allocator, std::vector<std::uint8_t> v) {
-    if (v.size() > (allocator.maxSize() - buffer_impl::headerSize())) {
+    if (v.size() > (maxSize(allocator))) {
         return fail<Buffer>(toError(ErrorCode::BufferCreateTooBig));
     }
-    returnOnFailT(p, Buffer, allocator.allocateObject());
-    Storage* s = static_cast<Storage*>(p);
-    s->header = { toHeaderSize(v.size()) };
-    Buffer r{StoragePtr(s)};
+    returnOnFailT(p, Buffer, alloc::allocate<buffer_impl::Data>(allocator, v.size()));
+    buffer_impl::Data* s = new (p) buffer_impl::Data{allocator, static_cast<buffer_impl::Data::SizeType>(v.size())};
+    Buffer r(s);
     std::memcpy(r.begin(), &v.front(), v.size());
     return ok(std::move(r));
 }
 
 inline
 Buffer::Buffer(Buffer&& toMove) noexcept
-    : storage(std::move(toMove.storage)) {
-    dpl("buffer: move ctor: %p", storage);
-    toMove.storage = nullptr;
+    : data(toMove.data) {
+    dpl("buffer: move ctor: %p", data);
+    toMove.data = nullptr;
 }
 
 inline
 Buffer& Buffer::operator=(Buffer&& toMove) noexcept {
-    storage = std::move(toMove.storage);
-    toMove.storage = nullptr;
-    dpl("buffer: move asgn: %p", storage);
+    if (data) {
+        deallocate();
+    }
+    data = toMove.data;
+    toMove.data = nullptr;
+    dpl("buffer: move asgn: %p", data);
     return *this;
 }
 
 inline
-uint8_t* Buffer::begin() {
-    return storage->buffer;
+std::uint8_t* Buffer::begin() {
+    return buffer();
 }
 
 inline
-uint8_t* Buffer::end() {
-    return storage->buffer + size();
+std::uint8_t* Buffer::end() {
+    return buffer() + size();
 }
 
 inline
-void Buffer::resize(size_t n) {
-    storage->header.size = toHeaderSize(std::min(n, maxSize()));
+void Buffer::resize(std::size_t n) {
+    data->size = static_cast<buffer_impl::Data::SizeType>(std::min(n, maxSize()));
 }
 
 inline
-const uint8_t* Buffer::begin() const {
-    return storage->buffer;
+const std::uint8_t* Buffer::begin() const {
+    return buffer();
 }
 
 inline
-const uint8_t* Buffer::end() const {
-    return storage->buffer + size();
+const std::uint8_t* Buffer::end() const {
+    return buffer() + size();
 }
 
 inline
-size_t Buffer::size() const {
-    return storage->header.size;
+std::size_t Buffer::size() const {
+    return data->size;
 }
 
 inline
 Result<Buffer> Buffer::prefix(size_t n) const {
-    alloc::Allocator& allocator = alloc::registry().allocator(storage);
-    returnOnFail(prefix, Buffer::create(allocator, std::min(n, size())));
+    returnOnFail(prefix, Buffer::create(data->allocator, std::min(n, size())));
     std::memcpy(prefix.begin(), begin(), prefix.size());
     return ok(std::move(prefix));
 }
 
 inline
 Result<Buffer> Buffer::suffix(uint8_t* begin) const {
-    alloc::Allocator& allocator = alloc::registry().allocator(storage);
-    returnOnFail(prefix, Buffer::create(allocator, end() - begin));
+    returnOnFail(prefix, Buffer::create(data->allocator, end() - begin));
     std::memcpy(prefix.begin(), begin, prefix.size());
     return ok(std::move(prefix));
 }
