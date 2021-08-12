@@ -47,12 +47,13 @@ using Multistack = MultistackT<Address, 2>;
 using Executor = ExecutorT<1>;
 
 Allocator allocator;
+ProcAllocator procAllocator;
 Executor executor;
 Driver_ driver(allocator, UARTD1);
-Stack stack(executor);
-BottomModule bottom(driver);
+Stack stack(executor, procAllocator);
+BottomModule bottom(driver, procAllocator);
 Loopback loopback;
-Multistack multistack;
+Multistack multistack(procAllocator);
 PacketizerModule packetizer(allocator);
 CobsModule cobsModule;
 CrcModule crcModule;

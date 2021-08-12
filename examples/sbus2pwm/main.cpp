@@ -52,8 +52,6 @@ void process(const Buffer& buffer) {
     pwmEnableChannel(pwmDriver, pwmChannel, width);
 }
 
-Allocator allocator;
-
 struct Top: Module {
     Result<Void> up(Buffer&& b) override {
         cpm::dpl("Bottom::up|");
@@ -67,26 +65,33 @@ struct Top: Module {
     }
 };
 
+
+Storage<BufferAllocator> bufferAllocatorStorage;
+Storage<ProcAllocator> procAllocatorStorage;
+
 int main() {
     halInit();
     chSysInit();
 
+    BufferAllocator& bufferAllocator = *new (&bufferAllocatorStorage) BufferAllocator;
+    ProcAllocator& procAllocator = *new (&procAllocatorStorage) ProcAllocator;
+
     chprintf(&rttStream, "RTT ready\r\n");
-    chprintf(&rttStream, "Buffer::maxSize(): %d\r\n", Buffer::maxSize(allocator));
+    chprintf(&rttStream, "Buffer::maxSize(): %d\r\n", Buffer::maxSize(bufferAllocator));
     chprintf(&rttStream, "sizeof(Buffer): %d\r\n", sizeof(Buffer));
     chprintf(&rttStream, "sizeof(DeferredProc): %d\r\n", sizeof(DeferredProc));
     chprintf(&rttStream, "sizeof(Packet): %d\r\n", sizeof(sbus::Packet));
 
-    Uart2 uart(allocator, UARTD1);
+    Uart2 uart(bufferAllocator, UARTD1);
     uart.setBaud(100000);
     uart.setParity(Uart2::Parity::Even);
     uart.setStopBits(Uart2::StopBits::B_2);
     uart.start();
 
     Executor executor;
-    Stack stack(executor);
-    sbus::Decoder decoder(allocator);
-    BottomModule bottom(uart);
+    Stack stack(executor, procAllocator);
+    sbus::Decoder decoder(bufferAllocator);
+    BottomModule bottom(uart, procAllocator);
     Top top;
 
     stack.push(bottom);

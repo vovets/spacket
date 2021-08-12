@@ -41,7 +41,7 @@ class MultistackT: public Module {
 
         Slot(Multistack& multistack, const Address& address)
             : multistack(multistack)
-            , stack(multistack.executor())
+            , stack(multistack.executor(), multistack.procAllocator)
             , address(address)
         {
             stack.push(*this);
@@ -72,6 +72,7 @@ class MultistackT: public Module {
     
     SlotsStorage slotsStorage;
     std::size_t firstFree = 0;
+    alloc::Allocator& procAllocator;
 
     Slot& at(std::size_t index) {
         return *reinterpret_cast<Slot*>(&slotsStorage[index]);
@@ -90,6 +91,8 @@ class MultistackT: public Module {
     }
 
 public:
+    MultistackT(alloc::Allocator& procAllocator): procAllocator(procAllocator) {}
+
     void push(const Address& address, Module& module) {
         Slot& slot = findOrCreate(address);
         slot.stack.push(module);

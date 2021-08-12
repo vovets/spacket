@@ -41,4 +41,9 @@ Result<T*> allocate(Allocator& allocator, std::size_t size) {
     };
 }
 
+template<typename T>
+Result<T*> allocate(Allocator& allocator) {
+    return allocate<T>(allocator, sizeof(T));
+}
+
 } // alloc

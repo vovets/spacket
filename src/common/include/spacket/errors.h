@@ -46,6 +46,7 @@
     X(ID(StackNoUpperModule),        CODE(1601),  SEP())  \
     X(ID(AddressNoRoom),             CODE(1700),  SEP())  \
     X(ID(MallocAllocatorOutOfMem),   CODE(1800),  SEP())  \
+    X(ID(MallocAllocatorTooBig),     CODE(1801),  SEP())  \
     X(ID(Driver2RxNotReady),         CODE(1900),  SEP())  \
     X(ID(Driver2TxNotReady),         CODE(1901),  SEP())  \
     X(ID(ExecutorRingFull),          CODE(2000),  SEP())  \

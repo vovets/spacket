@@ -6,9 +6,11 @@
 
 struct BottomModule: public Module {
     Driver2& driver;
+    alloc::Allocator& procAllocator;
 
-    BottomModule(Driver2& driver)
+    BottomModule(Driver2& driver, alloc::Allocator& procAllocator)
         : driver(driver)
+        , procAllocator(procAllocator)
     {
     }
 
@@ -47,12 +49,15 @@ struct BottomModule: public Module {
         cpm::dpb("Bottom::down|", &b);
         if (!driver.txReady()) {
             return
-            executor().defer(
-                DeferredProc(
-                    [&,buffer=std::move(b)] () mutable {
-                        return this->down(std::move(buffer));
-                    }
-                ));
+            DeferredProc::create(
+                procAllocator,
+                [&,buffer=std::move(b)] () mutable {
+                    return this->down(std::move(buffer));
+                }
+            ) >=
+            [&](DeferredProc&& p) {
+                return executor().defer(std::move(p));
+            };
         }
         return
         driver.serviceTx()

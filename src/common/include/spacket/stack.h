@@ -12,9 +12,12 @@
 class Stack: StackOps {
     ModuleList moduleList;
     ExecutorI& executor;
+    alloc::Allocator& procAllocator;
 
 public:
-    Stack(ExecutorI& executor): executor(executor)
+    Stack(ExecutorI& executor, alloc::Allocator& procAllocator)
+        : executor(executor)
+        , procAllocator(procAllocator)
     {
     }
 
@@ -32,12 +35,16 @@ private:
         if (it == moduleList.rend()) {
             return fail(toError(ErrorCode::StackNoLowerModule));
         }
-        auto dp = DeferredProc(
+        return
+        DeferredProc::create(
+            procAllocator,
             [&,buffer=std::move(b),module=&(*it)] () mutable {
                 return module->down(std::move(buffer));
             }
-        );
-        return executor.defer(std::move(dp));
+        ) >=
+        [&](DeferredProc&& p) {
+            return executor.defer(std::move(p));
+        };
     }
     
     Result<Void> deferUp(Module& m, Buffer&& b) override {
@@ -45,11 +52,15 @@ private:
         if (it == moduleList.end()) {
             return fail(toError(ErrorCode::StackNoUpperModule));
         }
-        auto dp = DeferredProc(
+        return
+        DeferredProc::create(
+            procAllocator,
             [&,buffer=std::move(b),module=&(*it)] () mutable {
                 return module->up(std::move(buffer));
             }
-        );
-        return executor.defer(std::move(dp));
+        ) >=
+        [&](DeferredProc&& p) {
+            return executor.defer(std::move(p));
+        };
     }    
 };
