@@ -57,6 +57,7 @@ struct Result {
 
     Result(Result&& source) {
         constructFrom(source);
+        source.isOk_ = false;
     }
 
     void swap(Result& other) {
