@@ -43,22 +43,28 @@ std::uint16_t decode3(std::uint16_t a, std::uint16_t b, std::uint16_t c, std::ui
     return ((a >> rshift) | (b << (8 - rshift)) | (c << (8 + 8 - rshift))) & Packet::channelMax;
 }
 
-std::uint16_t decodeA(const std::uint8_t d[], std::uint8_t rshift) {
-    if (8 - rshift < (Packet::channelBits - 8)) {
-        return decode2(d[0], d[1], rshift);
-    }
+template <std::uint8_t nBytes>
+std::uint16_t decodeT(const std::uint8_t d[], std::uint8_t rshift);
+
+template <>
+std::uint16_t decodeT<2>(const std::uint8_t d[], std::uint8_t rshift) {
+    return decode2(d[0], d[1], rshift);
+}
+
+template <>
+std::uint16_t decodeT<3>(const std::uint8_t d[], std::uint8_t rshift) {
     return decode3(d[0], d[1], d[2], rshift);
 }
 
 void decode(const std::uint8_t* data, std::uint16_t* channels) {
-    channels[0] = decodeA(data, 0);
-    channels[1] = decodeA(data + 1, 3);
-    channels[2] = decodeA(data + 2, 6);
-    channels[3] = decodeA(data + 4, 1);
-    channels[4] = decodeA(data + 5, 4);
-    channels[5] = decodeA(data + 6, 7);
-    channels[6] = decodeA(data + 8, 2);
-    channels[7] = decodeA(data + 9, 5);
+    channels[0] = decodeT<2>(data + 0, 0);
+    channels[1] = decodeT<2>(data + 1, 3);
+    channels[2] = decodeT<3>(data + 2, 6);
+    channels[3] = decodeT<2>(data + 4, 1);
+    channels[4] = decodeT<2>(data + 5, 4);
+    channels[5] = decodeT<3>(data + 6, 7);
+    channels[6] = decodeT<2>(data + 8, 2);
+    channels[7] = decodeT<2>(data + 9, 5);
 }
 
 Result<Buffer> decode(const Buffer& source, Buffer dest) {
