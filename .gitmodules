@@ -11,3 +11,6 @@
 [submodule "external/pycrc"]
 	path = external/pycrc
 	url = https://github.com/tpircher/pycrc.git
+[submodule "external/printf"]
+	path = external/printf
+	url = git@github.com:eyalroz/printf.git
