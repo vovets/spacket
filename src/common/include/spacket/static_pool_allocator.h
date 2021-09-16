@@ -2,16 +2,18 @@
 
 #include <spacket/allocator.h>
 
+#include <cstddef>
 
-template <std::size_t SIZE, std::size_t ALIGN, std::size_t NUM_OBJECTS>
+
+template <std::size_t OBJECT_SIZE, std::size_t NUM_OBJECTS, std::size_t ALIGN = alignof(std::max_align_t)>
 class StaticPoolAllocatorT: public alloc::Allocator {
     struct FreeListNode {
         FreeListNode* next;
     };
     
-    static_assert(SIZE >= sizeof(FreeListNode) && ALIGN >= alignof(FreeListNode));
+    static_assert(OBJECT_SIZE >= sizeof(FreeListNode) && ALIGN >= alignof(FreeListNode));
 
-    using ObjectStorage = std::aligned_storage_t<SIZE, ALIGN>;
+    using ObjectStorage = std::aligned_storage_t<OBJECT_SIZE, ALIGN>;
     using Array = std::array<ObjectStorage, NUM_OBJECTS>;
 
     Array data;
@@ -29,15 +31,24 @@ public:
     }
 
     Result<void*> allocate(std::size_t size, std::size_t align) override {
-        if (size > SIZE) {
+        if (size > OBJECT_SIZE) {
+#ifdef SPACKET_STATIC_POOL_ALLOCATOR_ALL_ERRORS_FATAL
+            FATAL_ERROR("StaticPoolAllocatorTooBig");
+#endif
             return fail<void*>(
                 toError(ErrorCode::StaticPoolAllocatorTooBig));
         }
         if (align > ALIGN) {
+#ifdef SPACKET_STATIC_POOL_ALLOCATOR_ALL_ERRORS_FATAL
+            FATAL_ERROR("StaticPoolAllocatorBadAlign");
+#endif
             return fail<void*>(
                 toError(ErrorCode::StaticPoolAllocatorBadAlign));
         }
         if (freeListHead == nullptr) {
+#ifdef SPACKET_STATIC_POOL_ALLOCATOR_ALL_ERRORS_FATAL
+            FATAL_ERROR("StaticPoolAllocatorOutOfMem");
+#endif
             return fail<void*>(
                 toError(ErrorCode::StaticPoolAllocatorOutOfMem));
         }
@@ -53,6 +64,6 @@ public:
     }
 
     std::size_t maxSize() const override {
-        return SIZE;
+        return OBJECT_SIZE;
     }
 };
