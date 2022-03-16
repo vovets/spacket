@@ -42,6 +42,8 @@
     X(ID(ModuleRxEmpty),             CODE(1501),  SEP())  \
     X(ID(ModuleNoModules),           CODE(1502),  SEP())  \
     X(ID(ModuleTxQueueFull),         CODE(1503),  SEP())  \
+    X(ID(ModuleNotImplemented),      CODE(1504),  SEP())  \
+    X(ID(ModuleOperationInProgress), CODE(1505),  SEP())  \
     X(ID(StackNoLowerModule),        CODE(1600),  SEP())  \
     X(ID(StackNoUpperModule),        CODE(1601),  SEP())  \
     X(ID(AddressNoRoom),             CODE(1700),  SEP())  \

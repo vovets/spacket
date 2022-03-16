@@ -1,22 +1,20 @@
 #pragma once
 
 #include <spacket/errors.h>
+#include <spacket/debug_print.h>
 
 #include "ch.h"
-#include "hal_streams.h"
-#include "chprintf.h"
 
 #include <array>
 
 
-// this should be defined by the app
-extern BaseSequentialStream* errorStream;
-
 namespace impl {
 
 void logError(Error e) {
+    dbg::ArrayOut<128> out;
     std::array<char, 12> buffer;
-    chprintf(errorStream, "E|%s|%s\r\n", Thread::getName(), toString(e, buffer.data(), buffer.size()));
+    oprintf(out, "E|%s|%s\r\n", chRegGetThreadNameX(chThdGetSelfX()), toString(e, buffer.data(), buffer.size()));
+    dbg::write(out);
 }
 
 } // impl

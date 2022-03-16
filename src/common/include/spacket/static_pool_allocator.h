@@ -10,10 +10,11 @@ class StaticPoolAllocatorT: public alloc::Allocator {
     struct FreeListNode {
         FreeListNode* next;
     };
-    
-    static_assert(OBJECT_SIZE >= sizeof(FreeListNode) && ALIGN >= alignof(FreeListNode));
 
-    using ObjectStorage = std::aligned_storage_t<OBJECT_SIZE, ALIGN>;
+    constexpr static std::size_t minAlign = alignof(FreeListNode);
+    constexpr static std::size_t align = std::max(ALIGN, minAlign);
+
+    using ObjectStorage = std::aligned_storage_t<OBJECT_SIZE, align>;
     using Array = std::array<ObjectStorage, NUM_OBJECTS>;
 
     Array data;
@@ -24,7 +25,7 @@ class StaticPoolAllocatorT: public alloc::Allocator {
             deallocate(&o);
         }
     }
-    
+
 public:
     StaticPoolAllocatorT(): freeListHead(nullptr) {
         init();

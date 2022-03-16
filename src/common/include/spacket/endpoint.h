@@ -1,43 +1,14 @@
 #pragma once
 
-#include <spacket/queue.h>
 #include <spacket/module.h>
 
 
-inline
-Buffer extract(boost::optional<Buffer>& opt) {
-    if (!opt) { FATAL_ERROR("extract"); }
-    Buffer tmp = std::move(*opt);
-    opt = {};
-    return tmp;
-}
-
-template <typename Buffer>
-struct BufferBoxT: public QueueT<Buffer> {
-    boost::optional<Buffer> buffer;
-
-    void operator delete(void*, std::size_t) {}
-
-    bool put(Buffer& b) override {
-        if (buffer) { return false; }
-        buffer = std::move(b);
-        return true;
-    }
-
-    bool canPut() const override {
-        return !buffer;
-    }
-};
-
 struct Endpoint: Module {
-    BufferBoxT<Buffer> readBox;
+    ReadOperation::Ptr readOp;
 
-    Result<Void> up(Buffer&& b_) override {
+    Result<Void> up(Buffer&& b) override {
         cpm::dpl("Endpoint::up|");
-        Buffer b = std::move(b_);
-        if (!readBox.put(b)) {
-            return { toError(ErrorCode::ModulePacketDropped) };
-        }
+        readCompleted(std::move(b));
         return ok();
     }
     
@@ -46,16 +17,39 @@ struct Endpoint: Module {
         return deferDown(std::move(b));
     }
 
-    Result<Buffer> read() {
-        if (readBox.buffer) {
-            cpm::dpb("Endpoint::read|", &*readBox.buffer);
-            return ok(extract(readBox.buffer));
+    Result<Void> read(ReadCompletionFunc completion) override {
+        cpm::dpl("Endpoint::read|");
+        if (readOp) {
+            return fail(toError(ErrorCode::ModuleOperationInProgress));
         }
-        return { toError(ErrorCode::Timeout) };
+        return
+        createReadOperation(std::move(completion)) >=
+        [&](ReadOperation::Ptr&& op) {
+            return
+            createFunction<ReadCompletionSig>(
+                [&](Result<Buffer>&& r) {
+                    return this->readCompleted(std::move(r));
+                }
+            ) >=
+            [&](ReadCompletionFunc&& innerCompletion) {
+                return
+                ops().lower(*this) >=
+                [&](Module* m) {
+                    readOp = std::move(op);
+                    return m->read(std::move(innerCompletion));
+                };
+            };
+        };
     }
 
-    Result<Void> write(Buffer b) {
-        cpm::dpb("Endpoint::write|", &b);
-        return deferDown(std::move(b));
+    Result<Void> readCompleted(Result<Buffer> result) {
+        if (!readOp) { FATAL_ERROR("Endpoint::readCompleted"); return ok(); }
+        return completeReadOperation(std::move(readOp), std::move(result));
+    }
+    
+    Result<Void> write(FunctionT<WriteCompletionSig> completion) {
+        cpm::dpl("Endpoint::write|");
+        (void)completion;
+        return ok();
     }
 };

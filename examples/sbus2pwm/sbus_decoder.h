@@ -87,27 +87,63 @@ Result<Buffer> decode(const Buffer& source, Buffer dest) {
 }
 
 struct Decoder: Module {
-    alloc::Allocator& allocator;
+    ReadOperation::Ptr readOp;
 
-    explicit Decoder(alloc::Allocator& allocator): allocator(allocator) {}
-    
-    Result<Void> up(Buffer&& buffer) override {
-        cpm::dpb("SbusDecoder::up|", &buffer);
+    Decoder(
+        alloc::Allocator& bufferAllocator,
+        alloc::Allocator& funcAllocator,
+        ExecutorI& executor
+    )
+    : Module(bufferAllocator, funcAllocator, executor) {}
+
+    Result<Void> read(ReadCompletionFunc&& completion) override {
+        cpm::dpl("SbusDecoder::read|");
+        if (readOp) {
+            return ::toError(::ErrorCode::ModuleOperationInProgress);
+        }
         return
-        Buffer::create(allocator, sizeof(Packet)) >=
-        [&] (Buffer&& dest) {
+        ReadOperation::create(funcAllocator(), std::move(completion)) >=
+        [&](ReadOperation::Ptr&& op) {
             return
-            decode(buffer, std::move(dest)) >=
-            [&] (Buffer&& decoded) {
-                return deferUp(std::move(decoded));
+            ops().lower(*this) >=
+            [&](Module* m) {
+                return
+                createFunction<ReadCompletionSig>(
+                    [&](Result<Buffer>&& result) {
+                        return this->readCompleted(std::move(result));
+                    }
+                ) >=
+                [&](ReadCompletionFunc&& innerCompletion) {
+                    readOp = std::move(op);
+                    return m->read(std::move(innerCompletion));
+                };
             };
         };
     }
 
-    Result<Void> down(Buffer&&) override {
-        cpm::dpl("SbusDecoder::down|");
-        return { ::toError(::ErrorCode::ModulePacketDropped) };
-    }
+    Result<Void> readCompleted(Result<Buffer>&& r) {
+        if (!readOp) {
+            return ok();
+        }
+        return
+        std::move(r) >=
+        [&](Buffer&& buffer) {
+            return
+            Buffer::create(bufferAllocator(), sizeof(Packet)) >=
+            [&] (Buffer&& dest) {
+                return
+                decode(std::move(buffer), std::move(dest)) >=
+                [&] (Buffer&& decoded) {
+                    return
+                    deferOperationCompletion<ReadOperation>(std::move(readOp), ok(std::move(decoded)));
+                } <=
+                [&](Error e) {
+                    return
+                    deferOperationCompletion<ReadOperation>(std::move(readOp), fail<Buffer>(e));
+                };
+            };
+        };
+    }  
 };
 
 } // sbus

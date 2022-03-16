@@ -6,61 +6,89 @@
 
 struct BottomModule: public Module {
     Driver2& driver;
-    alloc::Allocator& procAllocator;
+    ReadOperation::Ptr readOp;
+    WriteOperation::Ptr writeOp;
 
-    BottomModule(Driver2& driver, alloc::Allocator& procAllocator)
-        : driver(driver)
-        , procAllocator(procAllocator)
-    {
+    BottomModule(
+        alloc::Allocator& bufferAllocator,
+        alloc::Allocator& funcAllocator,
+        ExecutorI& executor,
+        Driver2& driver
+    )
+    : Module(bufferAllocator, funcAllocator, executor)
+    , driver(driver)
+    {}
+
+    Result<Void> deferPoll() {
+        return defer([&]() { return this->poll(); });
     }
 
-    template <typename Executor>
-    Result<Void> service(Executor& executor) {
+    Result<Void> poll() {
+        Driver2::Events events = driver.poll();
+        if (events.has(Driver2::Event::RX_NEEDS_SERVICE)) { driver.serviceRx() <= logError; }
+        if (events.has(Driver2::Event::TX_NEEDS_SERVICE)) { driver.serviceTx() <= logError; }
+        if (events.has(Driver2::Event::RX_READY)) { completeRead() <= logError; }
+        if (events.has(Driver2::Event::TX_READY)) { completeWrite() <= logError; }
+        return deferPoll();
+    }
+
+    Result<Void> completeRead() {
+        if (!readOp) {
+            cpm::dpl("BottomModule::completeRead|drop");
+            driver.rx();
+            return driver.serviceRx();
+        }
+        auto r = driver.rx();
+        cpm::dpl("BottomModule::completeRead|completing");
         return
-        driver.serviceRx() >
-        [&]() {
-            if (driver.rxReady()) {
-                return
-                driver.rx() >=
-                [&](Buffer&& b) {
-                    return up(std::move(b));
-                };
-            }
-            return ok();
-        } >
-        [&]() {
-            for (;;) {
-                auto r = executor.executeOne();
-                if (isFail(r)) { return fail(getFailUnsafe(r)); }
-                bool thereAreMore = getOkUnsafe(r);
-                if (!thereAreMore) { return ok(); }
-            }
-            return ok();
-        };
-            
+        deferOperationCompletion<ReadOperation>(std::move(readOp), std::move(r)) >
+        [&]() { return driver.serviceRx(); };
     }
-    
-    Result<Void> up(Buffer&& b) override {
-        cpm::dpb("Bottom::up|", &b);
-        return deferUp(std::move(b));
+
+    Result<Void> completeWrite() {
+        if (!writeOp) {
+            return ok();
+        }
+        auto r = driver.tx(std::move(writeOp->buffer));
+        cpm::dpl("BottomModule::completeWrite|completing");
+        return
+        deferOperationCompletion<WriteOperation>(std::move(writeOp), std::move(r));
     }
-    
-    Result<Void> down(Buffer&& b) override {
-        cpm::dpb("Bottom::down|", &b);
-        if (!driver.txReady()) {
+
+    Result<Void> read(ReadCompletionFunc&& completion) override {
+        cpm::dpl("Bottom::read|");
+        if (driver.poll().has(Driver2::Event::RX_READY)) {
             return
-            DeferredProc::create(
-                procAllocator,
-                [&,buffer=std::move(b)] () mutable {
-                    return this->down(std::move(buffer));
-                }
-            ) >=
-            [&](DeferredProc&& p) {
-                return executor().defer(std::move(p));
+            driver.rx() >=
+            [&](Buffer&& b) {
+                return
+                deferReadCompletion(std::move(completion), std::move(b));
             };
         }
         return
-        driver.serviceTx()
-        > [&]() { return driver.tx(std::move(b)); };
+        ReadOperation::create(bufferAllocator(), std::move(completion)) >=
+        [&](ReadOperation::Ptr&& op) {
+            readOp = std::move(op);
+            return ok();
+        };
+    }
+
+    Result<Void> write(Buffer&& buffer, WriteCompletionFunc&& completion) override {
+        cpm::dpb("BottomModule::write|", &buffer);
+        if (driver.poll().has(Driver2::Event::TX_READY)) {
+            return
+            driver.tx(std::move(buffer)) >
+            [&]() {
+                cpm::dpl("BottomModule::write|completing");
+                return deferWriteCompletion(std::move(completion));
+            } >
+            [&]() { return driver.serviceTx(); };
+        }
+        return
+        WriteOperation::create(bufferAllocator(), std::move(completion), std::move(buffer)) >=
+        [&] (WriteOperation::Ptr&& op) {
+            writeOp = std::move(op);
+            return ok();
+        };
     }
 };

@@ -1,8 +1,6 @@
 #include "ch.h"
 #include "hal.h"
-#include "chprintf.h"
 
-#include "rtt_stream.h"
 #include "typedefs.h"
 #include "sbus_decoder.h"
 
@@ -10,6 +8,7 @@
 #include <spacket/bottom_module.h>
 #include <spacket/uart2.h>
 
+#include <spacket/action.h>
 
 namespace {
 
@@ -22,6 +21,28 @@ IMPLEMENT_DPL_FUNCTION_NOP
 #endif
 
 } // namespace
+
+struct BufferOut {
+    Buffer& buffer;
+    std::size_t writeIdx;
+    const std::size_t size;
+
+    BufferOut(Buffer& buffer): buffer(buffer), writeIdx(0), size(buffer.maxSize()) {}
+
+    static void out(char c, void* arg) {
+        static_cast<BufferOut*>(arg)->out_(c);
+    }
+
+    void out_(char c) {
+        if (writeIdx < size) {
+            buffer.begin()[writeIdx++] = c;
+        }
+    }
+
+    void resizeBuffer() {
+        buffer.resize(writeIdx);
+    }
+};
 
 using ChannelValue = sbus::Packet::ChannelValue;
 
@@ -37,75 +58,128 @@ ChannelValue norm(ChannelValue value) {
     return value - sbusMin;
 }
 
-void process(const Buffer& buffer) {
-    const sbus::Packet* packet = reinterpret_cast<const sbus::Packet*>(buffer.begin());
-    debugPrint("P %c %c", packet->frameLost ? 'L' : ' ', packet->failsafe ? 'F' : ' ');
-    for (std::size_t i = 0; i < sbus::Packet::numChannels; ++i) {
-        debugPrint(" %04d", packet->channels[i]);
-    }
-    debugPrintFinish();
+void updatePwm(const sbus::Packet& packet) {
     auto width = PWM_FRACTION_TO_WIDTH(
-        pwmDriver,
-        (sbusMax - sbusMin),
-        norm(packet->channels[sbusChannel]));
+            pwmDriver,
+            (sbusMax - sbusMin),
+            norm(packet.channels[sbusChannel]));
     dpl("W %d", width);
     pwmEnableChannel(pwmDriver, pwmChannel, width);
 }
 
-struct Top: Module {
-    Result<Void> up(Buffer&& b) override {
-        cpm::dpl("Bottom::up|");
-        process(b);
-        return ok();
-    }
-    
-    Result<Void> down(Buffer&&) override {
-        cpm::dpl("Top::down|");
-        return ok();
-    }
-};
-
+Result<Buffer> printPacket(const sbus::Packet& packet, alloc::Allocator& allocator) {
+    return
+    Buffer::create(allocator) >=
+    [&] (Buffer&& printBuffer) {
+        BufferOut bo(printBuffer);
+        oprintf(bo, "P %c %c", packet.frameLost ? 'L' : ' ', packet.failsafe ? 'F' : ' ');
+        for (std::size_t i = 0; i < sbus::Packet::numChannels; ++i) {
+            oprintf(bo, " %04d", packet.channels[i]);
+        }
+        oprintf(bo, "\r\n");
+        bo.resizeBuffer();
+        return ok(std::move(printBuffer));
+    };
+}
 
 Storage<BufferAllocator> bufferAllocatorStorage;
-Storage<ProcAllocator> procAllocatorStorage;
+Storage<FuncAllocator> funcAllocatorStorage;
+Storage<TxtBufferAllocator> txtBufferAllocatorStorage;
 
 int main() {
     halInit();
     chSysInit();
+    SEGGER_RTT_Init();
 
     BufferAllocator& bufferAllocator = *new (&bufferAllocatorStorage) BufferAllocator;
-    ProcAllocator& procAllocator = *new (&procAllocatorStorage) ProcAllocator;
+    FuncAllocator& funcAllocator = *new (&funcAllocatorStorage) FuncAllocator;
+    TxtBufferAllocator& txtBufferAllocator = *new (&txtBufferAllocatorStorage) TxtBufferAllocator;
 
-    chprintf(&rttStream, "RTT ready\r\n");
-    chprintf(&rttStream, "Buffer::maxSize(): %d\r\n", Buffer::maxSize(bufferAllocator));
-    chprintf(&rttStream, "sizeof(Buffer): %d\r\n", sizeof(Buffer));
-    chprintf(&rttStream, "sizeof(DeferredProc): %d\r\n", sizeof(DeferredProc));
-    chprintf(&rttStream, "sizeof(Packet): %d\r\n", sizeof(sbus::Packet));
+    dbg::p("RTT ready\r\n");
+    dbg::p("Buffer::maxSize(): %d\r\n", Buffer::maxSize(bufferAllocator));
+    dbg::p("sizeof(Buffer): %d\r\n", sizeof(Buffer));
+    dbg::p("sizeof(DeferredProc): %d\r\n", sizeof(DeferredProc));
+    dbg::p("sizeof(Packet): %d\r\n", sizeof(sbus::Packet));
 
-    Uart2 uart(bufferAllocator, UARTD1);
-    uart.setBaud(100000);
-    uart.setParity(Uart2::Parity::Even);
-    uart.setStopBits(Uart2::StopBits::B_2);
-    uart.start();
+    Uart2 sbusUart(bufferAllocator, UARTD1);
+    sbusUart
+    .setBaud(100000)
+    .setParity(Uart2::Parity::Even)
+    .setStopBits(Uart2::StopBits::B_2);
+    sbusUart.start();
+
+    Uart2 monitorUart(bufferAllocator, UARTD2);
+    monitorUart.setBaud(921600);
+    monitorUart.start();
 
     Executor executor;
-    Stack stack(executor, procAllocator);
-    sbus::Decoder decoder(bufferAllocator);
-    BottomModule bottom(uart, procAllocator);
-    Top top;
+    Stack sbusStack;
+    sbus::Decoder decoder(bufferAllocator, funcAllocator, executor);
+    BottomModule sbusBottom(bufferAllocator, funcAllocator, executor, sbusUart);
 
-    stack.push(bottom);
-    stack.push(decoder);
-    stack.push(top);
+    sbusStack.push(sbusBottom);
+    sbusStack.push(decoder);
+
+    Stack monitorStack;
+    BottomModule monitorBottom(bufferAllocator, funcAllocator, executor, monitorUart);
+    monitorStack.push(monitorBottom);
+
+    sbusBottom.deferPoll() <= [&] (Error e) { logError(e); FATAL_ERROR("sbusBottom.deferPoll()"); return ok(); };
+    monitorBottom.deferPoll() <= [&] (Error e) { logError(e); FATAL_ERROR("monitorBottom.deferPoll()"); return ok(); };
 
     PWMConfig pwmConfig = {};
-    pwmConfig.frequency = 72000000;
+    pwmConfig.frequency = STM32_TIMCLK1;
     pwmConfig.period = 0xFFFFU; // not 0x10000, so we can achieve true 100% pwm
     pwmConfig.channels[0].mode = PWM_OUTPUT_ACTIVE_HIGH;
 
     pwmStart(&PWMD1, &pwmConfig);
 
+    auto startRead = [&](auto&& startReadRef) -> Result<Void> {
+        return
+        Module::ReadCompletionFunc::create(
+            funcAllocator,
+            [&](Result<Buffer>&& readResult) mutable {
+                std::move(readResult) >=
+                [&](Buffer&& b) {
+                    cpm::dpb("main::startRead|read completion|", &b);
+                    const sbus::Packet& packet = *reinterpret_cast<const sbus::Packet*>(b.begin());
+                    updatePwm(packet);
+                    return
+                    printPacket(packet, txtBufferAllocator) >=
+                    [&](Buffer&& txtBuffer) {
+                        dbg::write(txtBuffer);
+                        return
+                        Module::WriteCompletionFunc::create(
+                                funcAllocator,
+                                [&](Result<Void>&& r) {
+                                    cpm::dpl("main::startRead|write completion");
+                                    return std::move(r) <= logError;
+                                }
+                        ) >=
+                        [&](Module::WriteCompletionFunc&& writeCompletion) {
+                            return
+                            monitorBottom.write(std::move(txtBuffer), std::move(writeCompletion));
+                        };
+                    };
+                } <= logError;
+                return startReadRef(startReadRef);
+            }
+        ) >=
+        [&](Module::ReadCompletionFunc&& completion) {
+            return
+            decoder.read(std::move(completion));
+        };
+    };
+
+    startRead(startRead) <= logError;
+
     for (;;) {
-        bottom.service(executor) <= logError;
+        executor.executeOne() >= [](bool) { return ok(); } <= logError;
     }
+}
+
+extern "C"
+void _putchar(char character) {
+    (void)character;
+    FATAL_ERROR("_putchar");
 }

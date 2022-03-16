@@ -20,7 +20,7 @@ public:
     // returns true if there are more to execute
     Result<bool> executeOne() {
         if (!ring.empty()) {
-            cpm::dpl("ExecutorT::executeOne|exec");
+//            cpm::dpl("ExecutorT::executeOne|exec");
             DeferredProc dp = std::move(ring.tail());
             ring.eraseTail();
             return

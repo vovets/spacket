@@ -11,56 +11,43 @@
 
 class Stack: StackOps {
     ModuleList moduleList;
-    ExecutorI& executor;
-    alloc::Allocator& procAllocator;
 
 public:
-    Stack(ExecutorI& executor, alloc::Allocator& procAllocator)
-        : executor(executor)
-        , procAllocator(procAllocator)
-    {
-    }
-
-    ~Stack() {
-    }
-
     void push(Module& m) {
-        m.attach(this, &executor);
+        m.attach(this);
         moduleList.push_back(m);
     }
 
 private:
-    Result<Void> deferDown(Module& from, Buffer&& b) override {
+    Module* upper_(Module& from) {
+        auto it = ++moduleList.iterator_to(from);
+        if (it == moduleList.end()) {
+            return nullptr;
+        }
+        return &(*it);
+    }
+        
+    Module* lower_(Module& from) {
         auto it = typename ModuleList::reverse_iterator(moduleList.iterator_to(from));
         if (it == moduleList.rend()) {
-            return fail(toError(ErrorCode::StackNoLowerModule));
+            return nullptr;
         }
-        return
-        DeferredProc::create(
-            procAllocator,
-            [&,buffer=std::move(b),module=&(*it)] () mutable {
-                return module->down(std::move(buffer));
-            }
-        ) >=
-        [&](DeferredProc&& p) {
-            return executor.defer(std::move(p));
-        };
+        return &(*it);
     }
-    
-    Result<Void> deferUp(Module& m, Buffer&& b) override {
-        auto it = ++moduleList.iterator_to(m);
-        if (it == moduleList.end()) {
-            return fail(toError(ErrorCode::StackNoUpperModule));
+
+    Result<Module*> upper(Module& from) override {
+        Module* m = upper_(from);
+        if (m == nullptr) {
+            return fail<Module*>(toError(ErrorCode::StackNoUpperModule));
         }
-        return
-        DeferredProc::create(
-            procAllocator,
-            [&,buffer=std::move(b),module=&(*it)] () mutable {
-                return module->up(std::move(buffer));
-            }
-        ) >=
-        [&](DeferredProc&& p) {
-            return executor.defer(std::move(p));
-        };
-    }    
+        return ok(std::move(m));
+    }
+
+    Result<Module*> lower(Module& from) override {
+        Module* m = lower_(from);
+        if (m == nullptr) {
+            return fail<Module*>(toError(ErrorCode::StackNoLowerModule));
+        }
+        return ok(std::move(m));
+    }
 };

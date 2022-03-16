@@ -91,8 +91,8 @@
  * @brief   Managed RAM size.
  * @details Size of the RAM area to be managed by the OS. If set to zero
  *          then the whole available RAM is used. The core memory is made
- *          available to the heap allocator and/or can be used directly through
- *          the simplified core memory allocator.
+ *          available to the heap bufferAllocator and/or can be used directly through
+ *          the simplified core memory bufferAllocator.
  *
  * @note    In order to let the OS manage the whole RAM the linker script must
  *          provide the @p __heap_base__ and @p __heap_end__ symbols.
@@ -126,7 +126,7 @@
  * @note    This is not related to the compiler optimization options.
  * @note    The default is @p TRUE.
  */
-#define CH_CFG_OPTIMIZE_SPEED               TRUE
+#define CH_CFG_OPTIMIZE_SPEED               FALSE
 
 /** @} */
 
@@ -283,11 +283,11 @@
  *
  * @note    The default is @p TRUE.
  */
-#define CH_CFG_USE_MEMCORE                  TRUE
+#define CH_CFG_USE_MEMCORE                  FALSE
 
 /**
  * @brief   Heap Allocator APIs.
- * @details If enabled then the memory heap allocator APIs are included
+ * @details If enabled then the memory heap bufferAllocator APIs are included
  *          in the kernel.
  *
  * @note    The default is @p TRUE.
@@ -299,12 +299,12 @@
 
 /**
  * @brief   Memory Pools Allocator APIs.
- * @details If enabled then the memory pools allocator APIs are included
+ * @details If enabled then the memory pools bufferAllocator APIs are included
  *          in the kernel.
  *
  * @note    The default is @p TRUE.
  */
-#define CH_CFG_USE_MEMPOOLS                 TRUE
+#define CH_CFG_USE_MEMPOOLS                 FALSE
 
 /**
  * @brief   Dynamic Threads APIs.
